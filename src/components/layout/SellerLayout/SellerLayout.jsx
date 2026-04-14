@@ -7,6 +7,7 @@ import {
   useTheme, useMediaQuery, Menu, MenuItem, Badge,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -16,6 +17,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { toggleTheme } from '../../../features/ui/uiSlice';
 import { logoutSeller } from '../../../features/auth/authSlice';
 import Toast from '../../common/Toast/Toast';
@@ -27,7 +29,10 @@ const NAV_ITEMS = [
   { label: 'Products', icon: InventoryIcon, path: '/products' },
   { label: 'Orders', icon: ShoppingBagIcon, path: '/orders' },
   { label: 'Analytics', icon: BarChartIcon, path: '/analytics' },
+  { label: 'Support', icon: SupportAgentIcon, path: '/support' },
   { label: 'Profile', icon: PersonIcon, path: '/profile' },
+  { label: 'Inventory', icon: Inventory2Icon, path: '/inventory' },
+
 ];
 
 const SellerLayout = () => {

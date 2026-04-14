@@ -323,8 +323,8 @@ const ProductForm = () => {
                 <Divider sx={{ mb: 2 }} />
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {isEdit
-                    ? 'Your changes will be visible to buyers immediately after saving.'
-                    : 'Once created, the product will be visible to buyers on the store.'}
+                    ? 'Updates to approved products remain subject to admin review and product status.'
+                    : 'Once created, the product is sent to admin as pending and will appear to buyers only after approval.'}
                 </Typography>
                 <Button
                   type="submit"

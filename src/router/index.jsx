@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import PageLoader from '../components/common/PageLoader/PageLoader';
 import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
+import Support from '../pages/Support/Support';
+// For Inventory
+import Inventory from "../pages/Inventory/Inventory";
+
 
 const Login = lazy(() => import('../pages/Auth/Login'));
 const Register = lazy(() => import('../pages/Auth/Register'));
@@ -39,7 +43,9 @@ const AppRouter = () => (
           <Route path="/products/:id/edit" element={<ProductForm />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/inventory" element={<Inventory />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
