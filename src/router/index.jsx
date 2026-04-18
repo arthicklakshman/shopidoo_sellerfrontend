@@ -16,6 +16,8 @@ const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
 const Orders = lazy(() => import('../pages/Orders/Orders'));
 const Analytics = lazy(() => import('../pages/Analytics/Analytics'));
 const Profile = lazy(() => import('../pages/Profile/Profile'));
+const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
+const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
@@ -46,6 +48,8 @@ const AppRouter = () => (
           <Route path="/support" element={<Support />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/coupons" element={<Coupons />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

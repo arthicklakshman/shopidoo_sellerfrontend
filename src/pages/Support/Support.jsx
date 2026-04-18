@@ -314,9 +314,21 @@ const Support = () => {
           <Typography variant="h4" fontWeight={700} gutterBottom>Support</Typography>
           <Typography color="text.secondary">Get help and manage support tickets</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ minWidth: 180 }}>
-          Raise Ticket
-        </Button>
+        <Button
+  variant="contained"
+  startIcon={<AddIcon />}
+  onClick={() => setCreateOpen(true)}
+  sx={{
+  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+  color: '#000',
+  '&:hover': {
+    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+    color: '#000',
+  },
+}}
+>
+  Raise Ticket
+</Button>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>

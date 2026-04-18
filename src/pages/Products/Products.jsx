@@ -95,22 +95,60 @@ const Products = () => {
     });
   }, [categories]);
 
-  const load = () => {
-    setLoading(true);
-    setFetchError('');
-    sellerService.getProducts({
+  // const load = () => {
+  //   setLoading(true);
+  //   setFetchError('');
+  //   sellerService.getProducts({
+  //     page,
+  //     limit: 10,
+  //     search: deferredSearch || undefined,
+  //     category: categoryFilter || undefined,
+  //     status: statusFilter || undefined,
+  //   }).then(({ data }) => {
+  //     setProducts(data.data || []);
+  //     setPagination(data.pagination || {});
+  //   }).catch((err) => {
+  //     setFetchError(getErrorMessage(err));
+  //   }).finally(() => setLoading(false));
+  // };
+    // Replace your entire load function in Products.jsx with this
+  const load = async () => {
+  setLoading(true);
+  setFetchError('');
+
+  try {
+    const { data } = await sellerService.getProducts({
       page,
       limit: 10,
       search: deferredSearch || undefined,
       category: categoryFilter || undefined,
       status: statusFilter || undefined,
-    }).then(({ data }) => {
-      setProducts(data.data || []);
-      setPagination(data.pagination || {});
-    }).catch((err) => {
-      setFetchError(getErrorMessage(err));
-    }).finally(() => setLoading(false));
-  };
+    });
+
+    const productList =
+      Array.isArray(data?.data) ? data.data :
+      Array.isArray(data?.products) ? data.products :
+      Array.isArray(data?.data?.products) ? data.data.products :
+      [];
+
+    setProducts(productList);
+
+    setPagination(
+      data?.pagination ||
+      data?.data?.pagination || {
+        totalItems: productList.length,
+        totalPages: 1,
+        currentPage: 1,
+      }
+    );
+  } catch (error) {
+    setFetchError(getErrorMessage(error));
+    setProducts([]);
+    setPagination({});
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     sellerService.getCategories().then(({ data }) => {
@@ -307,11 +345,13 @@ const Products = () => {
                 textTransform: 'none',
                 fontSize: 13,
                 fontWeight: 600,
-                bgcolor: '#39B54A',
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                color: '#000',
                 boxShadow: 'none',
                 whiteSpace: 'nowrap',
                 '&:hover': {
-                  bgcolor: '#2ea03f',
+                  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                  color: '#000',
                   boxShadow: 'none',
                 },
               }}
