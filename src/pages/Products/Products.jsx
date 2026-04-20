@@ -63,7 +63,7 @@ const tableBodyCellSx = {
   verticalAlign: 'middle',
 };
 
-const getProductCode = (product) => product?.product_code || `P${String(product?.id || 0).padStart(3, '0')}`;
+const getProductCode = (product) => product?.product_code || `P${String(product?.id || 0).padStart(4, '0')}`;
 
 const getStockLabel = (quantity) => {
   if (quantity > 0) return String(quantity);
