@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import socket from '../../services/socket';
 import {
   Box,
   Typography,
@@ -19,9 +20,36 @@ const Notifications = () => {
 
   const [notifications, setNotifications] = useState([]);
 
+  // useEffect(() => {
+  //   fetchNotifications();
+  // }, []);
+
+  // Socket
+  
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+  fetchNotifications();
+
+  const handleNewNotification = (data) => {
+    if (
+      data.type === 'product_status' ||
+      data.type === 'support_reply'
+    ) {
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === data.id);
+
+        if (exists) return prev;
+
+        return [data, ...prev];
+      });
+    }
+  };
+
+  socket.on('new_notification', handleNewNotification);
+
+  return () => {
+    socket.off('new_notification', handleNewNotification);
+  };
+}, []);
 
 //   const fetchNotifications = async () => {
 //     try {

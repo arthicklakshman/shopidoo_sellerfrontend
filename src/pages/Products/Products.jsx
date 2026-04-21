@@ -14,6 +14,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +25,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -82,6 +84,8 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [fetchError, setFetchError] = useState('');
+  
+  const [allProductsVisible, setAllProductsVisible] = useState(true);
   const deferredSearch = useDeferredValue(search);
 
   const categoryFilterOptions = useMemo(() => {
@@ -179,6 +183,33 @@ const Products = () => {
     }
   };
 
+  
+ 
+const handleToggleAllProducts = async () => {
+  try {
+    const { data } = await sellerService.toggleAllProductsVisibility();
+
+    setAllProductsVisible(data?.data?.is_active);
+
+    dispatch(
+      showToast({
+        message: data?.data?.is_active
+          ? 'All products visible to users'
+          : 'All products hidden from users',
+        severity: 'success',
+      })
+    );
+  } catch (err) {
+    dispatch(
+      showToast({
+        message: getErrorMessage(err),
+        severity: 'error',
+      })
+    );
+  }
+};
+  
+
   return (
     <Box
       sx={{
@@ -192,6 +223,7 @@ const Products = () => {
     >
       <Box
         sx={{
+          position: 'relative',
           bgcolor: '#F7F8FC',
           border: '1px solid #EAECF0',
           borderRadius: '10px 10px 0 0',
@@ -205,6 +237,26 @@ const Products = () => {
         <Typography sx={{ fontSize: 14, color: '#667085', fontWeight: 400 }}>
           Manage your products and track admin approval status
         </Typography>
+        <Box
+  sx={{
+    position: 'absolute',
+    top: 20,
+    right: 24,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+  }}
+>
+  <Typography sx={{ fontSize: 13, color: '#667085', fontWeight: 500 }}>
+    Shop Visible
+  </Typography>
+
+  <Switch
+    checked={allProductsVisible}
+    onChange={handleToggleAllProducts}
+    color="success"
+  />
+</Box>
       </Box>
 
       <Card
@@ -367,7 +419,8 @@ const Products = () => {
           <Table sx={{ minWidth: 920 }}>
             <TableHead>
               <TableRow>
-                {['Product', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
+                
+                {['Product', 'Category', 'Price', 'Stock','Status', 'Actions'].map((header) => (
                   <TableCell key={header} sx={tableHeaderCellSx}>
                     {header}
                   </TableCell>
@@ -394,6 +447,7 @@ const Products = () => {
                       '&:hover': { bgcolor: '#FAFBFC' },
                     }}
                   >
+
                     <TableCell sx={tableBodyCellSx}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
                         <Avatar

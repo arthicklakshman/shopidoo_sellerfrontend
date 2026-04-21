@@ -118,17 +118,26 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({});
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortFilter, setSortFilter] = useState('newest');
   const [loading, setLoading] = useState(true);
 
   const load = () => {
     setLoading(true);
-    sellerService.getOrders({ page, limit: 15 }).then(({ data }) => {
+      sellerService.getOrders({
+        page,
+        limit: 15,
+        status: statusFilter || undefined,
+        sort: sortFilter,
+      }).then(({ data }) => {
       setOrders(data.data || []);
       setPagination(data.pagination || {});
     }).finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => {
+  load();
+}, [page, statusFilter, sortFilter]);
 
   const handleStatusChange = async (itemId, status) => {
     try {
@@ -141,6 +150,42 @@ const Orders = () => {
   return (
     <Box>
       <Typography variant="h5" fontWeight={700} gutterBottom>Orders</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+  <FormControl size="small">
+    <Select
+      value={statusFilter}
+      onChange={(e) => {
+        setStatusFilter(e.target.value);
+        setPage(1);
+      }}
+      displayEmpty
+      sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+    >
+      <MenuItem value="">All Status</MenuItem>
+      {ALLOWED_STATUSES.map((status) => (
+        <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>
+          {status}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+
+  <FormControl size="small">
+    <Select
+      value={sortFilter}
+      onChange={(e) => {
+        setSortFilter(e.target.value);
+        setPage(1);
+      }}
+      sx={{ minWidth: 180, bgcolor: '#f5f5f5' }}
+    >
+      <MenuItem value="newest">Newest</MenuItem>
+      <MenuItem value="oldest">Oldest</MenuItem>
+      <MenuItem value="orderIdAsc">Order ID Increment</MenuItem>
+      <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
+    </Select>
+  </FormControl>
+</Box>
       <Card>
         <TableContainer>
           <Table>

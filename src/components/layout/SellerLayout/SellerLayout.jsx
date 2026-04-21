@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import socket from '../../../services/socket';
 import {
   Box,
   Drawer,
@@ -74,18 +75,41 @@ const SellerLayout = () => {
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  // useEffect(() => {
+  //   fetchNotifications();
+  // }, []);
 
-  // const fetchNotifications = async () => {
-  //   try {
-  //     const res = await api.get('/notifications');
-  //     setNotifications(res.data.data || []);
-  //   } catch (err) {
-  //     console.error(err);
-  //   }
-  // };
+  //socket
+
+  useEffect(() => {
+  fetchNotifications();
+
+  socket.emit('join', `seller_${user?.id}`);
+
+  const handleNewNotification = (data) => {
+    console.log('SELLER NEW NOTIFICATION', data);
+
+    if (
+      data.type === 'product_status' ||
+      data.type === 'support_reply'
+    ) {
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === data.id);
+
+        if (exists) return prev;
+
+        return [data, ...prev];
+      });
+    }
+  };
+
+  socket.on('new_notification', handleNewNotification);
+
+  return () => {
+    socket.off('new_notification', handleNewNotification);
+  };
+}, [user?.id]);
+  
   const fetchNotifications = async () => {
   try {
     const res = await api.get('/notifications');
