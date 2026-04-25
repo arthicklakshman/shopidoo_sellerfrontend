@@ -65,7 +65,7 @@ const tableBodyCellSx = {
   verticalAlign: 'middle',
 };
 
-const getProductCode = (product) => product?.product_code || `P${String(product?.id || 0).padStart(4, '0')}`;
+const getProductCode = (product) => product?.product_code || `P${String(product?.id || 0).padStart(5, '0')}`;
 
 const getStockLabel = (quantity) => {
   if (quantity > 0) return String(quantity);
@@ -83,9 +83,11 @@ const Products = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [dateFilter,setDateFilter]=useState('');
   const [fetchError, setFetchError] = useState('');
-  
   const [allProductsVisible, setAllProductsVisible] = useState(true);
+  const [togglingAllProducts, setTogglingAllProducts] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState(null);
   const deferredSearch = useDeferredValue(search);
 
   const categoryFilterOptions = useMemo(() => {
@@ -127,6 +129,7 @@ const Products = () => {
       search: deferredSearch || undefined,
       category: categoryFilter || undefined,
       status: statusFilter || undefined,
+      date: dateFilter || undefined,
     });
 
     const productList =
@@ -136,7 +139,6 @@ const Products = () => {
       [];
 
     setProducts(productList);
-
     setPagination(
       data?.pagination ||
       data?.data?.pagination || {
@@ -170,7 +172,7 @@ const Products = () => {
 
   useEffect(() => {
     load();
-  }, [page, deferredSearch, categoryFilter, statusFilter]);
+  }, [page, deferredSearch, categoryFilter, statusFilter, dateFilter]);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this product?')) return;
@@ -184,30 +186,82 @@ const Products = () => {
   };
 
   
- 
-const handleToggleAllProducts = async () => {
-  try {
-    const { data } = await sellerService.toggleAllProductsVisibility();
+  const handleToggleAllProducts = async () => {
+    setTogglingAllProducts(true);
 
-    setAllProductsVisible(data?.data?.is_active);
+    try {
+      const { data } = await sellerService.toggleAllProductsVisibility();
+      const visible = Boolean(data?.data?.is_active);
 
-    dispatch(
-      showToast({
-        message: data?.data?.is_active
-          ? 'All products visible to users'
-          : 'All products hidden from users',
-        severity: 'success',
-      })
-    );
-  } catch (err) {
-    dispatch(
-      showToast({
-        message: getErrorMessage(err),
-        severity: 'error',
-      })
-    );
-  }
-};
+      setAllProductsVisible(visible);
+      setProducts((prev) => prev.map((product) => ({ ...product, is_active: visible })));
+
+      dispatch(
+        showToast({
+          message: visible
+            ? 'All products visible to users'
+            : 'All products hidden from users',
+          severity: 'success',
+        })
+      );
+    } catch (err) {
+      dispatch(
+        showToast({
+          message: getErrorMessage(err),
+          severity: 'error',
+        })
+      );
+    } finally {
+      setTogglingAllProducts(false);
+    }
+  };
+
+  const handleToggleProductVisibility = async (productId) => {
+    if (!allProductsVisible) {
+      dispatch(
+        showToast({
+          message: 'Please turn ON the main "Show To Users" button first.',
+          severity: 'warning',
+        })
+      );
+      return;
+    }
+
+    setTogglingProductId(productId);
+
+    try {
+      const { data } = await sellerService.toggleProductVisibility(productId);
+      const updatedProduct = data?.data;
+      const nextIsActive = Boolean(updatedProduct?.is_active);
+
+      setProducts((prev) => {
+        return prev.map((product) =>
+          product.id === productId
+            ? { ...product, is_active: nextIsActive }
+            : product
+        );
+      });
+
+      dispatch(
+        showToast({
+          message: nextIsActive
+            ? 'Product visible to users'
+            : 'Product hidden from users',
+          severity: 'success',
+        })
+      );
+    } catch (err) {
+      dispatch(
+        showToast({
+          message: getErrorMessage(err),
+          severity: 'error',
+        })
+      );
+    } finally {
+      setTogglingProductId(null);
+    }
+  };
+
   
 
   return (
@@ -238,25 +292,25 @@ const handleToggleAllProducts = async () => {
           Manage your products and track admin approval status
         </Typography>
         <Box
-  sx={{
-    position: 'absolute',
-    top: 20,
-    right: 24,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-  }}
->
-  <Typography sx={{ fontSize: 13, color: '#667085', fontWeight: 500 }}>
-    Shop Visible
-  </Typography>
-
-  <Switch
-    checked={allProductsVisible}
-    onChange={handleToggleAllProducts}
-    color="success"
-  />
-</Box>
+          sx={{
+            position: 'absolute',
+            top: 20,
+            right: 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <Typography sx={{ fontSize: 13, color: '#667085', fontWeight: 500 }}>
+            Show To Users
+          </Typography>
+          <Switch
+            checked={allProductsVisible}
+            onChange={handleToggleAllProducts}
+            color="success"
+            disabled={togglingAllProducts || products.length === 0}
+          />
+        </Box>
       </Box>
 
       <Card
@@ -386,6 +440,24 @@ const handleToggleAllProducts = async () => {
               </Select>
             </FormControl>
 
+            <TextField
+                type="date"
+                size="small"
+                value={dateFilter}
+                onChange={(e)=>{
+                setDateFilter(e.target.value);
+                setPage(1);
+                }}
+                sx={{
+                minWidth:180,
+                '& .MuiOutlinedInput-root':{
+                    height:40,
+                    borderRadius:'8px',
+                    bgcolor:'#F8FAFC'
+                }
+                }}
+                />
+
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -419,8 +491,7 @@ const handleToggleAllProducts = async () => {
           <Table sx={{ minWidth: 920 }}>
             <TableHead>
               <TableRow>
-                
-                {['Product', 'Category', 'Price', 'Stock','Status', 'Actions'].map((header) => (
+                {['Product', 'Category', 'Price', 'Stock', 'Status', 'Visible', 'Actions'].map((header) => (
                   <TableCell key={header} sx={tableHeaderCellSx}>
                     {header}
                   </TableCell>
@@ -431,7 +502,7 @@ const handleToggleAllProducts = async () => {
               {loading
                 ? Array.from({ length: 5 }).map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {Array.from({ length: 6 }).map((__, cellIndex) => (
+                    {Array.from({ length: 7 }).map((__, cellIndex) => (
                       <TableCell key={cellIndex} sx={tableBodyCellSx}>
                         <Skeleton variant="rounded" height={32} />
                       </TableCell>
@@ -515,11 +586,48 @@ const handleToggleAllProducts = async () => {
                           {STATUS_STYLES[product.admin_status || 'pending'].label.toLowerCase()}
                         </Box>
                         <Typography sx={{ fontSize: 11, color: '#98A2B3' }}>
-                          {product.admin_status === 'approved'
+                          {product.admin_status === 'approved' && product.is_active
                             ? 'Visible to users'
-                            : product.admin_status === 'blocked'
+                            : product.admin_status === 'approved' && !product.is_active
+                              ? 'Hidden from users'
+                              : product.admin_status === 'blocked'
                               ? 'Hidden from users'
                               : 'Waiting for admin approval'}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+
+                    <TableCell sx={tableBodyCellSx}>
+                      <Stack spacing={0.5} alignItems="flex-start">
+                        <Box onClick={() => {
+                          if (!allProductsVisible) {
+                            dispatch(
+                              showToast({
+                                message: 'Please turn ON the main "Show To Users" button first.',
+                                severity: 'warning',
+                              })
+                            );
+                          }
+                        }}>
+                          <Switch
+                            checked={Boolean(product.is_active)}
+                            onChange={() => handleToggleProductVisibility(product.id)}
+                            color="success"
+                            disabled={
+                              !allProductsVisible ||
+                              togglingProductId === product.id ||
+                              product.admin_status !== 'approved'
+                            }
+                          />
+                        </Box>
+                        <Typography sx={{ fontSize: 11, color: '#98A2B3' }}>
+                          {!allProductsVisible
+                            ? 'Turn ON main button first'
+                            : product.admin_status !== 'approved'
+                            ? 'Approve first'
+                            : product.is_active
+                              ? 'ON'
+                              : 'OFF'}
                         </Typography>
                       </Stack>
                     </TableCell>
@@ -551,7 +659,7 @@ const handleToggleAllProducts = async () => {
 
               {!loading && products.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center', borderBottom: 0 }}>
+                  <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', borderBottom: 0 }}>
                     <EmptyState
                       icon={InventoryIcon}
                       title="No products found"

@@ -175,11 +175,15 @@ const SellerLayout = () => {
   const DrawerContent = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <StorefrontIcon
+        <Avatar
           sx={{
-            color: '#0B8457',
+            background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+            width: 36,
+            height: 36,
           }}
-        />
+        >
+          <StorefrontIcon fontSize="small" />
+        </Avatar>
         <Box>
           <Typography
             variant="subtitle2"

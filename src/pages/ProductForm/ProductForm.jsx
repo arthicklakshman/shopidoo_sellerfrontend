@@ -23,6 +23,8 @@ const emptyForm = {
   category_id: '',
 };
 
+const MAX_PRODUCT_IMAGES = 6;
+
 const flattenCategories = (list, depth = 0) => {
   const result = [];
   for (const cat of list) {
@@ -74,7 +76,22 @@ const ProductForm = () => {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
-    setNewFiles((prev) => [...prev, ...files]);
+    const totalExistingImages = images.length + newFiles.length;
+    const availableSlots = MAX_PRODUCT_IMAGES - totalExistingImages;
+
+    if (availableSlots <= 0) {
+      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images only.`, severity: 'error' }));
+      e.target.value = '';
+      return;
+    }
+
+    const filesToAdd = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots) {
+      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed per product.`, severity: 'warning' }));
+    }
+
+    setNewFiles((prev) => [...prev, ...filesToAdd]);
     e.target.value = '';
   };
 
@@ -90,10 +107,12 @@ const ProductForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  if (e) e.preventDefault();
+  
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!form.stock_quantity || parseInt(form.stock_quantity) < 0) { setError('Please enter a valid stock quantity.'); return; }
+    if ((images.length + newFiles.length) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
 
     setSaving(true);
     setError('');
@@ -304,10 +323,16 @@ const ProductForm = () => {
 
                 <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />}>
                   {newFiles.length > 0 ? 'Add More Images' : 'Upload Images'}
-                  <input type="file" hidden multiple accept="image/*" onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
                 </Button>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  Supported formats: JPG, PNG, WEBP. Max 10 images.
+                  Supported formats: JPG, PNG, WEBP. Max 6 images.
                 </Typography>
               </CardContent>
             </Card>
@@ -327,12 +352,13 @@ const ProductForm = () => {
                     : 'Once created, the product is sent to admin as pending and will appear to buyers only after approval.'}
                 </Typography>
                 <Button
-                  type="submit"
+                  type="button"
                   variant="contained"
                   fullWidth
                   size="large"
                   disabled={saving}
                   sx={{ mb: 1 }}
+                  onClick={() => handleSubmit()}
                 >
                   {saving
                     ? <CircularProgress size={22} color="inherit" />

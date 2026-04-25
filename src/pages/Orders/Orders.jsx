@@ -103,7 +103,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl } from '@mui/material';
+import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField } from '@mui/material';
 import { sellerService } from '../../services/seller.service';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
@@ -111,7 +111,7 @@ import OrderStatusChip from '../../components/shared/OrderStatusChip/OrderStatus
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 
-const ALLOWED_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned'];
 
 const Orders = () => {
   const dispatch = useDispatch();
@@ -120,6 +120,9 @@ const Orders = () => {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [sortFilter, setSortFilter] = useState('newest');
+  const [yearFilter, setYearFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = () => {
@@ -129,6 +132,9 @@ const Orders = () => {
         limit: 15,
         status: statusFilter || undefined,
         sort: sortFilter,
+        year: yearFilter || undefined,
+        month: monthFilter || undefined,
+        date: dateFilter || undefined,
       }).then(({ data }) => {
       setOrders(data.data || []);
       setPagination(data.pagination || {});
@@ -137,7 +143,7 @@ const Orders = () => {
 
   useEffect(() => {
   load();
-}, [page, statusFilter, sortFilter]);
+}, [page, statusFilter, sortFilter, yearFilter, monthFilter, dateFilter]);
 
   const handleStatusChange = async (itemId, status) => {
     try {
@@ -185,6 +191,67 @@ const Orders = () => {
       <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
     </Select>
   </FormControl>
+  <FormControl size="small">
+  <Select
+    value={yearFilter}
+    onChange={(e) => {
+      setYearFilter(e.target.value);
+      setMonthFilter('');
+      setPage(1);
+    }}
+    displayEmpty
+    sx={{ minWidth: 120, bgcolor: '#f5f5f5' }}
+  >
+    <MenuItem value="">All Years</MenuItem>
+    <MenuItem value="2026">2026</MenuItem>
+    <MenuItem value="2025">2025</MenuItem>
+    <MenuItem value="2024">2024</MenuItem>
+  </Select>
+</FormControl>
+
+<FormControl size="small" disabled={!yearFilter}>
+  <Select
+    value={monthFilter}
+    onChange={(e) => {
+      setMonthFilter(e.target.value);
+      setPage(1);
+    }}
+    displayEmpty
+    sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+  >
+    <MenuItem value="">All Months</MenuItem>
+    <MenuItem value="1">January</MenuItem>
+    <MenuItem value="2">February</MenuItem>
+    <MenuItem value="3">March</MenuItem>
+    <MenuItem value="4">April</MenuItem>
+    <MenuItem value="5">May</MenuItem>
+    <MenuItem value="6">June</MenuItem>
+    <MenuItem value="7">July</MenuItem>
+    <MenuItem value="8">August</MenuItem>
+    <MenuItem value="9">September</MenuItem>
+    <MenuItem value="10">October</MenuItem>
+    <MenuItem value="11">November</MenuItem>
+    <MenuItem value="12">December</MenuItem>
+  </Select>
+</FormControl>
+<TextField
+  type="date"
+  size="small"
+  value={dateFilter}
+  onChange={(e) => {
+    setDateFilter(e.target.value);
+    setYearFilter('');
+    setMonthFilter('');
+    setPage(1);
+  }}
+  sx={{
+    minWidth: 170,
+    bgcolor: '#f5f5f5',
+  }}
+  InputLabelProps={{
+    shrink: true,
+  }}
+/> 
 </Box>
       <Card>
         <TableContainer>
@@ -215,7 +282,7 @@ const Orders = () => {
                     <TableRow key={item.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>
-                         {item.order?.order_number || `ORD${String(item.id).padStart(4, '0')}`}
+                         {item.order?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
                         </Typography>
                       </TableCell>
                       <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
