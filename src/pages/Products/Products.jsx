@@ -548,6 +548,11 @@ const Products = () => {
 
                     <TableCell sx={tableBodyCellSx}>
                       <Typography sx={{ fontSize: 13, color: '#344054' }}>{product.category?.name || '-'}</Typography>
+                      {product.subcategory?.name && (
+                        <Typography sx={{ mt: 0.25, fontSize: 12, color: '#667085' }}>
+                          {product.subcategory.name}
+                        </Typography>
+                      )}
                     </TableCell>
 
                     <TableCell sx={tableBodyCellSx}>

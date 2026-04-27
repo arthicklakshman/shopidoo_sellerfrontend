@@ -21,6 +21,9 @@ const emptyForm = {
   stock_quantity: '',
   sku: '',
   category_id: '',
+  subcategory_id:'',
+  specificationsText: '',
+
 };
 
 const MAX_PRODUCT_IMAGES = 6;
@@ -28,11 +31,36 @@ const MAX_PRODUCT_IMAGES = 6;
 const flattenCategories = (list, depth = 0) => {
   const result = [];
   for (const cat of list) {
-    result.push({ id: cat.id, name: cat.name, depth });
+    result.push({ id: cat.id, name: cat.name, parent_id: cat.parent_id ?? null, depth });
     if (cat.children?.length) result.push(...flattenCategories(cat.children, depth + 1));
   }
   return result;
 };
+
+const formatSpecifications = (specifications = []) => (
+  specifications
+    .map((spec) => `${spec.name || ''}: ${spec.value || ''}`.trim())
+    .filter(Boolean)
+    .join('\n')
+);
+
+const parseSpecifications = (text) => (
+  String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const separatorIndex = line.indexOf(':');
+      if (separatorIndex === -1) {
+        return { name: `Specification ${index + 1}`, value: line };
+      }
+      return {
+        name: line.slice(0, separatorIndex).trim(),
+        value: line.slice(separatorIndex + 1).trim(),
+      };
+    })
+    .filter((spec) => spec.name && spec.value)
+);
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -65,6 +93,8 @@ const ProductForm = () => {
             stock_quantity: p.stock_quantity ?? '',
             sku: p.sku || '',
             category_id: p.category_id != null ? Number(p.category_id) : '',
+            subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
+            specificationsText: formatSpecifications(p.specifications || []),
           });
           setImages(p.images || []);
         }).finally(() => setLoading(false))
@@ -126,6 +156,8 @@ const ProductForm = () => {
         stock_quantity: parseInt(form.stock_quantity),
         sku: form.sku.trim() || null,
         category_id: parseInt(form.category_id),
+        subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
+        specifications: parseSpecifications(form.specificationsText),
       };
 
       let productId = id;
@@ -253,7 +285,7 @@ const ProductForm = () => {
                         labelId="cat-label"
                         label="Category"
                         value={form.category_id}
-                        onChange={(e) => setForm((p) => ({ ...p, category_id: Number(e.target.value) }))}
+                        onChange={(e) => setForm((p) => ({ ...p, category_id: Number(e.target.value), subcategory_id: '' }))}
                       >
                         {categories.length === 0 ? (
                           <MenuItem disabled value="">No categories available</MenuItem>
@@ -266,6 +298,54 @@ const ProductForm = () => {
                         )}
                       </Select>
                     </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+              <InputLabel>Subcategory</InputLabel>
+
+              <Select
+              value={form.subcategory_id}
+              label="Subcategory"
+              onChange={(e)=>
+              setForm({
+              ...form,
+              subcategory_id:e.target.value
+              })
+              }
+              >
+
+              <MenuItem value="">
+              Select Subcategory
+              </MenuItem>
+
+              {categories
+              .filter(
+              c=>c.parent_id ==
+              form.category_id
+              )
+              .map(sub=>(
+              <MenuItem
+              key={sub.id}
+              value={sub.id}
+              >
+              {sub.name}
+              </MenuItem>
+              ))}
+
+              </Select>
+              </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Specifications"
+                      value={form.specificationsText}
+                      onChange={handleChange('specificationsText')}
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      placeholder={'Size: XL, M, L\nMaterial: Cotton'}
+                      helperText="One per line, for example Size: XL, M, L"
+                    />
                   </Grid>
                 </Grid>
               </CardContent>
