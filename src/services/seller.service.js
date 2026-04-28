@@ -37,6 +37,7 @@ export const sellerService = {
   updateOrderItemStatus: (itemId, status) =>
     api.patch(`/seller/orders/${itemId}/status`, { status }),
   getCategories: () => api.get('/categories'),
+  getCategoryAttributes: (categoryId) => api.get(`/categories/${categoryId}/attributes`),
 
   getCoupons: () => api.get('/coupons/admin'),
   createCoupon: (data) => api.post('/coupons', data),

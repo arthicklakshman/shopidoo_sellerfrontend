@@ -3,11 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress,
-  IconButton, Chip, Divider,
+  IconButton, Chip, Divider, RadioGroup, FormControlLabel, Radio, Stack,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { sellerService } from '../../services/seller.service';
@@ -22,8 +23,6 @@ const emptyForm = {
   sku: '',
   category_id: '',
   subcategory_id:'',
-  specificationsText: '',
-
 };
 
 const MAX_PRODUCT_IMAGES = 6;
@@ -37,29 +36,39 @@ const flattenCategories = (list, depth = 0) => {
   return result;
 };
 
-const formatSpecifications = (specifications = []) => (
-  specifications
-    .map((spec) => `${spec.name || ''}: ${spec.value || ''}`.trim())
-    .filter(Boolean)
-    .join('\n')
-);
+const emptyCustomSpec = () => ({ name: '', value: '', is_custom: true });
 
-const parseSpecifications = (text) => (
-  String(text || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const separatorIndex = line.indexOf(':');
-      if (separatorIndex === -1) {
-        return { name: `Specification ${index + 1}`, value: line };
-      }
-      return {
-        name: line.slice(0, separatorIndex).trim(),
-        value: line.slice(separatorIndex + 1).trim(),
-      };
-    })
-    .filter((spec) => spec.name && spec.value)
+const CustomSpecsEditor = ({ customSpecs, onChange, onAdd, onRemove }) => (
+  <Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+      <Typography variant="body2" fontWeight={600}>Custom Attributes</Typography>
+      <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={onAdd}>
+        Add Custom Attribute
+      </Button>
+    </Box>
+    <Stack spacing={1.5}>
+      {customSpecs.map((spec, index) => (
+        <Grid container spacing={1.5} key={index}>
+          <Grid item xs={12} sm={5}>
+            <TextField label="Attribute" value={spec.name || ''} onChange={onChange(index, 'name')} fullWidth />
+          </Grid>
+          <Grid item xs={12} sm={5}>
+            <TextField label="Value" value={spec.value || ''} onChange={onChange(index, 'value')} fullWidth />
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <Button color="error" onClick={() => onRemove(index)} fullWidth sx={{ height: '100%' }}>
+              Remove
+            </Button>
+          </Grid>
+        </Grid>
+      ))}
+      {customSpecs.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          Add one-off details like warranty, package contents, or regional variants.
+        </Typography>
+      )}
+    </Stack>
+  </Box>
 );
 
 const ProductForm = () => {
@@ -70,6 +79,9 @@ const ProductForm = () => {
 
   const [form, setForm] = useState(emptyForm);
   const [categories, setCategories] = useState([]);
+  const [categoryAttributes, setCategoryAttributes] = useState([]);
+  const [attributeValues, setAttributeValues] = useState({});
+  const [customSpecs, setCustomSpecs] = useState([]);
   const [images, setImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -94,15 +106,107 @@ const ProductForm = () => {
             sku: p.sku || '',
             category_id: p.category_id != null ? Number(p.category_id) : '',
             subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
-            specificationsText: formatSpecifications(p.specifications || []),
           });
+          setAttributeValues(
+            (p.specifications || []).reduce((acc, spec) => {
+              if (spec.attribute_id) acc[String(spec.attribute_id)] = spec.value || '';
+              return acc;
+            }, {})
+          );
+          setCustomSpecs((p.specifications || []).filter((spec) => spec.is_custom || !spec.attribute_id));
           setImages(p.images || []);
         }).finally(() => setLoading(false))
       );
     }
   }, [id]);
 
+  useEffect(() => {
+    const categoryId = form.subcategory_id || form.category_id;
+    if (!categoryId) {
+      setCategoryAttributes([]);
+      return;
+    }
+
+    sellerService.getCategoryAttributes(categoryId)
+      .then(({ data }) => setCategoryAttributes(data.data || []))
+      .catch(() => setCategoryAttributes([]));
+  }, [form.category_id, form.subcategory_id]);
+
   const handleChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleAttributeChange = (attributeId) => (e) => {
+    setAttributeValues((prev) => ({ ...prev, [String(attributeId)]: e.target.value }));
+  };
+
+  const handleCustomSpecChange = (index, field) => (e) => {
+    const value = e.target.value;
+    setCustomSpecs((prev) => prev.map((spec, i) => (i === index ? { ...spec, [field]: value } : spec)));
+  };
+
+  const buildSpecifications = () => {
+    const structured = categoryAttributes.map((attribute, index) => ({
+      attribute_id: attribute.id,
+      name: attribute.name,
+      value: attributeValues[String(attribute.id)] || '',
+      input_type: attribute.input_type,
+      unit: attribute.unit || null,
+      is_custom: false,
+      sort_order: attribute.sort_order ?? index,
+    }));
+
+    const custom = customSpecs
+      .map((spec, index) => ({
+        name: String(spec.name || '').trim(),
+        value: String(spec.value || '').trim(),
+        is_custom: true,
+        sort_order: categoryAttributes.length + index,
+      }))
+      .filter((spec) => spec.name && spec.value);
+
+    return [...structured, ...custom].filter((spec) => String(spec.value || '').trim());
+  };
+
+  const renderAttributeField = (attribute) => {
+    const value = attributeValues[String(attribute.id)] || '';
+    const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
+    const options = attribute.options || [];
+
+    if (attribute.input_type === 'select') {
+      return (
+        <FormControl fullWidth required={attribute.is_required}>
+          <InputLabel>{label}</InputLabel>
+          <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)}>
+            <MenuItem value="">Select {attribute.name}</MenuItem>
+            {options.map((option) => <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>)}
+          </Select>
+        </FormControl>
+      );
+    }
+
+    if (attribute.input_type === 'radio') {
+      return (
+        <FormControl required={attribute.is_required}>
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>{label}</Typography>
+          <RadioGroup row value={value} onChange={handleAttributeChange(attribute.id)}>
+            {options.map((option) => (
+              <FormControlLabel key={option.id} value={option.value} control={<Radio size="small" />} label={option.value} />
+            ))}
+          </RadioGroup>
+        </FormControl>
+      );
+    }
+
+    return (
+      <TextField
+        label={label}
+        type={attribute.input_type === 'number' ? 'number' : 'text'}
+        value={value}
+        onChange={handleAttributeChange(attribute.id)}
+        fullWidth
+        required={attribute.is_required}
+      />
+    );
+  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -157,7 +261,7 @@ const ProductForm = () => {
         sku: form.sku.trim() || null,
         category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
-        specifications: parseSpecifications(form.specificationsText),
+        specifications: buildSpecifications(),
       };
 
       let productId = id;
@@ -335,19 +439,35 @@ const ProductForm = () => {
               </Select>
               </FormControl>
                   </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      label="Specifications"
-                      value={form.specificationsText}
-                      onChange={handleChange('specificationsText')}
-                      fullWidth
-                      multiline
-                      minRows={3}
-                      placeholder={'Size: XL, M, L\nMaterial: Cotton'}
-                      helperText="One per line, for example Size: XL, M, L"
-                    />
-                  </Grid>
                 </Grid>
+              </CardContent>
+            </Card>
+
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Specifications</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {categoryAttributes.length > 0 ? (
+                  <Grid container spacing={2}>
+                    {categoryAttributes.map((attribute) => (
+                      <Grid item xs={12} sm={attribute.input_type === 'radio' ? 12 : 6} key={attribute.id}>
+                        {renderAttributeField(attribute)}
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Select a category to load suggested specifications.
+                  </Typography>
+                )}
+
+                <Divider sx={{ my: 2 }} />
+                <CustomSpecsEditor
+                  customSpecs={customSpecs}
+                  onChange={handleCustomSpecChange}
+                  onAdd={() => setCustomSpecs((prev) => [...prev, emptyCustomSpec()])}
+                  onRemove={(index) => setCustomSpecs((prev) => prev.filter((_, i) => i !== index))}
+                />
               </CardContent>
             </Card>
 
