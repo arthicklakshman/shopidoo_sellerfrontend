@@ -6,6 +6,8 @@ import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
 import Support from '../pages/Support/Support';
 // For Inventory
 import Inventory from "../pages/Inventory/Inventory";
+//settings
+import Maintenance from '../pages/Maintenance/Maintenance';
 
 
 const Login = lazy(() => import('../pages/Auth/Login'));
@@ -18,6 +20,8 @@ const Analytics = lazy(() => import('../pages/Analytics/Analytics'));
 const Profile = lazy(() => import('../pages/Profile/Profile'));
 const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
+
+
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
@@ -37,6 +41,7 @@ const AppRouter = () => (
       <Routes>
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+        <Route path="/maintenance" element={<Maintenance />} />
         <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
