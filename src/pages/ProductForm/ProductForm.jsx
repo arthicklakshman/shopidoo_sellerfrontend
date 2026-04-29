@@ -4,6 +4,7 @@ import {
   Box, Grid, Card, CardContent, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress,
   IconButton, Chip, Divider, RadioGroup, FormControlLabel, Radio, Stack,
+  Switch,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -13,6 +14,7 @@ import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { sellerService } from '../../services/seller.service';
 import { getErrorMessage } from '../../utils/getErrorMessage';
+import { getDeliverySummary } from '../../utils/shipping';
 
 const emptyForm = {
   name: '',
@@ -23,6 +25,10 @@ const emptyForm = {
   sku: '',
   category_id: '',
   subcategory_id:'',
+  delivery_type: 'free',
+  delivery_charge: '',
+  free_delivery_min_order: '',
+  express_delivery_charge: '',
 };
 
 const MAX_PRODUCT_IMAGES = 6;
@@ -106,6 +112,10 @@ const ProductForm = () => {
             sku: p.sku || '',
             category_id: p.category_id != null ? Number(p.category_id) : '',
             subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
+            delivery_type: p.delivery_type || 'free',
+            delivery_charge: p.delivery_charge || '',
+            free_delivery_min_order: p.free_delivery_min_order || '',
+            express_delivery_charge: p.express_delivery_charge || '',
           });
           setAttributeValues(
             (p.specifications || []).reduce((acc, spec) => {
@@ -247,6 +257,14 @@ const ProductForm = () => {
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!form.stock_quantity || parseInt(form.stock_quantity) < 0) { setError('Please enter a valid stock quantity.'); return; }
     if ((images.length + newFiles.length) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
+    if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
+      setError('Please enter a delivery charge for fixed delivery.');
+      return;
+    }
+    if (form.delivery_type === 'conditional' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0 || !form.free_delivery_min_order || parseFloat(form.free_delivery_min_order) <= 0)) {
+      setError('Please enter delivery charge and free delivery threshold.');
+      return;
+    }
 
     setSaving(true);
     setError('');
@@ -261,6 +279,10 @@ const ProductForm = () => {
         sku: form.sku.trim() || null,
         category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
+        delivery_type: form.delivery_type,
+        delivery_charge: form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0),
+        free_delivery_min_order: form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null,
+        express_delivery_charge: form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null,
         specifications: buildSpecifications(),
       };
 
@@ -295,6 +317,8 @@ const ProductForm = () => {
       </Box>
     );
   }
+
+  const deliverySummary = getDeliverySummary(form);
 
   return (
     <Box>
@@ -468,6 +492,90 @@ const ProductForm = () => {
                   onAdd={() => setCustomSpecs((prev) => [...prev, emptyCustomSpec()])}
                   onRemove={(index) => setCustomSpecs((prev) => prev.filter((_, i) => i !== index))}
                 />
+              </CardContent>
+            </Card>
+
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Shipping & Delivery</Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.delivery_type === 'free'}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        delivery_type: e.target.checked ? 'free' : 'fixed',
+                        delivery_charge: e.target.checked ? '' : prev.delivery_charge,
+                        free_delivery_min_order: e.target.checked ? '' : prev.free_delivery_min_order,
+                      }))}
+                    />
+                  }
+                  label="Free delivery"
+                  sx={{ mb: 1 }}
+                />
+
+                {form.delivery_type !== 'free' && (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth>
+                        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Delivery Rule</Typography>
+                        <RadioGroup
+                          row
+                          value={form.delivery_type}
+                          onChange={(e) => setForm((prev) => ({ ...prev, delivery_type: e.target.value }))}
+                        >
+                          <FormControlLabel value="fixed" control={<Radio size="small" />} label="Fixed charge" />
+                          <FormControlLabel value="conditional" control={<Radio size="small" />} label="Free above order value" />
+                        </RadioGroup>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Delivery Charge (Rs)"
+                        type="number"
+                        value={form.delivery_charge}
+                        onChange={handleChange('delivery_charge')}
+                        fullWidth
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    </Grid>
+                    {form.delivery_type === 'conditional' && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Free Delivery Above (Rs)"
+                          type="number"
+                          value={form.free_delivery_min_order}
+                          onChange={handleChange('free_delivery_min_order')}
+                          fullWidth
+                          inputProps={{ min: 0, step: 0.01 }}
+                        />
+                      </Grid>
+                    )}
+                  </Grid>
+                )}
+
+                <TextField
+                  label="Express Delivery Charge (Rs)"
+                  type="number"
+                  value={form.express_delivery_charge}
+                  onChange={handleChange('express_delivery_charge')}
+                  fullWidth
+                  sx={{ mt: 2 }}
+                  helperText="Optional faster delivery fee."
+                  inputProps={{ min: 0, step: 0.01 }}
+                />
+
+                <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Typography variant="body2" fontWeight={700} gutterBottom>Shipping Summary Preview</Typography>
+                  <Typography variant="body2" color="text.secondary">Product Rs {Number(form.price || 0).toLocaleString('en-IN')}</Typography>
+                  <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
+                    Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `Rs ${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
+                  </Typography>
+                  <Typography variant="subtitle2" fontWeight={700}>Total Rs {deliverySummary.total.toLocaleString('en-IN')}</Typography>
+                  <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
+                </Box>
               </CardContent>
             </Card>
 
