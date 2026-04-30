@@ -11,7 +11,10 @@ import Maintenance from '../pages/Maintenance/Maintenance';
 
 
 const Login = lazy(() => import('../pages/Auth/Login'));
-const Register = lazy(() => import('../pages/Auth/Register'));
+// const Register = lazy(() => import('../pages/Auth/Register'));
+const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
+const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
+const RegistrationSuccess = lazy(() => import('../pages/Onboarding/RegistrationSuccess'));
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'));
 const Products = lazy(() => import('../pages/Products/Products'));
 const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
@@ -40,7 +43,30 @@ const AppRouter = () => (
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+        {/* <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} /> */}
+        <Route 
+ path="/register" 
+ element={
+   <GuestRoute>
+      <OnboardingEntry />
+   </GuestRoute>
+ } 
+/>
+
+<Route
+ path="/onboarding/:step"
+ element={
+   <GuestRoute>
+      <SellerOnboarding />
+   </GuestRoute>
+ }
+/>
+
+<Route
+ path="/onboarding/success"
+ element={<RegistrationSuccess />}
+/>
+
         <Route path="/maintenance" element={<Maintenance />} />
         <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />

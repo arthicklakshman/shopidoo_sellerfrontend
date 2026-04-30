@@ -1,8 +1,22 @@
 import axios from 'axios';
 
-// 🌟 Changed ONLY the path to point to your new backend '/seller/register' module
-const API_BASE_URL = 'http://localhost:5000/api/v1/seller/register';
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken');
 
+  if (!config.headers) {
+    config.headers = {};
+  }
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// 🌟 Changed ONLY the path to point to your new backend '/seller/register' module
+const API_BASE_URL = '/api/v1/auth';
+const SELLER_API = '/api/v1/seller';
 const onboardingService = {
 
   /**
@@ -29,7 +43,15 @@ const onboardingService = {
    * POST for new registration, PUT for editing existing data
    */
   registerBasicInfo: async (data) => {
-    return await axios.post(`${API_BASE_URL}`, data);
+    return await axios.post(
+ `${API_BASE_URL}/register`,
+ {
+   name: data.fullName,
+    email: data.emailId,
+   password: data.password,
+   role: 'seller'
+ }
+);
   },
 
   updateBasicInfo: async (sellerId, data) => {
@@ -41,7 +63,7 @@ const onboardingService = {
    */
   updateBusinessDetails: async (sellerId, data) => {
     // Note: data should include businessName, storeName, panNumber, etc.
-    return await axios.put(`${API_BASE_URL}/${sellerId}/business`, data);
+    return await axios.put(`${SELLER_API}/${sellerId}/business`, data);
   },
 
   /**
@@ -49,7 +71,7 @@ const onboardingService = {
    */
   updateBankDetails: async (sellerId, data) => {
     // data: accountName, accountNumber, ifscCode, bankProofImage (Base64)
-    return await axios.put(`${API_BASE_URL}/${sellerId}/bank-details`, data);
+    return await axios.put(`${SELLER_API}/${sellerId}/bank-details`, data);
   },
 
   /**
@@ -57,7 +79,7 @@ const onboardingService = {
    */
   updateDocuments: async (sellerId, data) => {
     // data: panCardImage, aadhaarFrontImage, aadhaarBackImage, signatureImage
-    return await axios.put(`${API_BASE_URL}/${sellerId}/documents`, data);
+  return await axios.put(`${SELLER_API}/${sellerId}/documents`, data);
   },
 
   /**
@@ -65,15 +87,15 @@ const onboardingService = {
    */
   updateStoreSetup: async (sellerId, data) => {
     // data: categories (stringified), shippingPreference, pickupAddress, images
-    return await axios.put(`${API_BASE_URL}/${sellerId}/store-setup`, data);
+    return await axios.put(`${SELLER_API}/${sellerId}/store-setup`, data);
   },
 
   /**
    * STEP 5 HELPER: Get Categories from DB
    */
   getCategories: async () => {
-    return await axios.get(`${API_BASE_URL}/categories`);
-  },
+  return await axios.get('/api/v1/categories');
+},
 
   /**
    * FINAL STEP: Complete Onboarding (Final Submit)
@@ -83,7 +105,7 @@ const onboardingService = {
       status: 'pending',
       isRegistered: true
     };
-    return await axios.put(`${API_BASE_URL}/${sellerId}/complete`, finalPayload);
+    return await axios.put(`${SELLER_API}/${sellerId}/complete`, finalPayload);
   }
 };
 

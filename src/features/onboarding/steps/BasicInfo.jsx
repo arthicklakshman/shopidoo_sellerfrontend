@@ -225,8 +225,12 @@ const handleResendOtp = async () => {
           fullName: formData.fullName, mobileNumber: formData.mobileNumber, emailId: formData.emailId,
           password: formData.password, businessType: formData.businessType
         });
-        currentSellerId = response.data.data.id || response.data.data.sellerId;
+        currentSellerId = response.data.data.user.id;
         localStorage.setItem("sellerId", currentSellerId);
+        localStorage.setItem(
+        "accessToken",
+        response.data.data.accessToken
+        );
       }
 
       const updatedStorageData = { ...formData, id: currentSellerId };
