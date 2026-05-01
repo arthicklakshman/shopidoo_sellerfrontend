@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,7 +9,11 @@ import {
 } from '@mui/material';
 
 // ✅ Custom Helper Imports
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
+import {
+  getNotificationPreferencesAPI,
+  updateNotificationPreferencesAPI,
+} from '../../features/settings/settings.service';
 
 const notificationData = [
   { id: 'newOrders', title: 'New Orders', description: 'Get notified when you receive a new order', defaultChecked: true },
@@ -33,6 +37,23 @@ export default function Notifications() {
 
   const [preferences, setPreferences] = useState({ ...savedData });
 
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      try {
+        const response = await getNotificationPreferencesAPI();
+        const dbPreferences = response.data?.notificationPreferences;
+        if (dbPreferences) {
+          setSavedData(dbPreferences);
+          setPreferences(dbPreferences);
+        }
+      } catch (err) {
+        console.error("Failed to load notification preferences", err);
+      }
+    };
+
+    fetchPreferences();
+  }, []);
+
   // ---------------- HANDLERS ----------------
 
   const handleToggle = (id) => {
@@ -49,12 +70,7 @@ export default function Notifications() {
 
   const handleSave = async () => {
     try {
-      console.log("Notification Preferences:", preferences);
-
-      // 🔗 API call here
-      // await saveNotifications(preferences);
-
-      // Save the new state as the truth
+      await updateNotificationPreferencesAPI(preferences);
       setSavedData({ ...preferences });
       setIsEditing(false);
       alert("Preferences saved successfully");

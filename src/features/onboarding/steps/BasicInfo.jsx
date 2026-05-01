@@ -231,6 +231,9 @@ const handleResendOtp = async () => {
         "accessToken",
         response.data.data.accessToken
         );
+        localStorage.setItem("sellerAccessToken", response.data.data.accessToken);
+        localStorage.setItem("sellerRefreshToken", response.data.data.refreshToken);
+        localStorage.setItem("sellerUser", JSON.stringify(response.data.data.user));
       }
 
       const updatedStorageData = { ...formData, id: currentSellerId };

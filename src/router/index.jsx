@@ -8,6 +8,7 @@ import Support from '../pages/Support/Support';
 import Inventory from "../pages/Inventory/Inventory";
 //settings
 import Maintenance from '../pages/Maintenance/Maintenance';
+import Settings from '../pages/Settings/Setting';
 
 
 const Login = lazy(() => import('../pages/Auth/Login'));
@@ -81,6 +82,7 @@ const AppRouter = () => (
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

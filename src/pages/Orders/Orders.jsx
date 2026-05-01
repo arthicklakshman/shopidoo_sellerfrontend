@@ -66,7 +66,7 @@
 //                     <TableRow key={item.id} hover>
 //                       <TableCell><Typography variant="body2" fontWeight={600}>#{item.order?.order_number}</Typography></TableCell>
 //                       <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2">{item.order?.user?.name || '—'}</Typography></TableCell>
+//                       <TableCell><Typography variant="body2">{item.order?.user?.name || 'â€”'}</Typography></TableCell>
 //                       <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
 //                       <TableCell><Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography></TableCell>
 //                       <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
@@ -110,8 +110,149 @@ import { formatDate } from '../../utils/formatDate';
 import OrderStatusChip from '../../components/shared/OrderStatusChip/OrderStatusChip';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
+import { generateInvoice } from '../../utils/generateInvoice';
+import DownloadIcon from '@mui/icons-material/Download';
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import Grid from '@mui/material/Grid';
+import Tooltip from '@mui/material/Tooltip';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import Button from '@mui/material/Button';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned'];
+
+const DELIVERY_COLORS = {
+  delivered: { bg: '#e8f5e9', color: '#2e7d32' },
+  cancelled: { bg: '#fdecea', color: '#c62828' },
+  shipped: { bg: '#e3f2fd', color: '#1565c0' },
+  processing: { bg: '#fff8e1', color: '#f57f17' },
+  confirmed: { bg: '#e8f5e9', color: '#2e7d32' },
+  pending: { bg: '#f5f5f5', color: '#616161' },
+  refunded: { bg: '#f3e5f5', color: '#6a1b9a' },
+};
+
+const StatusBadge = ({ label, colorMap }) => {
+  const style = colorMap[label] || { bg: '#f5f5f5', color: '#616161' };
+  return (
+    <Box component="span" sx={{ px: 1.5, py: 0.4, borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize', bgcolor: style.bg, color: style.color }}>
+      {label}
+    </Box>
+  );
+};
+
+const getNextStatuses = (currentStatus) => {
+  if(currentStatus==="pending") return ["confirmed"];
+  if(currentStatus==="confirmed") return ["processing"];
+  if(currentStatus==="processing") return ["shipped"];
+  if(currentStatus==="shipped") return ["delivered"];
+  return [];
+};
+
+const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
+  const [updating, setUpdating] = useState(false);
+  const dispatch = useDispatch();
+
+  if (!order) return null;
+
+  const handleStatusChange = async (newStatus) => {
+    setUpdating(true);
+    try {
+      await sellerService.updateOrderItemStatus(order.itemId, newStatus);
+      dispatch(showToast({ message: 'Status updated successfully', severity: 'success' }));
+      onStatusUpdate?.();
+      onClose();
+    } catch {
+      dispatch(showToast({ message: 'Failed to update status', severity: 'error' }));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const addressString = typeof order.address === 'string' ? order.address : (order.address ? `${order.address.address_line1 || ''}\n${order.address.city || ''}, ${order.address.state || ''} ${order.address.pincode || ''}` : '-');
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ pb: 0.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>Order Details - {order.orderNumber}</Typography>
+            <Typography variant="body2" color="text.secondary">View and manage order details and status.</Typography>
+          </Box>
+          <IconButton onClick={onClose} size="small"><CloseIcon fontSize="small" /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 2 }}>
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Customer Name</Typography>
+            <Typography variant="body1">{order.customer || '-'}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Product</Typography>
+            <Typography variant="body1">{order.product || '-'}</Typography>
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Order Amount</Typography>
+            <Typography variant="body1" fontWeight={700}>{formatCurrency(Number(order.amount) || 0)}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Quantity</Typography>
+            <Typography variant="body1">{order.quantity ?? '-'}</Typography>
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Delivery Status</Typography>
+            <StatusBadge label={order.status || 'pending'} colorMap={DELIVERY_COLORS} />
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Box sx={{ mb: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1 }}>
+            <LocationOnOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="body1" fontWeight={700}>Shipping Address</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{addressString}</Typography>
+        </Box>
+        <Divider sx={{ mb: 2.5 }} />
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
+            <AccessTimeOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="body1" fontWeight={700}>Order Timeline</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">Order Placed</Typography>
+            <Typography variant="body2" color="text.secondary">{order.createdAt ? formatDate(order.createdAt) : '-'}</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, borderRadius: 2, textTransform: 'none', fontWeight: 600 }} onClick={() => generateInvoice(order.rawItem, true)}>
+            Download Invoice
+          </Button>
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <Select value="" displayEmpty disabled={updating} onChange={(e) => handleStatusChange(e.target.value)} IconComponent={KeyboardArrowDownIcon} sx={{ borderRadius: 2, bgcolor: '#f5f5f5', fontWeight: 600, color: 'text.secondary' }} renderValue={() => 'Update Status'}>
+              {getNextStatuses(order?.status).map((status) => (
+                <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>{status}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const Orders = () => {
   const dispatch = useDispatch();
@@ -124,6 +265,8 @@ const Orders = () => {
   const [monthFilter, setMonthFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -258,7 +401,7 @@ const Orders = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'Update'].map((h) => (
+                {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'Update', 'View'].map((h) => (
                   <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -282,13 +425,13 @@ const Orders = () => {
                     <TableRow key={item.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>
-                         {item.order?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
+                         {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
                         </Typography>
                       </TableCell>
                       <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {item.order?.user?.name || '—'}
+                          {(item.Order || item.order)?.user?.name || 'â€”'}
                         </Typography>
                       </TableCell>
                       <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
@@ -308,6 +451,30 @@ const Orders = () => {
                           </Select>
                         </FormControl>
                       </TableCell>
+                      <TableCell>
+                        <Tooltip title="View Details">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedOrder({
+                                itemId: item.id,
+                                orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
+                                customer: (item.Order || item.order)?.user?.name || '-',
+                                product: item.product?.name || '-',
+                                quantity: item.quantity,
+                                amount: item.total_price,
+                                status: item.status,
+                                createdAt: item.created_at,
+                                address: (item.Order || item.order)?.address,
+                                rawItem: item
+                              });
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))
               }
@@ -320,6 +487,12 @@ const Orders = () => {
           </Box>
         )}
       </Card>
+      <OrderDetailDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        order={selectedOrder}
+        onStatusUpdate={load}
+      />
     </Box>
   );
 };

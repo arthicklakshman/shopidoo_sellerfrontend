@@ -385,7 +385,7 @@ import {
 import StoreIcon from '@mui/icons-material/Store';
 
 // ✅ Custom Helper Imports
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { convertToBase64 } from '../../utils/fileHelpers';
 import { getStoreInfoAPI, updateStoreInfoAPI } from '../../features/settings/settings.service';
 

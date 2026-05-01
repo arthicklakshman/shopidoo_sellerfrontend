@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 
 // ✅ Custom Helper Imports
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
 

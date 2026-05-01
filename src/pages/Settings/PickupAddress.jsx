@@ -246,7 +246,7 @@ import {
 } from '@mui/material';
 
 // ✅ Custom Helper Imports
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { getPickupAddressAPI, updatePickupAddressAPI } from '../../features/settings/settings.service';
 
 const StyledInputLabel = ({ children }) => (

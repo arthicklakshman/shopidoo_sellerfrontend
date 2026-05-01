@@ -40,6 +40,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import CircleIcon from '@mui/icons-material/Circle';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
@@ -57,7 +58,9 @@ const NAV_ITEMS = [
   { label: 'Analytics', icon: BarChartIcon, path: '/analytics' },
   { label: 'Support', icon: SupportAgentIcon, path: '/support' },
   { label: 'Profile', icon: PersonIcon, path: '/profile' },
+  { label: 'Settings', icon: SettingsIcon, path: '/settings' },
 ];
+
 
 const SellerLayout = () => {
   const theme = useTheme();

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('sellerAccessToken') || localStorage.getItem('accessToken');
 
   if (!config.headers) {
     config.headers = {};
@@ -47,7 +47,10 @@ const onboardingService = {
  `${API_BASE_URL}/register`,
  {
    name: data.fullName,
-    email: data.emailId,
+   email: data.emailId,
+   phone: data.mobileNumber,
+   mobileNumber: data.mobileNumber,
+   businessType: data.businessType,
    password: data.password,
    role: 'seller'
  }
@@ -55,7 +58,7 @@ const onboardingService = {
   },
 
   updateBasicInfo: async (sellerId, data) => {
-    return await axios.put(`${API_BASE_URL}/${sellerId}/basic`, data);
+    return await axios.put(`${SELLER_API}/${sellerId}/basic`, data);
   },
 
   /**
