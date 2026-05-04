@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import socket from '../../../services/socket';
@@ -41,6 +42,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import CircleIcon from '@mui/icons-material/Circle';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
@@ -57,6 +59,7 @@ const NAV_ITEMS = [
   { label: 'Coupons', icon: LocalOfferIcon, path: '/coupons' },
   { label: 'Analytics', icon: BarChartIcon, path: '/analytics' },
   { label: 'Support', icon: SupportAgentIcon, path: '/support' },
+  { label: 'Wallet', icon: AccountBalanceWalletIcon, path: '/wallet' },
   { label: 'Profile', icon: PersonIcon, path: '/profile' },
   { label: 'Settings', icon: SettingsIcon, path: '/settings' },
 ];
@@ -94,7 +97,8 @@ const SellerLayout = () => {
 
     if (
       data.type === 'product_status' ||
-      data.type === 'support_reply'
+      data.type === 'support_reply' ||
+      data.type === 'payout_status'
     ) {
       setNotifications((prev) => {
         const exists = prev.some((n) => n.id === data.id);
@@ -112,6 +116,40 @@ const SellerLayout = () => {
     socket.off('new_notification', handleNewNotification);
   };
 }, [user?.id]);
+
+useEffect(() => {
+  if (notificationAnchor) {
+    setNotificationAnchor(null);
+  }
+}, [location.pathname]);
+
+
+useEffect(() => {
+  const handleNotificationRead = (e) => {
+    const id = e.detail;
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === id ? { ...n, is_read: true } : n
+      )
+    );
+  };
+
+  window.addEventListener('notification-read', handleNotificationRead);
+  return () => {
+    window.removeEventListener('notification-read', handleNotificationRead);
+  };
+}, []);
+
+useEffect(() => {
+  const closeMenu = () => {
+    setNotificationAnchor(null);
+  };
+
+  window.addEventListener('close-notification-menu', closeMenu);
+  return () => {
+    window.removeEventListener('close-notification-menu', closeMenu);
+  };
+}, []);
   
   const fetchNotifications = async () => {
   try {
@@ -120,7 +158,8 @@ const SellerLayout = () => {
     const onlyProductNotifications = (res.data.data || []).filter(
       (item) =>
         item.type === 'product_status' ||
-        item.type === 'support_reply'  
+        item.type === 'support_reply' ||
+        item.type === 'payout_status'
     );
 
     setNotifications(onlyProductNotifications);
@@ -132,6 +171,10 @@ const SellerLayout = () => {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const handleOpenNotifications = (event) => {
+    if (notificationAnchor) {
+      setNotificationAnchor(null);
+      return;
+    }
     setNotificationAnchor(event.currentTarget);
   };
 
@@ -161,6 +204,14 @@ const SellerLayout = () => {
         item.type === 'product_approval'
       ) {
         navigate(`/products?highlight=${item.reference_id}`);
+      }
+
+      if (item.type === 'support_reply') {
+        navigate(`/support?highlight=${item.reference_id}`);
+      }
+
+      if (item.type === 'payout_status') {
+        navigate('/wallet');
       }
 
       handleCloseNotifications();
@@ -378,9 +429,11 @@ const SellerLayout = () => {
             </Tooltip>
 
             <Menu
+              key={location.pathname}
               anchorEl={notificationAnchor}
               open={Boolean(notificationAnchor)}
               onClose={handleCloseNotifications}
+              keepMounted={false}
               anchorOrigin={{
                 vertical: 'bottom',
                 horizontal: 'right',
@@ -515,28 +568,29 @@ const SellerLayout = () => {
                 )}
               </Box>
 
-              <Box
-                  onClick={() => {
-                setNotificationAnchor(null);
+             
 
-                setTimeout(() => {
-                  navigate('/notifications');
-                }, 100);
+
+
+            <Box
+              onClick={() => {
+                handleCloseNotifications();
+                navigate('/notifications');
               }}
-                sx={{
-                  py: 1.5,
-                  textAlign: 'center',
-                  color: 'rgb(76, 175, 80)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  borderTop: '1px solid #eee',
-                  '&:hover': {
-                    bgcolor: '#f5fff5',
-                  },
-                }}
-              >
-                View All Notifications
-              </Box>
+              sx={{
+                py: 1.5,
+                textAlign: 'center',
+                color: 'rgb(76, 175, 80)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                borderTop: '1px solid #eee',
+                '&:hover': {
+                  bgcolor: '#f5fff5',
+                },
+              }}
+            >
+              View All Notifications
+            </Box>
             </Menu>
 
             <Tooltip title="Account">

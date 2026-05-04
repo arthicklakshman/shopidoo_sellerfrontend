@@ -38,7 +38,19 @@ export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, { rejectWithVa
 const authSlice = createSlice({
   name: 'auth',
   initialState: { user: getUserFromStorage(), isAuthenticated: !!localStorage.getItem('sellerAccessToken'), loading: false, error: null },
-  reducers: { clearError: (state) => { state.error = null; } },
+  reducers: { 
+    clearError: (state) => { state.error = null; },
+    // 🌟 ADD THIS: Required by BasicInfo.jsx to sync state after Step 1
+    setCredentials: (state, action) => {
+      const { user, token } = action.payload;
+      state.user = user;
+      state.isAuthenticated = true;
+      if (token) {
+        localStorage.setItem('sellerAccessToken', token);
+      }
+      localStorage.setItem('sellerUser', JSON.stringify(user));
+    }
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loginSeller.pending, (state) => { state.loading = true; state.error = null; })
@@ -59,5 +71,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, setCredentials } = authSlice.actions;
 export default authSlice.reducer;

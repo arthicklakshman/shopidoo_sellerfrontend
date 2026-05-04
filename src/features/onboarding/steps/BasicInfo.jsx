@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
 import {
   Box, Typography, Card, CardContent, Grid, TextField, Button,
   InputAdornment, IconButton, MenuItem, InputLabel, FormHelperText
@@ -17,13 +17,15 @@ import {
   validateRequired, validateEmail, validateMobile, validatePassword
 } from '../../../utils/validation';
 
-import onboardingService from '../../../features/onboarding/onboarding.service';
+import onboardingService from '../onboarding.service';
 
 // Reusable Components
-import StepWrapper from '../../../features/onboarding/components/StepWrapper'; 
-import NavigationButtons from '../../../features/onboarding/components/NavigationButtons'; 
+import { setSellerId } from '../onboardingSlice';
+import { setCredentials } from '../../auth/authSlice'; 
+import StepWrapper from '../components/StepWrapper'; 
+import NavigationButtons from '../components/NavigationButtons'; 
 import GradientButton from '../../../components/shared/GradientButton/GradientButton';
-import OtpModal from '../../../features/onboarding/components/OtpModal';
+import OtpModal from '../components/OtpModal';
 
 const StyledInputLabel = ({ children, required }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -62,6 +64,7 @@ const VerifyButton = ({ onClick, isVerified }) => (
 );
 
 export default function BasicInformation({ onNext, sellerId }) {
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -69,10 +72,23 @@ export default function BasicInformation({ onNext, sellerId }) {
   const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
 
   const [formData, setFormData] = useState(() => {
-    const savedData = localStorage.getItem('onboarding_step_1');
-    return savedData ? JSON.parse(savedData) : {
-      fullName: '', mobileNumber: '', emailId: '', password: '', confirmPassword: '', businessType: ''
-    };
+    try {
+      const savedData = localStorage.getItem('onboarding_step_1');
+      const parsed = savedData ? JSON.parse(savedData) : null;
+      return {
+        fullName: parsed?.fullName || '',
+        mobileNumber: parsed?.mobileNumber || '',
+        emailId: parsed?.emailId || '',
+        password: '',
+        confirmPassword: '',
+        businessType: parsed?.businessType || ''
+      };
+    } catch (error) {
+      console.error("Failed to parse onboarding_step_1", error);
+      return {
+        fullName: '', mobileNumber: '', emailId: '', password: '', confirmPassword: '', businessType: ''
+      };
+    }
   });
 
   const [errors, setErrors] = useState({});
@@ -213,32 +229,82 @@ const handleResendOtp = async () => {
     try {
       setIsLoading(true);
       setApiError('');
-      let currentSellerId = sellerId;
 
-      if (sellerId) {
-        await onboardingService.updateBasicInfo(sellerId, {
-          fullName: formData.fullName, mobileNumber: formData.mobileNumber, emailId: formData.emailId,
-          businessType: formData.businessType, ...(formData.password && { password: formData.password })
+      let response;
+      const hasToken = !!localStorage.getItem('sellerAccessToken');
+
+      // If we have a sellerId AND a token, we can perform an update.
+      // Otherwise, we MUST treat it as a registration to get fresh tokens.
+      if (sellerId && hasToken) {
+        response = await onboardingService.updateBasicInfo(sellerId, {
+          fullName: formData.fullName,
+          mobileNumber: formData.mobileNumber,
+          emailId: formData.emailId,
+          businessType: formData.businessType,
+          ...(formData.password && { password: formData.password })
         });
       } else {
-        const response = await onboardingService.registerBasicInfo({
-          fullName: formData.fullName, mobileNumber: formData.mobileNumber, emailId: formData.emailId,
-          password: formData.password, businessType: formData.businessType
-        });
-        currentSellerId = response.data.data.user.id;
-        localStorage.setItem("sellerId", currentSellerId);
-        localStorage.setItem(
-        "accessToken",
-        response.data.data.accessToken
-        );
-        localStorage.setItem("sellerAccessToken", response.data.data.accessToken);
-        localStorage.setItem("sellerRefreshToken", response.data.data.refreshToken);
-        localStorage.setItem("sellerUser", JSON.stringify(response.data.data.user));
+        try {
+          response = await onboardingService.registerBasicInfo({
+            fullName: formData.fullName,
+            mobileNumber: formData.mobileNumber,
+            emailId: formData.emailId,
+            password: formData.password,
+            businessType: formData.businessType
+          });
+        } catch (regErr) {
+          // If the user already exists (409 Conflict), try to log them in with the password they provided
+          if (regErr.response?.status === 409) {
+            try {
+              const loginResp = await api.post('/auth/login', { 
+                email: formData.emailId, 
+                password: formData.password,
+                role: 'seller'
+              });
+              response = loginResp;
+            } catch (loginErr) {
+              // If login also fails, throw the original registration error or a custom one
+              throw new Error("This email is already registered. Please check your password or use the Login page.");
+            }
+          } else {
+            throw regErr;
+          }
+        }
       }
 
-      const updatedStorageData = { ...formData, id: currentSellerId };
-      localStorage.setItem('onboarding_step_1', JSON.stringify(updatedStorageData));
-      onNext(currentSellerId); 
+      const respData = response?.data?.data || response?.data;
+      const userData = respData?.user;
+      const accessToken = respData?.accessToken || respData?.token;
+      const refreshToken = respData?.refreshToken;
+
+      // If we got tokens (from registration or login), sync them
+      if (userData && accessToken) {
+        const currentSellerId = userData.id || userData.sellerId;
+
+        // Persist to LocalStorage
+        localStorage.setItem("sellerId", currentSellerId);
+        localStorage.setItem("sellerAccessToken", accessToken);
+        localStorage.setItem("sellerRefreshToken", refreshToken || '');
+        localStorage.setItem("sellerUser", JSON.stringify(userData));
+        
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // Sync Redux State
+        if (dispatch) {
+          dispatch(setSellerId(currentSellerId));
+          dispatch(setCredentials({
+            user: { ...userData, role: userData.role || 'seller' },
+            token: accessToken
+          }));
+        }
+        
+        onNext(currentSellerId);
+      } else {
+        // If it was just an update and no new tokens were returned, 
+        // we assume the existing session is still valid.
+        onNext(sellerId);
+      }
 
     } catch (err) {
       setApiError(err.response?.data?.message || 'Server connection failed.');

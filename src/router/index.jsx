@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import PageLoader from '../components/common/PageLoader/PageLoader';
 import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
@@ -22,6 +22,7 @@ const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
 const Orders = lazy(() => import('../pages/Orders/Orders'));
 const Analytics = lazy(() => import('../pages/Analytics/Analytics'));
 const Profile = lazy(() => import('../pages/Profile/Profile'));
+const Wallet       = lazy(() => import('../pages/Wallet/Wallet'));
 const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
 
@@ -31,12 +32,23 @@ const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
+  
   return children;
 };
 
 const GuestRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((s) => s.auth);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+  const { isAuthenticated, user } = useSelector((s) => s.auth || {});
+  const location = useLocation();
+  
+  // 🌟 REVISED: Only redirect if we are on Login/Register and ALREADY registered.
+  // This completely stays out of the way of the onboarding flow.
+  const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
+  
+  if (isAuthenticated && user?.isRegistered && isAuthPath) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children || null;
 };
 
 const AppRouter = () => (
@@ -46,27 +58,31 @@ const AppRouter = () => (
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         {/* <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} /> */}
         <Route 
- path="/register" 
- element={
-   <GuestRoute>
-      <OnboardingEntry />
-   </GuestRoute>
- } 
-/>
+          path="/register" 
+          element={
+            <GuestRoute>
+                <OnboardingEntry />
+            </GuestRoute>
+          } 
+          />
 
-<Route
- path="/onboarding/:step"
- element={
-   <GuestRoute>
-      <SellerOnboarding />
-   </GuestRoute>
- }
-/>
+          <Route
+          path="/onboarding/success"
+          element={<RegistrationSuccess />}
+          />
 
-<Route
- path="/onboarding/success"
- element={<RegistrationSuccess />}
-/>
+          {/* 🌟 ADDED: Handle the base /onboarding URL by redirecting to Step 1 */}
+          <Route 
+            path="/onboarding" 
+            element={<Navigate to="/onboarding/1" replace />} 
+          />
+
+          <Route
+          path="/onboarding/:step"
+          element={
+              <SellerOnboarding />
+          }
+          />
 
         <Route path="/maintenance" element={<Maintenance />} />
         <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
@@ -80,6 +96,7 @@ const AppRouter = () => (
           <Route path="/support" element={<Support />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/inventory" element={<Inventory />} />
+           <Route path="/wallet" element={<Wallet />} />
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
