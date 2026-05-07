@@ -418,9 +418,9 @@ const ProductForm = () => {
                         {categories.length === 0 ? (
                           <MenuItem disabled value="">No categories available</MenuItem>
                         ) : (
-                          categories.map((c) => (
-                            <MenuItem key={c.id} value={c.id} sx={{ pl: 2 + c.depth * 2 }}>
-                              {c.depth > 0 ? `↳ ${c.name}` : c.name}
+                          categories.filter(c => !c.parent_id).map((c) => (
+                            <MenuItem key={c.id} value={c.id}>
+                              {c.name}
                             </MenuItem>
                           ))
                         )}
