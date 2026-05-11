@@ -38,6 +38,7 @@ export const sellerService = {
     api.patch(`/seller/orders/${itemId}/status`, { status }),
   getCategories: () => api.get('/categories'),
   getCategoryAttributes: (categoryId) => api.get(`/categories/${categoryId}/attributes`),
+  getProduct: (id) => api.get(`/products/${id}`),
 
   getCoupons: () => api.get('/coupons/admin'),
   createCoupon: (data) => api.post('/coupons', data),
@@ -48,5 +49,9 @@ export const sellerService = {
     api.patch('/products/seller/products/toggle-visibility'),
   toggleProductVisibility: (id) =>
     api.patch(`/products/${id}/toggle-visibility`),
- 
+  
+  uploadImage: (formData) =>
+    api.post('/uploads/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };

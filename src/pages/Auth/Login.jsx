@@ -33,7 +33,7 @@ const Login = () => {
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 2 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', maxWidth: 420 }}>
         <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <StorefrontIcon color="primary" sx={{ fontSize: 48 }} />
+          <StorefrontIcon sx={{ fontSize: 48, color: '#0FB9B1' }} />
           <Typography variant="h5" fontWeight={800}>Seller Portal</Typography>
           <Typography color="text.secondary" variant="body2">Sign in to manage your store</Typography>
         </Box>
@@ -69,7 +69,22 @@ const Login = () => {
                   ),
                 }}
               />
-              <Button type="submit" variant="contained" fullWidth size="large" disabled={loading}>
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={loading}
+                sx={{
+                  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                  color: '#000',
+                  fontWeight: 700,
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    opacity: 0.9,
+                  },
+                }}
+              >
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </Box>
@@ -78,7 +93,7 @@ const Login = () => {
 
             <Typography variant="body2" align="center" color="text.secondary">
               New seller?{' '}
-              <Link component={RouterLink} to="/register" fontWeight={600}>
+              <Link component={RouterLink} to="/register" fontWeight={600} sx={{ color: '#0B8457' }}>
                 Create an account
               </Link>
             </Typography>

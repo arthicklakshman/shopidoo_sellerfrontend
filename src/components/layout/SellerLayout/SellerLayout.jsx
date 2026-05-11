@@ -317,7 +317,9 @@ useEffect(() => {
             sx={{
               width: 36,
               height: 36,
-              bgcolor: 'primary.main',
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 700,
               fontSize: 14,
             }}
           >
@@ -473,8 +475,10 @@ useEffect(() => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'rgb(76, 175, 80)',
-                      fontWeight: 700,
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 800,
                       cursor: 'pointer',
                     }}
                     onClick={async () => {
@@ -529,7 +533,7 @@ useEffect(() => {
                           <CircleIcon
                             sx={{
                               fontSize: 10,
-                              color: 'rgb(76, 175, 80)',
+                              color: '#0FB9B1',
                               mt: 0.7,
                             }}
                           />
@@ -580,8 +584,10 @@ useEffect(() => {
               sx={{
                 py: 1.5,
                 textAlign: 'center',
-                color: 'rgb(76, 175, 80)',
-                fontWeight: 700,
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 800,
                 cursor: 'pointer',
                 borderTop: '1px solid #eee',
                 '&:hover': {
@@ -603,7 +609,9 @@ useEffect(() => {
                   sx={{
                     width: 32,
                     height: 32,
-                    bgcolor: 'primary.main',
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    color: '#000',
+                    fontWeight: 700,
                     fontSize: 14,
                   }}
                 >
