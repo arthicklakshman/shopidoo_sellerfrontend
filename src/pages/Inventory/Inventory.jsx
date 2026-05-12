@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import {
@@ -19,6 +18,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  useTheme,
+  alpha
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import WarningIcon from "@mui/icons-material/Warning";
@@ -27,6 +28,7 @@ import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 const LOW_STOCK_DEFAULT = 10;
 
 const Inventory = () => {
+  const theme = useTheme();
   const [data, setData] = useState({
     totalProducts: 0,
     lowStockCount: 0,
@@ -81,11 +83,9 @@ const Inventory = () => {
     }
   };
 
-  // 🔥 NEW: RESTOCK FUNCTION (NO UI CHANGE)
   const handleRestock = async (product) => {
     try {
       const increaseBy = product.low_stock_alert || LOW_STOCK_DEFAULT;
-
       const newQuantity = product.stock_quantity + increaseBy;
 
       await api.patch(`/products/${product.id}/stock`, {
@@ -122,7 +122,7 @@ const Inventory = () => {
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight="bold">
+      <Typography variant="h5" fontWeight="bold" color="text.primary">
         Inventory Management
       </Typography>
       <Typography color="text.secondary" mb={3}>
@@ -139,11 +139,11 @@ const Inventory = () => {
 
       <Grid container spacing={2} mb={3}>
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Total Products</Typography>
-                <Typography variant="h5">{data.totalProducts}</Typography>
+                <Typography color="text.secondary" variant="body2">Total Products</Typography>
+                <Typography variant="h5" color="text.primary" fontWeight={700}>{data.totalProducts}</Typography>
               </Box>
               <Inventory2Icon color="success" />
             </CardContent>
@@ -151,11 +151,11 @@ const Inventory = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Low Stock</Typography>
-                <Typography variant="h5" color="warning.main">
+                <Typography color="text.secondary" variant="body2">Low Stock</Typography>
+                <Typography variant="h5" color="warning.main" fontWeight={700}>
                   {data.lowStockCount}
                 </Typography>
               </Box>
@@ -165,11 +165,11 @@ const Inventory = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Out of Stock</Typography>
-                <Typography variant="h5" color="error.main">
+                <Typography color="text.secondary" variant="body2">Out of Stock</Typography>
+                <Typography variant="h5" color="error.main" fontWeight={700}>
                   {data.outOfStockCount}
                 </Typography>
               </Box>
@@ -179,16 +179,20 @@ const Inventory = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
         <Box display="flex" justifyContent="space-between" mb={2}>
-          <Typography fontWeight="bold">Stock Levels</Typography>
+          <Typography fontWeight="bold" color="text.primary">Stock Levels</Typography>
          <Button
             variant="outlined"
             onClick={() => setOpenBulk(true)}
             sx={{
-              bgcolor: '#fff',
-              color: 'rgb(76, 175, 80)',
-              borderColor: 'rgb(76, 175, 80)',
+              bgcolor: 'background.paper',
+              color: 'success.main',
+              borderColor: 'success.main',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.success.main, 0.05),
+                borderColor: 'success.main',
+              }
             }}
           >
             Bulk Update
@@ -198,12 +202,12 @@ const Inventory = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>SKU</TableCell>
-              <TableCell>Stock</TableCell>
-              <TableCell>Alert</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="center">Update Stock</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Name</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>SKU</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Stock</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Alert</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Status</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 700, color: 'text.secondary' }}>Update Stock</TableCell>
             </TableRow>
           </TableHead>
 
@@ -216,28 +220,29 @@ const Inventory = () => {
 
               return (
                 <TableRow key={p.id}>
-                  <TableCell>{p.name}</TableCell>
-                  <TableCell>{p.sku || "-"}</TableCell>
+                  <TableCell color="text.primary">{p.name}</TableCell>
+                  <TableCell color="text.secondary">{p.sku || "-"}</TableCell>
 
                   <TableCell>
                     <Typography
+                      fontWeight={600}
                       sx={{
                         color:
                           p.stock_quantity === 0
-                            ? "red"
+                            ? "error.main"
                             : p.stock_quantity <= (p.low_stock_alert || LOW_STOCK_DEFAULT)
-                            ? "orange"
-                            : "green",
+                            ? "warning.main"
+                            : "success.main",
                       }}
                     >
                       {p.stock_quantity} units
                     </Typography>
                   </TableCell>
 
-                  <TableCell>{p.low_stock_alert || LOW_STOCK_DEFAULT}</TableCell>
+                  <TableCell color="text.secondary">{p.low_stock_alert || LOW_STOCK_DEFAULT}</TableCell>
 
                   <TableCell>
-                    <Chip label={status.label} color={status.color} size="small" />
+                    <Chip label={status.label} color={status.color} size="small" sx={{ fontWeight: 600 }} />
                   </TableCell>
 
                   <TableCell align="center">
@@ -250,9 +255,13 @@ const Inventory = () => {
                         }
                         style={{
                           width: "80px",
-                          padding: "6px",
-                          borderRadius: "6px",
-                          border: "1px solid #ccc",
+                          padding: "8px",
+                          borderRadius: "8px",
+                          border: "1px solid",
+                          borderColor: theme.palette.divider,
+                          backgroundColor: theme.palette.action.hover,
+                          color: theme.palette.text.primary,
+                          outline: 'none'
                         }}
                       />
 
@@ -263,9 +272,12 @@ const Inventory = () => {
                         sx={{
                           background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                           color: '#000',
+                          fontWeight: 600,
+                          textTransform: 'none',
                           '&:hover': {
                             background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                             color: '#000',
+                            boxShadow: '0 4px 12px rgba(15, 185, 177, 0.3)'
                           },
                         }}
                       >
@@ -281,62 +293,91 @@ const Inventory = () => {
       </Paper>
 
       {/* LOW STOCK */}
-      <Paper sx={{ p: 2, borderLeft: "4px solid orange" }}>
-        <Typography fontWeight="bold" mb={2}>
-          ⚠ Low Stock Alerts
-        </Typography>
+      {lowStockProducts.length > 0 && (
+        <Paper sx={{ p: 2, borderLeft: "4px solid", borderColor: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.05), boxShadow: 'none' }}>
+          <Typography fontWeight="bold" mb={2} color="warning.main" display="flex" alignItems="center" gap={1}>
+            <WarningIcon fontSize="small" /> Low Stock Alerts
+          </Typography>
 
-        {lowStockProducts.map((p) => (
-          <Box
-            key={p.id}
-            sx={{
-              p: 2,
-              mb: 1,
-              bgcolor: "#fff3cd",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box>
-              <Typography>{p.name}</Typography>
-              <Typography variant="caption">
-                Only {p.stock_quantity} units remaining
-              </Typography>
-            </Box>
-
-            {/* 🔥 ONLY CHANGE HERE */}
-            <Button onClick={() => handleRestock(p)}>Restock</Button>
-          </Box>
-        ))}
-      </Paper>
-
-      <Dialog open={openBulk} onClose={() => setOpenBulk(false)}>
-        <DialogTitle>Bulk Update Stock</DialogTitle>
-
-        <DialogContent>
-          {data.products.map((p) => (
-            <TextField
+          {lowStockProducts.map((p) => (
+            <Box
               key={p.id}
-              label={p.name}
-              type="number"
-              fullWidth
-              margin="dense"
-              onChange={(e) =>
-                setBulkData({
-                  ...bulkData,
-                  [p.id]: e.target.value,
-                })
-              }
-            />
+              sx={{
+                p: 2,
+                mb: 1,
+                bgcolor: 'background.paper',
+                borderRadius: '8px',
+                border: 1,
+                borderColor: alpha(theme.palette.warning.main, 0.2),
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: 'center'
+              }}
+            >
+              <Box>
+                <Typography fontWeight={600} color="text.primary">{p.name}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Only {p.stock_quantity} units remaining (Alert at {p.low_stock_alert || LOW_STOCK_DEFAULT})
+                </Typography>
+              </Box>
+
+              <Button 
+                variant="contained"
+                size="small"
+                onClick={() => handleRestock(p)}
+                sx={{
+                   bgcolor: 'warning.main',
+                   color: '#fff',
+                   textTransform: 'none',
+                   fontWeight: 600,
+                   '&:hover': { bgcolor: 'warning.dark' }
+                }}
+              >
+                Restock
+              </Button>
+            </Box>
+          ))}
+        </Paper>
+      )}
+
+      <Dialog open={openBulk} onClose={() => setOpenBulk(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: 'text.primary' }}>Bulk Update Stock</DialogTitle>
+        <DialogContent dividers>
+          {data.products.map((p) => (
+            <Box key={p.id} sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" mb={1}>{p.name}</Typography>
+              <TextField
+                type="number"
+                fullWidth
+                size="small"
+                placeholder="Enter new quantity"
+                onChange={(e) =>
+                  setBulkData({
+                    ...bulkData,
+                    [p.id]: e.target.value,
+                  })
+                }
+              />
+            </Box>
           ))}
 
           <Button
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': {
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                color: '#000',
+              }
+            }}
             variant="contained"
             onClick={handleBulkUpdate}
           >
-            Update All
+            Update All Stock
           </Button>
         </DialogContent>
       </Dialog>

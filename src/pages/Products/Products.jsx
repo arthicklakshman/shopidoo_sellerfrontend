@@ -49,19 +49,21 @@ const STATUS_STYLES = {
 const tableHeaderCellSx = {
   fontWeight: 500,
   fontSize: 13,
-  color: '#475467',
-  borderBottom: '1px solid #EAECF0',
+  color: 'text.secondary',
+  borderBottom: 1,
+  borderColor: 'divider',
   py: 1.8,
   px: 2,
   whiteSpace: 'nowrap',
 };
 
 const tableBodyCellSx = {
-  borderBottom: '1px solid #F2F4F7',
+  borderBottom: 1,
+  borderColor: 'divider',
   py: 1.4,
   px: 2,
   fontSize: 13,
-  color: '#101828',
+  color: 'text.primary',
   verticalAlign: 'middle',
 };
 
@@ -268,7 +270,7 @@ const Products = () => {
     <Box
       sx={{
         minHeight: '100%',
-        bgcolor: '#F5F7FB',
+        bgcolor: 'background.default',
         mx: { xs: -2, md: -3 },
         my: { xs: -2, md: -3 },
         px: { xs: 2, md: 3 },
@@ -278,17 +280,18 @@ const Products = () => {
       <Box
         sx={{
           position: 'relative',
-          bgcolor: '#F7F8FC',
-          border: '1px solid #EAECF0',
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
           borderRadius: '10px 10px 0 0',
           px: { xs: 2, md: 3 },
           py: { xs: 2.25, md: 2.5 },
         }}
       >
-        <Typography sx={{ fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1, color: '#101828', mb: 0.6 }}>
+        <Typography sx={{ fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1, color: 'text.primary', mb: 0.6 }}>
           Products Management
         </Typography>
-        <Typography sx={{ fontSize: 14, color: '#667085', fontWeight: 400 }}>
+        <Typography sx={{ fontSize: 14, color: 'text.secondary', fontWeight: 400 }}>
           Manage your products and track admin approval status
         </Typography>
         <Box
@@ -301,7 +304,7 @@ const Products = () => {
             gap: 1,
           }}
         >
-          <Typography sx={{ fontSize: 13, color: '#667085', fontWeight: 500 }}>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary', fontWeight: 500 }}>
             Show To Users
           </Typography>
           <Switch
@@ -317,9 +320,11 @@ const Products = () => {
         sx={{
           borderRadius: '0 0 18px 18px',
           boxShadow: 'none',
-          border: '1px solid #EAECF0',
+          border: 1,
+          borderColor: 'divider',
           borderTop: 'none',
           overflow: 'hidden',
+          bgcolor: 'background.paper',
         }}
       >
         <Box
@@ -335,13 +340,13 @@ const Products = () => {
           }}
         >
           <Box>
-            <Typography sx={{ fontSize: 24, fontWeight: 400, color: '#101828', mb: 0.25 }}>
+            <Typography sx={{ fontSize: 24, fontWeight: 400, color: 'text.primary', mb: 0.25 }}>
               My Products
             </Typography>
-            <Typography sx={{ fontSize: 13, color: '#98A2B3' }}>
+            <Typography sx={{ fontSize: 13, color: 'text.disabled' }}>
               {pagination.totalItems || products.length || 0} products found
             </Typography>
-            <Typography sx={{ fontSize: 12, color: '#667085', mt: 0.5 }}>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>
               New seller products go to admin as pending. Only approved products appear in the user frontend.
             </Typography>
           </Box>
@@ -361,24 +366,24 @@ const Products = () => {
               sx={{
                 minWidth: { xs: '100%', md: 280 },
                 '& .MuiInputBase-input::placeholder': {
-                  color: '#98A2B3',
+                  color: 'text.disabled',
                   opacity: 1,
                 },
                 '& .MuiOutlinedInput-root': {
                   height: 40,
                   borderRadius: '8px',
-                  bgcolor: '#F8FAFC',
-                  color: '#101828',
+                  bgcolor: 'background.default',
+                  color: 'text.primary',
                   fontSize: 13,
                   '& fieldset': {
-                    borderColor: '#EAECF0',
+                    borderColor: 'divider',
                   },
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchRoundedIcon sx={{ color: '#98A2B3', fontSize: 18 }} />
+                    <SearchRoundedIcon sx={{ color: 'text.disabled', fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
@@ -397,11 +402,11 @@ const Products = () => {
                 sx={{
                   height: 40,
                   borderRadius: '8px',
-                  bgcolor: '#F8FAFC',
-                  color: '#344054',
+                  bgcolor: 'background.default',
+                  color: 'text.primary',
                   fontSize: 13,
                   '& .MuiSelect-select': { py: 1 },
-                  '& fieldset': { borderColor: '#EAECF0' },
+                  '& fieldset': { borderColor: 'divider' },
                 }}
               >
                 <MenuItem value="">All Categories</MenuItem>
@@ -424,11 +429,11 @@ const Products = () => {
                 sx={{
                   height: 40,
                   borderRadius: '8px',
-                  bgcolor: '#F8FAFC',
-                  color: '#344054',
+                  bgcolor: 'background.default',
+                  color: 'text.primary',
                   fontSize: 13,
                   '& .MuiSelect-select': { py: 1 },
-                  '& fieldset': { borderColor: '#EAECF0' },
+                  '& fieldset': { borderColor: 'divider' },
                 }}
               >
                 <MenuItem value="">All Status</MenuItem>
@@ -453,7 +458,7 @@ const Products = () => {
                 '& .MuiOutlinedInput-root':{
                     height:40,
                     borderRadius:'8px',
-                    bgcolor:'#F8FAFC'
+                    bgcolor:'background.default'
                 }
                 }}
                 />
@@ -515,7 +520,7 @@ const Products = () => {
                     hover
                     sx={{
                       '&:last-child td': { borderBottom: 0 },
-                      '&:hover': { bgcolor: '#FAFBFC' },
+                      '&:hover': { bgcolor: 'action.hover' },
                     }}
                   >
 
@@ -536,10 +541,10 @@ const Products = () => {
                           {product.name?.[0]}
                         </Avatar>
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontSize: 14, fontWeight: 500, color: '#101828' }} noWrap>
+                          <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary' }} noWrap>
                             {product.name}
                           </Typography>
-                          <Typography sx={{ mt: 0.25, fontSize: 13, color: '#667085' }}>
+                          <Typography sx={{ mt: 0.25, fontSize: 13, color: 'text.secondary' }}>
                             {getProductCode(product)}
                           </Typography>
                         </Box>
@@ -547,23 +552,23 @@ const Products = () => {
                     </TableCell>
 
                     <TableCell sx={tableBodyCellSx}>
-                      <Typography sx={{ fontSize: 13, color: '#344054' }}>{product.category?.name || '-'}</Typography>
+                      <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{product.category?.name || '-'}</Typography>
                       {product.subcategory?.name && (
-                        <Typography sx={{ mt: 0.25, fontSize: 12, color: '#667085' }}>
+                        <Typography sx={{ mt: 0.25, fontSize: 12, color: 'text.secondary' }}>
                           {product.subcategory.name}
                         </Typography>
                       )}
                     </TableCell>
 
                     <TableCell sx={tableBodyCellSx}>
-                      <Typography sx={{ fontSize: 13, color: '#344054' }}>{formatCurrency(product.price)}</Typography>
+                      <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{formatCurrency(product.price)}</Typography>
                     </TableCell>
 
                     <TableCell sx={tableBodyCellSx}>
                       <Typography
                         sx={{
                           fontSize: 13,
-                          color: product.stock_quantity > 0 ? '#667085' : '#D92D20',
+                          color: product.stock_quantity > 0 ? 'text.secondary' : 'error.main',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -590,7 +595,7 @@ const Products = () => {
                         >
                           {STATUS_STYLES[product.admin_status || 'pending'].label.toLowerCase()}
                         </Box>
-                        <Typography sx={{ fontSize: 11, color: '#98A2B3' }}>
+                        <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
                           {product.admin_status === 'approved' && product.is_active
                             ? 'Visible to users'
                             : product.admin_status === 'approved' && !product.is_active
@@ -625,7 +630,7 @@ const Products = () => {
                             }
                           />
                         </Box>
-                        <Typography sx={{ fontSize: 11, color: '#98A2B3' }}>
+                        <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
                           {!allProductsVisible
                             ? 'Turn ON main button first'
                             : product.admin_status !== 'approved'
@@ -643,7 +648,7 @@ const Products = () => {
                           <IconButton
                             size="small"
                             onClick={() => navigate(`/products/${product.id}/edit`)}
-                            sx={{ color: '#344054' }}
+                            sx={{ color: 'text.primary' }}
                           >
                             <EditOutlinedIcon sx={{ fontSize: 18 }} />
                           </IconButton>

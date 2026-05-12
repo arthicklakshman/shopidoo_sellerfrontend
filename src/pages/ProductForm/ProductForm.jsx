@@ -125,13 +125,48 @@ const groupFashionVariants = (flatVariants = []) => {
   return Array.from(groups.values());
 };
 
-const flattenCategories = (list, depth = 0) => {
+const flattenCategories = (list, depth = 0, parent = null) => {
   const result = [];
   for (const cat of list) {
-    result.push({ id: cat.id, name: cat.name, parent_id: cat.parent_id ?? null, depth });
-    if (cat.children?.length) result.push(...flattenCategories(cat.children, depth + 1));
+    const flatCategory = {
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      category_type: cat.category_type,
+      parent_id: cat.parent_id ?? parent?.id ?? null,
+      parent_name: parent?.name || null,
+      parent_slug: parent?.slug || null,
+      parent_category_type: parent?.category_type || null,
+      depth,
+    };
+    result.push(flatCategory);
+    if (cat.children?.length) result.push(...flattenCategories(cat.children, depth + 1, flatCategory));
   }
   return result;
+};
+
+const normalizeCategoryText = (value) => String(value || '').toLowerCase().trim();
+
+const categoryHasAny = (category, matchers) => {
+  const haystack = [
+    category?.category_type,
+    category?.name,
+    category?.slug,
+    category?.parent_category_type,
+    category?.parent_name,
+    category?.parent_slug,
+  ].map(normalizeCategoryText).join(' ');
+
+  return matchers.some((matcher) => haystack.includes(normalizeCategoryText(matcher)));
+};
+
+const isColorAttributeName = (name) => ['color', 'colour'].includes(normalizeCategoryText(name));
+
+const isSizeLikeAttributeName = (name) => {
+  const normalized = normalizeCategoryText(name);
+  return normalized === 'size' ||
+    normalized.includes('size') ||
+    normalized.includes('age group');
 };
 
 const emptyCustomSpec = () => ({ name: '', value: '', is_custom: true });
@@ -245,14 +280,11 @@ const ProductForm = () => {
 
   const variantAttributes = useMemo(() => categoryAttributes.filter(a => a.is_variant), [categoryAttributes]);
   const colorAttribute = useMemo(
-    () => variantAttributes.find(a => ['color', 'colour'].includes(String(a.name || '').toLowerCase().trim())),
+    () => variantAttributes.find(a => isColorAttributeName(a.name)),
     [variantAttributes]
   );
   const sizeAttribute = useMemo(
-    () => variantAttributes.find(a => {
-      const name = String(a.name || '').toLowerCase().trim();
-      return name === 'size' || name.includes('size');
-    }),
+    () => variantAttributes.find(a => isSizeLikeAttributeName(a.name)),
     [variantAttributes]
   );
 
@@ -263,15 +295,17 @@ const ProductForm = () => {
 
   const isFashionVariantCategory = useMemo(() => {
     if (!colorAttribute || !sizeAttribute) return false;
-    
-    const categoryName = currentCategory?.name?.toLowerCase() || '';
-    const isFashionCat = categoryName.includes('clothing') || 
-                        categoryName.includes('shoes') || 
-                        categoryName.includes('fashion') || 
-                        categoryName.includes('footwear') || 
-                        categoryName.includes('apparel');
-    
-    return Boolean(isFashionCat || (colorAttribute && sizeAttribute));
+
+    return categoryHasAny(currentCategory, [
+      'fashion',
+      'clothing',
+      'apparel',
+      'footwear',
+      'shoe',
+      'sports clothing',
+      'kids clothing',
+      'kids-clothing',
+    ]);
   }, [colorAttribute, sizeAttribute, currentCategory]);
 
   const uniqueColors = useMemo(() => {
@@ -521,6 +555,26 @@ const ProductForm = () => {
 
     if (attribute.is_variant) {
       const value = variantAttributeValues[attribute.name] || [];
+
+      if (!options.length) {
+        return (
+          <TextField
+            label={`${label} (Variant)`}
+            value={Array.isArray(value) ? value.join(', ') : value}
+            onChange={(e) => {
+              const values = e.target.value
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+              setVariantAttributeValues((prev) => ({ ...prev, [attribute.name]: values }));
+            }}
+            fullWidth
+            helperText="Enter multiple values separated by commas."
+            required={attribute.is_required}
+          />
+        );
+      }
+
       return (
         <FormControl fullWidth>
           <InputLabel>{label} (Variant)</InputLabel>
@@ -940,6 +994,7 @@ const ProductForm = () => {
                         const previewImage = existingColorImages[0]?.image_url;
                         const colorOptions = colorAttribute.options || [];
                         const sizeOptions = sizeAttribute.options || [];
+                        const sizeLabel = sizeAttribute?.name || 'Size';
 
                         return (
                           <Box key={group.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
@@ -1020,9 +1075,9 @@ const ProductForm = () => {
 
                             <Box sx={{ mt: 2 }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="body2" fontWeight={700}>Sizes</Typography>
+                                <Typography variant="body2" fontWeight={700}>{sizeLabel}s</Typography>
                                 <Button size="small" startIcon={<AddIcon />} onClick={() => addSizeToColorGroup(groupIndex)} sx={secondaryButtonStyle}>
-                                  Add Size
+                                  Add {sizeLabel}
                                 </Button>
                               </Box>
 
@@ -1031,7 +1086,7 @@ const ProductForm = () => {
                                   <Table size="small">
                                     <TableHead>
                                       <TableRow>
-                                        <TableCell sx={{ minWidth: 120 }}>Size</TableCell>
+                                        <TableCell sx={{ minWidth: 120 }}>{sizeLabel}</TableCell>
                                         <TableCell sx={{ minWidth: 110 }}>Stock</TableCell>
                                         <TableCell sx={{ minWidth: 120 }}>Price (Rs)</TableCell>
                                         <TableCell sx={{ minWidth: 130 }}>Compare (Rs)</TableCell>
@@ -1050,7 +1105,7 @@ const ProductForm = () => {
                                                   onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
                                                   displayEmpty
                                                 >
-                                                  <MenuItem value="">Size</MenuItem>
+                                                  <MenuItem value="">{sizeLabel}</MenuItem>
                                                   {sizeOptions.map((option) => (
                                                     <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
                                                   ))}
@@ -1059,7 +1114,7 @@ const ProductForm = () => {
                                             ) : (
                                               <TextField
                                                 size="small"
-                                                placeholder="Size"
+                                                placeholder={sizeLabel}
                                                 value={sizeRow.size}
                                                 onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
                                               />

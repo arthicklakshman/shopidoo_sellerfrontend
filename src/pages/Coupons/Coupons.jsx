@@ -314,10 +314,10 @@ const Coupons = () => {
   };
 
   return (
-  <Box sx={{ p: 4, backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+  <Box sx={{ p: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
     <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
       <Box>
-        <Typography variant="h4" fontWeight="bold">
+        <Typography variant="h4" fontWeight="bold" color="text.primary">
           Offers & Coupons
         </Typography>
         <Typography color="text.secondary">
@@ -456,10 +456,12 @@ const Coupons = () => {
           width: { xs: '92%', sm: 640 },
           maxHeight: '90vh',
           overflowY: 'auto',
-          bgcolor: 'white',
+          bgcolor: 'background.paper',
           p: 3,
           borderRadius: 2,
           boxShadow: 24,
+          border: 1,
+          borderColor: 'divider',
         }}
       >
         <Typography variant="h6">

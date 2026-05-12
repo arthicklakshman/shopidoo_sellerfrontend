@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useTheme, alpha } from '@mui/material';
 import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField } from '@mui/material';
 import { sellerService } from '../../services/seller.service';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -26,20 +27,19 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned'];
 
-const DELIVERY_COLORS = {
-  delivered: { bg: '#e8f5e9', color: '#2e7d32' },
-  cancelled: { bg: '#fdecea', color: '#c62828' },
-  shipped: { bg: '#e3f2fd', color: '#1565c0' },
-  processing: { bg: '#fff8e1', color: '#f57f17' },
-  confirmed: { bg: '#e8f5e9', color: '#2e7d32' },
-  pending: { bg: '#f5f5f5', color: '#616161' },
-  refunded: { bg: '#f3e5f5', color: '#6a1b9a' },
-};
+const DELIVERY_COLORS = (theme) => ({
+  delivered: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
+  cancelled: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
+  shipped: { bg: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
+  processing: { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
+  confirmed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
+  pending: { bg: theme.palette.action.hover, color: theme.palette.text.secondary },
+  refunded: { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
+});
 
 const StatusBadge = ({ label, colorMap }) => {
-  const style = colorMap[label] || { bg: '#f5f5f5', color: '#616161' };
   return (
-    <Box component="span" sx={{ px: 1.5, py: 0.4, borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize', bgcolor: style.bg, color: style.color }}>
+    <Box component="span" sx={{ px: 1.5, py: 0.4, borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize', bgcolor: colorMap[label]?.bg || 'action.hover', color: colorMap[label]?.color || 'text.secondary' }}>
       {label}
     </Box>
   );
@@ -112,7 +112,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
           <Grid item xs={12}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Delivery Status</Typography>
-            <StatusBadge label={order.status || 'pending'} colorMap={DELIVERY_COLORS} />
+            <StatusBadge label={order.status || 'pending'} colorMap={DELIVERY_COLORS(useTheme())} />
           </Grid>
         </Grid>
         <Divider sx={{ mb: 2.5 }} />
@@ -139,7 +139,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
             Download Invoice
           </Button>
           <FormControl size="small" sx={{ flex: 1 }}>
-            <Select value="" displayEmpty disabled={updating} onChange={(e) => handleStatusChange(e.target.value)} IconComponent={KeyboardArrowDownIcon} sx={{ borderRadius: 2, bgcolor: '#f5f5f5', fontWeight: 600, color: 'text.secondary' }} renderValue={() => 'Update Status'}>
+            <Select value="" displayEmpty disabled={updating} onChange={(e) => handleStatusChange(e.target.value)} IconComponent={KeyboardArrowDownIcon} sx={{ borderRadius: 2, bgcolor: 'action.hover', fontWeight: 600, color: 'text.secondary' }} renderValue={() => 'Update Status'}>
               {getNextStatuses(order?.status).map((status) => (
                 <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>{status}</MenuItem>
               ))}
@@ -205,7 +205,7 @@ const Orders = () => {
         setPage(1);
       }}
       displayEmpty
-      sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+      sx={{ minWidth: 140, bgcolor: 'action.hover' }}
     >
       <MenuItem value="">All Status</MenuItem>
       {ALLOWED_STATUSES.map((status) => (
@@ -223,7 +223,7 @@ const Orders = () => {
         setSortFilter(e.target.value);
         setPage(1);
       }}
-      sx={{ minWidth: 180, bgcolor: '#f5f5f5' }}
+      sx={{ minWidth: 180, bgcolor: 'action.hover' }}
     >
       <MenuItem value="newest">Newest</MenuItem>
       <MenuItem value="oldest">Oldest</MenuItem>
@@ -240,7 +240,7 @@ const Orders = () => {
       setPage(1);
     }}
     displayEmpty
-    sx={{ minWidth: 120, bgcolor: '#f5f5f5' }}
+    sx={{ minWidth: 120, bgcolor: 'action.hover' }}
   >
     <MenuItem value="">All Years</MenuItem>
     <MenuItem value="2026">2026</MenuItem>
@@ -257,7 +257,7 @@ const Orders = () => {
       setPage(1);
     }}
     displayEmpty
-    sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+    sx={{ minWidth: 140, bgcolor: 'action.hover' }}
   >
     <MenuItem value="">All Months</MenuItem>
     <MenuItem value="1">January</MenuItem>
@@ -286,7 +286,7 @@ const Orders = () => {
   }}
   sx={{
     minWidth: 170,
-    bgcolor: '#f5f5f5',
+    bgcolor: 'action.hover',
   }}
   InputLabelProps={{
     shrink: true,

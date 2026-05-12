@@ -27,7 +27,6 @@ const notificationData = [
 export default function Notifications() {
   const [isEditing, setIsEditing] = useState(false);
 
-  // Keeps track of the real data so we can revert if the user clicks "Cancel"
   const [savedData, setSavedData] = useState(
     notificationData.reduce((acc, item) => {
       acc[item.id] = item.defaultChecked;
@@ -50,11 +49,8 @@ export default function Notifications() {
         console.error("Failed to load notification preferences", err);
       }
     };
-
     fetchPreferences();
   }, []);
-
-  // ---------------- HANDLERS ----------------
 
   const handleToggle = (id) => {
     setPreferences(prev => ({
@@ -64,7 +60,7 @@ export default function Notifications() {
   };
 
   const handleCancel = () => {
-    setPreferences({ ...savedData }); // Revert to original data
+    setPreferences({ ...savedData });
     setIsEditing(false);
   };
 
@@ -80,23 +76,20 @@ export default function Notifications() {
     }
   };
 
-  // ---------------- UI ----------------
-
   return (
     <Card sx={{ 
       borderRadius: '12px', 
-      border: '1px solid #e5e7eb', 
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      border: 1, 
+      borderColor: 'divider', 
+      boxShadow: 'none',
       maxWidth: '1000px',
-      fontFamily: 'sans-serif'
+      bgcolor: 'background.paper'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
             Notification Preferences
           </Typography>
-
           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
         </Box>
 
@@ -112,10 +105,10 @@ export default function Notifications() {
                 }}
               >
                 <Box sx={{ pr: 2 }}>
-                  <Typography sx={{ color: '#111827', fontSize: '14px', mb: 0.5 }}>
+                  <Typography sx={{ color: 'text.primary', fontSize: '14px', fontWeight: 600, mb: 0.5 }}>
                     {item.title}
                   </Typography>
-                  <Typography sx={{ color: '#6b7280', fontSize: '13px' }}>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '13px' }}>
                     {item.description}
                   </Typography>
                 </Box>
@@ -124,24 +117,11 @@ export default function Notifications() {
                   checked={preferences[item.id]}
                   onChange={() => handleToggle(item.id)}
                   disabled={!isEditing}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#ffffff',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#111827',
-                      opacity: 1,
-                    },
-                    '& .MuiSwitch-track': {
-                      backgroundColor: '#d1d5db',
-                      opacity: 1,
-                    }
-                  }}
                 />
               </Box>
 
               {index < notificationData.length - 1 && (
-                <Divider sx={{ borderColor: '#f3f4f6' }} />
+                <Divider sx={{ borderColor: 'divider' }} />
               )}
             </React.Fragment>
           ))}
@@ -152,7 +132,6 @@ export default function Notifications() {
                 <SaveCancelButtons onCancel={handleCancel} onSave={handleSave} />
             </Box>
         )}
-
       </CardContent>
     </Card>
   );

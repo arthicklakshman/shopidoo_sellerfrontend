@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Grid, Typography, Box, Card, CardContent, Skeleton } from '@mui/material';
+import { Grid, Typography, Box, Card, CardContent, Skeleton, useTheme } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
@@ -11,6 +11,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { useSelector } from 'react-redux';
 
 const Dashboard = () => {
+  const theme = useTheme();
   const { user } = useSelector((s) => s.auth);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,11 +62,15 @@ const Dashboard = () => {
                 : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={monthlyRevenue}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
-                      <Bar dataKey="revenue" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
+                      <YAxis tick={{ fontSize: 12, fill: theme.palette.text.secondary }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.divider }}
+                        itemStyle={{ color: theme.palette.text.primary }}
+                        formatter={(v) => [formatCurrency(v), 'Revenue']} 
+                      />
+                      <Bar dataKey="revenue" fill={theme.palette.primary.main} radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

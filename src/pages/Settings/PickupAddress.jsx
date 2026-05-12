@@ -1,245 +1,3 @@
-// import React, { useState } from 'react';
-// import {
-//   Box,
-//   Typography,
-//   Card,
-//   CardContent,
-//   Grid,
-//   TextField,
-//   InputLabel
-// } from '@mui/material';
-
-// // ✅ Custom Helper Imports (Assuming these match your StoreInfo setup)
-// import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
-
-// // ----------------------------------------------------------------------
-// // Styled Components
-// // ----------------------------------------------------------------------
-// const StyledInputLabel = ({ children }) => (
-//   <InputLabel sx={{ color: '#111827', fontSize: '14px', mb: 1, fontWeight: 400 }}>
-//     {children}
-//   </InputLabel>
-// );
-
-// const getCustomInputStyles = (isEditing) => ({
-//   backgroundColor: '#f3f4f6',
-//   borderRadius: '8px',
-//   '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-//   '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-//   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-//     border: isEditing ? '1px solid #3b82f6' : 'none',
-//   },
-//   '& .MuiOutlinedInput-input': {
-//     padding: '10px 14px',
-//     fontSize: '14px',
-//     color: '#111827',
-//     WebkitTextFillColor: '#111827',
-//   },
-//   '& .Mui-disabled': {
-//     WebkitTextFillColor: '#111827',
-//   }
-// });
-
-// // ----------------------------------------------------------------------
-// // Main Component
-// // ----------------------------------------------------------------------
-// export default function PickupAddress() {
-//   const [isEditing, setIsEditing] = useState(false);
-
-//   // Keeps track of the real data so we can revert if the user clicks "Cancel"
-//   const [savedData, setSavedData] = useState({
-//     address1: "",
-//     address2: "",
-//     city: "",
-//     state: "",
-//     zip: "",
-//     country: ""
-//   });
-
-//   const [form, setForm] = useState({ ...savedData });
-//   const [errors, setErrors] = useState({});
-
-//   // ---------------- HANDLERS ----------------
-
-//   const handleChange = (e) => {
-//     setForm({ ...form, [e.target.name]: e.target.value });
-//   };
-
-//   const validate = () => {
-//     let temp = {};
-
-//     if (!form.address1) temp.address1 = "Address Line 1 is required";
-//     if (!form.address2) temp.address2 = "Address Line 2 is required";
-//     if (!form.city) temp.city = "City is required";
-//     if (!form.state) temp.state = "State is required";
-//     if (!form.zip) temp.zip = "ZIP Code is required";
-//     if (!form.country) temp.country = "Country is required";
-
-//     setErrors(temp);
-//     return Object.keys(temp).length === 0;
-//   };
-
-//   const handleCancel = () => {
-//     setForm({ ...savedData }); // Revert to original data
-//     setErrors({});
-//     setIsEditing(false);
-//   };
-
-//   const handleSubmit = async () => {
-//     if (!validate()) return;
-
-//     try {
-//       console.log("Address Data:", form);
-
-//       // 🔗 connect API here
-//       // await savePickupAddress(form);
-
-//       // Save the new state as the truth
-//       setSavedData({ ...form });
-//       setIsEditing(false);
-//       alert("Address saved successfully");
-//     } catch (err) {
-//       console.error(err);
-//       alert("Something went wrong.");
-//     }
-//   };
-
-//   // ---------------- UI ----------------
-
-//   return (
-//     <Card sx={{ 
-//       borderRadius: '12px', 
-//       border: '1px solid #e5e7eb', 
-//       boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-//       maxWidth: '1000px',
-//       fontFamily: 'sans-serif'
-//     }}>
-//       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        
-//         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-//           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
-//             Pickup Address
-//           </Typography>
-
-//           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
-//         </Box>
-
-//         <Grid container spacing={3}>
-          
-//           <Grid item xs={12}>
-//             <StyledInputLabel>Address Line 1</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="address1"
-//               value={form.address1}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter address line 1"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.address1}
-//               helperText={errors.address1}
-//             />
-//           </Grid>
-
-//           <Grid item xs={12}>
-//             <StyledInputLabel>Address Line 2</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="address2"
-//               value={form.address2}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter address line 2"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.address2}
-//               helperText={errors.address2}
-//             />
-//           </Grid>
-
-//           <Grid item xs={12} sm={4}>
-//             <StyledInputLabel>City</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="city"
-//               value={form.city}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter city"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.city}
-//               helperText={errors.city}
-//             />
-//           </Grid>
-
-//           <Grid item xs={12} sm={4}>
-//             <StyledInputLabel>State</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="state"
-//               value={form.state}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter state"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.state}
-//               helperText={errors.state}
-//             />
-//           </Grid>
-
-//           <Grid item xs={12} sm={4}>
-//             <StyledInputLabel>ZIP Code</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="zip"
-//               value={form.zip}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter ZIP code"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.zip}
-//               helperText={errors.zip}
-//             />
-//           </Grid>
-
-//           <Grid item xs={12}>
-//             <StyledInputLabel>Country</StyledInputLabel>
-//             <TextField
-//               fullWidth
-//               name="country"
-//               value={form.country}
-//               onChange={handleChange}
-//               disabled={!isEditing}
-//               placeholder="Enter country"
-//               variant="outlined"
-//               size="small"
-//               sx={getCustomInputStyles(isEditing)}
-//               error={!!errors.country}
-//               helperText={errors.country}
-//             />
-//           </Grid>
-//         </Grid>
-
-//         {isEditing && (
-//             <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} />
-//         )}
-
-//       </CardContent>
-//     </Card>
-//   );
-// }
-
-
-
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Grid, TextField, InputLabel
@@ -250,17 +8,17 @@ import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActio
 import { getPickupAddressAPI, updatePickupAddressAPI } from '../../features/settings/settings.service';
 
 const StyledInputLabel = ({ children }) => (
-  <InputLabel sx={{ color: '#111827', fontSize: '14px', mb: 1, fontWeight: 400 }}>{children}</InputLabel>
+  <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 600 }}>{children}</InputLabel>
 );
 
 const getCustomInputStyles = (isEditing) => ({
-  backgroundColor: '#f3f4f6',
+  backgroundColor: 'action.hover',
   borderRadius: '8px',
-  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid #3b82f6' : 'none' },
-  '& .MuiOutlinedInput-input': { padding: '10px 14px', fontSize: '14px', color: '#111827', WebkitTextFillColor: '#111827' },
-  '& .Mui-disabled': { WebkitTextFillColor: '#111827' }
+  '& .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'divider' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'primary.main' },
+  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'primary.main' },
+  '& .MuiOutlinedInput-input': { padding: '10px 14px', fontSize: '14px', color: 'text.primary', WebkitTextFillColor: (theme) => theme.palette.text.primary },
+  '& .Mui-disabled': { WebkitTextFillColor: (theme) => theme.palette.text.primary }
 });
 
 export default function PickupAddress() {
@@ -272,26 +30,24 @@ export default function PickupAddress() {
     city: "",
     state: "",
     zip: "",
-    country: "India" // 🔥 Default set to India
+    country: "India" 
   });
 
   const [form, setForm] = useState({ ...savedData });
   const [errors, setErrors] = useState({});
 
-  // ---------------- API INTEGRATION ----------------
   useEffect(() => {
     const fetchAddress = async () => {
       try {
         const response = await getPickupAddressAPI();
         if (response.success && response.data) {
           const dbData = {
-            // 🔥 Map DB keys to Frontend keys
             address1: response.data.addressLine1 || "",
             address2: response.data.addressLine2 || "",
             city: response.data.city || "",
             state: response.data.state || "",
-            zip: response.data.pincode || "", // mapped pincode -> zip
-            country: "India" // Force Country to India
+            zip: response.data.pincode || "", 
+            country: "India" 
           };
           setSavedData(dbData);
           setForm(dbData);
@@ -302,8 +58,6 @@ export default function PickupAddress() {
     };
     fetchAddress();
   }, []);
-
-  // ---------------- HANDLERS ----------------
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -316,7 +70,6 @@ export default function PickupAddress() {
     if (!form.state) temp.state = "State is required";
     if (!form.zip) temp.zip = "ZIP Code is required";
     if (!form.country) temp.country = "Country is required";
-
     setErrors(temp);
     return Object.keys(temp).length === 0;
   };
@@ -342,13 +95,18 @@ export default function PickupAddress() {
     }
   };
 
-  // ---------------- UI ----------------
-
   return (
-    <Card sx={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '1000px', fontFamily: 'sans-serif' }}>
+    <Card sx={{ 
+      borderRadius: '12px', 
+      border: 1, 
+      borderColor: 'divider', 
+      boxShadow: 'none', 
+      maxWidth: '1000px',
+      bgcolor: 'background.paper'
+    }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827' }}>Pickup Address</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>Pickup Address</Typography>
           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
         </Box>
 
@@ -380,7 +138,7 @@ export default function PickupAddress() {
               name="country" 
               value={form.country} 
               onChange={handleChange} 
-              disabled={true} // 🔥 Disabled to strictly enforce "India"
+              disabled={true} 
               variant="outlined" 
               size="small" 
               sx={getCustomInputStyles(false)} 

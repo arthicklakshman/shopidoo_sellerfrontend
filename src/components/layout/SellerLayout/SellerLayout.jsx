@@ -24,6 +24,7 @@ import {
   Menu,
   MenuItem,
   Badge,
+  alpha,
 } from '@mui/material';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -276,25 +277,22 @@ useEffect(() => {
                   background: active
                   ? 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)'
                   : 'transparent',
-                  color: active ? '#000' : 'text.primary',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                    color: '#000',
-                  },
-                  
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 40,
-                    color: active ? '#000' : 'text.secondary',
-                    '.MuiListItemButton-root:hover &': {
+                    color: active ? '#000' : 'text.primary',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      color: '#000',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: active ? '#000' : 'text.secondary',
+                    },
+                    '&:hover .MuiListItemIcon-root': {
                       color: '#000',
                     },
                   }}
                 >
-                  <Icon fontSize="small" />
-                </ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                    <Icon fontSize="small" />
+                  </ListItemIcon>
 
                 <ListItemText
                   primary={label}
@@ -460,11 +458,11 @@ useEffect(() => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  borderBottom: '1px solid #eee',
+                  borderBottom: `1px solid ${theme.palette.divider}`,
                 }}
               >
                 <Box>
-                  <Typography fontWeight={700}>Notifications</Typography>
+                  <Typography fontWeight={700} color="text.primary">Notifications</Typography>
 
                   <Typography variant="caption" color="text.secondary">
                     {unreadCount} unread
@@ -521,10 +519,10 @@ useEffect(() => {
                         px: 2,
                         py: 1.5,
                         cursor: 'pointer',
-                        borderBottom: '1px solid #eee',
-                        bgcolor: item.is_read ? '#fff' : '#f5fff5',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        bgcolor: item.is_read ? 'background.paper' : alpha(theme.palette.success.main, 0.05),
                         '&:hover': {
-                          bgcolor: '#eef7ee',
+                          bgcolor: 'action.hover',
                         },
                       }}
                     >
@@ -572,10 +570,6 @@ useEffect(() => {
                 )}
               </Box>
 
-             
-
-
-
             <Box
               onClick={() => {
                 handleCloseNotifications();
@@ -589,9 +583,9 @@ useEffect(() => {
                 WebkitTextFillColor: 'transparent',
                 fontWeight: 800,
                 cursor: 'pointer',
-                borderTop: '1px solid #eee',
+                borderTop: `1px solid ${theme.palette.divider}`,
                 '&:hover': {
-                  bgcolor: '#f5fff5',
+                  bgcolor: 'action.hover',
                 },
               }}
             >

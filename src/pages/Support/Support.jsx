@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTheme, alpha } from '@mui/material';
 import {
   Alert,
   Box,
@@ -51,17 +52,17 @@ const CATEGORY_OPTIONS = [
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High'];
 
-const statusChipSx = {
-  Open: { bgcolor: '#FFF4E5', color: '#B45309' },
-  'In Progress': { bgcolor: '#E8F1FF', color: '#1D4ED8' },
-  Resolved: { bgcolor: '#EAF7EE', color: '#15803D' },
-};
+const statusChipSx = (theme) => ({
+  Open: { bgcolor: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
+  'In Progress': { bgcolor: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
+  Resolved: { bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
+});
 
-const priorityChipSx = {
-  Low: { bgcolor: '#F3F4F6', color: '#374151' },
-  Medium: { bgcolor: '#FEF3C7', color: '#B45309' },
-  High: { bgcolor: '#FEE2E2', color: '#DC2626' },
-};
+const priorityChipSx = (theme) => ({
+  Low: { bgcolor: theme.palette.action.hover, color: theme.palette.text.secondary },
+  Medium: { bgcolor: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
+  High: { bgcolor: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
+});
 
 const FALLBACK_SUMMARY = { open: 0, inProgress: 0, resolved: 0 };
 
@@ -79,92 +80,105 @@ const normalizeTicket = (ticket = {}) => ({
   reply: typeof ticket.reply === 'string' ? ticket.reply : '',
 });
 
-const SummaryCard = ({ title, value, icon: Icon, tint }) => (
-  <Card sx={{ borderRadius: 4, height: '100%' }}>
-    <CardContent sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography color="text.secondary" sx={{ mb: 1 }}>{title}</Typography>
-          <Typography variant="h4" fontWeight={700}>{value}</Typography>
-        </Box>
-        <Box
-          sx={{
-            width: 68,
-            height: 68,
-            borderRadius: 3,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: tint.bg,
-            color: tint.color,
-          }}
-        >
-          <Icon />
-        </Box>
-      </Box>
-    </CardContent>
-  </Card>
-);
-
-const TicketCard = ({ ticket, onOpen, onDelete, deleting }) => (
-  <Card
-    variant="outlined"
-    onClick={() => onOpen(ticket)}
-    sx={{
-      borderRadius: 3,
-      cursor: 'pointer',
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-    }}
-  >
-    <CardContent sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', gap: 2 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-            <Typography variant="h6" fontWeight={700}>{ticket.subject}</Typography>
-            <Chip label={ticket.status} size="small" sx={{ ...(statusChipSx[ticket.status] || statusChipSx.Open), fontWeight: 700 }} />
-            <Chip label={ticket.priority} size="small" sx={{ ...(priorityChipSx[ticket.priority] || priorityChipSx.Low), fontWeight: 700 }} />
-          </Stack>
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-            <Typography color="text.secondary">{ticket.display_id}</Typography>
-            <Typography color="text.secondary">•</Typography>
-            <Typography color="text.secondary">{ticket.category}</Typography>
-            <Typography color="text.secondary">•</Typography>
-            <Typography color="text.secondary">{ticket.message_count} message{ticket.message_count > 1 ? 's' : ''}</Typography>
-          </Stack>
-          <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-            {ticket.description.length > 140 ? `${ticket.description.slice(0, 140)}...` : (ticket.description || 'No description provided.')}
-          </Typography>
-        </Box>
-        <Box sx={{ minWidth: { md: 185 } }}>
-          <Typography color="text.secondary" sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-            Created: {ticket.created_at ? formatDate(ticket.created_at) : 'N/A'}
-          </Typography>
-          <Typography color="text.secondary" sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-            Updated: {ticket.updated_at ? formatDate(ticket.updated_at) : 'N/A'}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: 1.5 }}>
-            <Button
-              color="error"
-              variant="text"
-              size="small"
-              startIcon={<DeleteOutlineRoundedIcon />}
-              disabled={deleting}
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete(ticket);
-              }}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Delete
-            </Button>
+const SummaryCard = ({ title, value, icon: Icon, tint }) => {
+  const theme = useTheme();
+  return (
+    <Card sx={{ borderRadius: 4, height: '100%' }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Box>
+            <Typography color="text.secondary" sx={{ mb: 1 }}>{title}</Typography>
+            <Typography variant="h4" fontWeight={700}>{value}</Typography>
+          </Box>
+          <Box
+            sx={{
+              width: 68,
+              height: 68,
+              borderRadius: 3,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha(tint.color, 0.1),
+              color: tint.color,
+            }}
+          >
+            <Icon />
           </Box>
         </Box>
-      </Box>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
+
+const TicketCard = ({ ticket, onOpen, onDelete, deleting }) => {
+  const theme = useTheme();
+  const STATUS_STYLES = statusChipSx(theme);
+  const PRIORITY_STYLES = priorityChipSx(theme);
+
+  return (
+    <Card
+      variant="outlined"
+      onClick={() => onOpen(ticket)}
+      sx={{
+        borderRadius: 3,
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', gap: 2 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+              <Typography variant="h6" fontWeight={700}>{ticket.subject}</Typography>
+              <Chip label={ticket.status} size="small" sx={{ ...(STATUS_STYLES[ticket.status] || STATUS_STYLES.Open), fontWeight: 700 }} />
+              <Chip label={ticket.priority} size="small" sx={{ ...(PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.Low), fontWeight: 700 }} />
+            </Stack>
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Typography color="text.secondary">{ticket.display_id}</Typography>
+              <Typography color="text.secondary">•</Typography>
+              <Typography color="text.secondary">{ticket.category}</Typography>
+              <Typography color="text.secondary">•</Typography>
+              <Typography color="text.secondary">{ticket.message_count} message{ticket.message_count > 1 ? 's' : ''}</Typography>
+            </Stack>
+            <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+              {ticket.description.length > 140 ? `${ticket.description.slice(0, 140)}...` : (ticket.description || 'No description provided.')}
+            </Typography>
+          </Box>
+          <Box sx={{ minWidth: { md: 185 } }}>
+            <Typography color="text.secondary" sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+              Created: {ticket.created_at ? formatDate(ticket.created_at) : 'N/A'}
+            </Typography>
+            <Typography color="text.secondary" sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+              Updated: {ticket.updated_at ? formatDate(ticket.updated_at) : 'N/A'}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: 1.5 }}>
+              <Button
+                color="error"
+                variant="text"
+                size="small"
+                startIcon={<DeleteOutlineRoundedIcon />}
+                disabled={deleting}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(ticket);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Support = () => {
+  const theme = useTheme();
+  const STATUS_STYLES = statusChipSx(theme);
+  const PRIORITY_STYLES = priorityChipSx(theme);
+
   const dispatch = useDispatch();
   const [tickets, setTickets] = useState([]);
   const [summary, setSummary] = useState(FALLBACK_SUMMARY);
@@ -185,21 +199,21 @@ const Support = () => {
       title: 'Open Tickets',
       value: summary.open || 0,
       icon: AccessTimeOutlinedIcon,
-      tint: { bg: '#FFF7ED', color: '#F59E0B' },
+      tint: { color: theme.palette.warning.main },
     },
     {
       title: 'In Progress',
       value: summary.inProgress || 0,
       icon: ChatBubbleOutlineRoundedIcon,
-      tint: { bg: '#EFF6FF', color: '#3B82F6' },
+      tint: { color: theme.palette.info.main },
     },
     {
       title: 'Resolved',
       value: summary.resolved || 0,
       icon: CheckCircleOutlineRoundedIcon,
-      tint: { bg: '#ECFDF5', color: '#22C55E' },
+      tint: { color: theme.palette.success.main },
     },
-  ]), [summary]);
+  ]), [summary, theme.palette]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -311,7 +325,7 @@ const Support = () => {
     <Box>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 4 }}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>Support</Typography>
+          <Typography variant="h4" fontWeight={700} gutterBottom color="text.primary">Support</Typography>
           <Typography color="text.secondary">Get help and manage support tickets</Typography>
         </Box>
         <Button
@@ -455,7 +469,21 @@ const Support = () => {
         </DialogContent>
         <DialogActions sx={{ px: 4, pb: 3 }}>
           <Button onClick={handleCreateClose} color="inherit" disabled={submitting}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={submitting}>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained" 
+            disabled={submitting}
+            sx={{
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: '8px',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              }
+            }}
+          >
             {submitting ? 'Submitting...' : 'Submit Ticket'}
           </Button>
         </DialogActions>
@@ -479,8 +507,8 @@ const Support = () => {
           {selectedTicket && (
             <Stack spacing={2}>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={selectedTicket.status} sx={{ ...(statusChipSx[selectedTicket.status] || statusChipSx.Open), fontWeight: 700 }} />
-                <Chip label={selectedTicket.priority} sx={{ ...(priorityChipSx[selectedTicket.priority] || priorityChipSx.Low), fontWeight: 700 }} />
+                <Chip label={selectedTicket.status} sx={{ ...(STATUS_STYLES[selectedTicket.status] || STATUS_STYLES.Open), fontWeight: 700 }} />
+                <Chip label={selectedTicket.priority} sx={{ ...(PRIORITY_STYLES[selectedTicket.priority] || PRIORITY_STYLES.Low), fontWeight: 700 }} />
                 <Chip label={selectedTicket.category} variant="outlined" />
               </Stack>
 
