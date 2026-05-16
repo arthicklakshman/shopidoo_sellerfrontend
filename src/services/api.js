@@ -4,9 +4,26 @@ const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({ baseURL: BASE_URL, headers: { 'Content-Type': 'application/json' }, withCredentials: true });
 
+api.interceptors.response.use(
+ response => response,
+ error => {
+   if (error.response?.status === 503) {
+      window.location.href="/maintenance";
+   }
+   return Promise.reject(error);
+ }
+);
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('sellerAccessToken');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  // 🌟 FIX: Do not send the old token if we are trying to register or login!
+  const isAuthRoute = config.url.includes('/auth/register') || config.url.includes('/auth/login');
+  
+  if (token && !isAuthRoute) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  
   return config;
 });
 
@@ -38,7 +55,12 @@ api.interceptors.response.use(
         processQueue(err, null);
         localStorage.removeItem('sellerAccessToken');
         localStorage.removeItem('sellerRefreshToken');
-        window.location.href = '/login';
+        
+        // 🌟 UPDATED: Prevent hard redirect to login if we are in onboarding!
+        // This allows onboarding components to handle the error themselves.
+        if (!window.location.pathname.startsWith('/onboarding')) {
+          window.location.href = '/login';
+        }
         return Promise.reject(err);
       } finally { isRefreshing = false; }
     }

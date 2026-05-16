@@ -12,11 +12,12 @@ import RegistrationSuccess from './RegistrationSuccess';
 const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
 
   const currentStep = Number(step); 
+  const sellerId = localStorage.getItem('sellerId');
 
   const renderStep = () => {
     switch (currentStep) {  
       case 1:
-        return <BasicInfo onNext={onNext} onBack={onBack} />;
+        return <BasicInfo onNext={onNext} onBack={onBack} sellerId={sellerId} />;
       case 2:
         return <BusinessDetails onNext={onNext} onBack={onBack} />;
       case 3:

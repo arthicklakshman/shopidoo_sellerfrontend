@@ -1,236 +1,102 @@
-// import axios from "axios";
+import api from '../../services/api';
 
-// const API = axios.create({
-//   baseURL: "http://localhost:5000/api/v1", // 🔥 your backend URL
-//   withCredentials: true,
-// });
-
-// // 👉 Add token automatically (if using auth)
-// API.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("sellerAccessToken");
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
-
-// // ✅ Update Security API
-// export const updateSecurityAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/security", payload);
-//   return response.data;
-// };
-
-
-
-
-
-// // Get Bank Details
-// export const getBankDetailsAPI = async () => {
-//   // ✅ Added /seller to the path
-//   const response = await API.get("/seller/settings/bank-details"); 
-//   return response.data;
-// };
-
-// // Update Bank Details
-// export const updateBankDetailsAPI = async (payload) => {
-//   // ✅ Added /seller to the path
-//   const response = await API.put("/seller/settings/bank-details", payload);
-//   return response.data;
-// };
-
-
-
-
-
-
-
-
-
-
-
-// import axios from "axios";
-
-// const API = axios.create({
-//   baseURL: "http://localhost:5000/api/v1", // 🔥 your backend URL
-//   withCredentials: true,
-// });
-
-// // 👉 Add token automatically (if using auth)
-// API.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("sellerAccessToken");
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
-import axios from "axios";
-
-const API = axios.create({
-  baseURL: "http://localhost:5000/api/v1",
-  withCredentials: true,
-});
-
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("sellerAccessToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+const getSellerId = () => {
+  try {
+    return JSON.parse(localStorage.getItem('sellerUser') || '{}')?.id;
+  } catch {
+    return null;
   }
-  return config;
-});
+};
 
+const sellerPath = () => {
+  const sellerId = getSellerId();
+  if (!sellerId) throw new Error('Seller session missing. Please login again.');
+  return `/seller/${sellerId}`;
+};
 
-// Store Info
 export const getStoreInfoAPI = async () => {
-  const response = await API.get("/seller/settings/store-info");
-  return response.data;
+  const { data } = await api.get(sellerPath());
+  return {
+    ...data,
+    data: {
+      ...data.data,
+      email: data.data?.emailId || data.data?.email,
+      logo: data.data?.storeLogo,
+    },
+  };
 };
 
-export const updateStoreInfoAPI = async (payload) => {
-  const response = await API.put("/seller/settings/store-info", payload);
-  return response.data;
+export const updateStoreInfoAPI = async (form) => {
+  const { data } = await api.put(`${sellerPath()}/store-setup`, {
+    storeName: form.storeName,
+    emailId: form.email,
+    phone: form.phone,
+    description: form.description,
+    categories: form.categories,
+    storeLogo: form.logo,
+  });
+  return data;
 };
 
-// Security
-export const updateSecurityAPI = async (payload) => {
-  const response = await API.put("/seller/settings/security", payload);
-  return response.data;
-};
-
-// Bank
 export const getBankDetailsAPI = async () => {
-  const response = await API.get("/seller/settings/bank-details");
-  return response.data;
+  const { data } = await api.get(sellerPath());
+  return {
+    ...data,
+    data: {
+      accountName: data.data?.accountName,
+      accountNumber: data.data?.accountNumber,
+      routingNumber: data.data?.ifscCode,
+    },
+  };
 };
 
-export const updateBankDetailsAPI = async (payload) => {
-  const response = await API.put("/seller/settings/bank-details", payload);
-  return response.data;
+export const updateBankDetailsAPI = async (form) => {
+  const { data } = await api.put(`${sellerPath()}/bank-details`, {
+    accountName: form.accountName,
+    accountNumber: form.accountNumber,
+    ifscCode: form.routingNumber,
+  });
+  return data;
 };
 
-// Pickup
 export const getPickupAddressAPI = async () => {
-  const response = await API.get("/seller/settings/pickup-address");
-  return response.data;
+  const { data } = await api.get(sellerPath());
+  return data;
 };
 
-export const updatePickupAddressAPI = async (payload) => {
-  const response = await API.put("/seller/settings/pickup-address", payload);
-  return response.data;
+export const updatePickupAddressAPI = async (form) => {
+  const { data } = await api.put(`${sellerPath()}/business`, {
+    addressLine1: form.address1,
+    addressLine2: form.address2,
+    city: form.city,
+    state: form.state,
+    pincode: form.zip,
+  });
+  return data;
 };
 
+export const updateSecurityAPI = async (payload) => {
+  if (payload.newPassword) {
+    await api.post('/auth/reset-password', {
+      email: payload.email,
+      newPassword: payload.newPassword,
+    });
+  }
 
-// //store info on settings 
-// export const getStoreInfoAPI = async () => {
-//   const response = await API.get("/seller-settings/store-info"); // 🌟 Ensure this is /seller-settings
-//   return response.data;
-// };
+  const { data } = await api.put(`${sellerPath()}/store-setup`, {
+    twoFactor: payload.twoFactor,
+  });
+  return data;
+};
 
-// export const updateStoreInfoAPI = async (payload) => {
-//   const response = await API.put("/seller-settings/store-info", payload); // 🌟 Ensure this is /seller-settings
-//   return response.data;
-// };
+export const getNotificationPreferencesAPI = async () => {
+  const { data } = await api.get(sellerPath());
+  return data;
+};
 
-// // ✅ Update Security API
-// export const updateSecurityAPI = async (payload) => {
-//   // 🌟 FIXED: Changed from /seller/settings/ to /seller-settings/
-//   const response = await API.put("/seller-settings/security", payload);
-//   return response.data;
-// };
-
-// // Get Bank Details
-// export const getBankDetailsAPI = async () => {
-//   // 🌟 FIXED: Changed from /seller/settings/ to /seller-settings/
-//   const response = await API.get("/seller-settings/bank-details"); 
-//   return response.data;
-// };
-
-// // Update Bank Details
-// export const updateBankDetailsAPI = async (payload) => {
-//   // 🌟 FIXED: Changed from /seller/settings/ to /seller-settings/
-//   const response = await API.put("/seller-settings/bank-details", payload);
-//   return response.data;
-// };
-
-// export const getPickupAddressAPI = async () => {
-//   // 🌟 FIXED: Changed from /seller/settings/ to /seller-settings/
-//   const response = await API.get("/seller-settings/pickup-address"); 
-//   return response.data;
-// };
-
-// export const updatePickupAddressAPI = async (payload) => {
-//   // 🌟 FIXED: Changed from /seller/settings/ to /seller-settings/
-//   const response = await API.put("/seller-settings/pickup-address", payload);
-//   return response.data;
-// };
-
-
-// export const getPickupAddressAPI = async () => {
-//   const response = await API.get("/seller/settings/pickup-address"); 
-//   return response.data;
-// };
-
-// export const updatePickupAddressAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/pickup-address", payload);
-//   return response.data;
-// };
-
-
-
-
-// import axios from "axios";
-
-// const API = axios.create({
-//   baseURL: "http://localhost:5000/api/v1", // 🔥 your backend URL
-//   withCredentials: true,
-// });
-
-// // 👉 Add token automatically (if using auth)
-// API.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("sellerAccessToken");
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
-
-// // 🏪 Store info on settings 
-// export const getStoreInfoAPI = async () => {
-//   // 🌟 REVERTED: Now matches the new modular backend hub
-//   const response = await API.get("/seller/settings/store-info"); 
-//   return response.data;
-// };
-
-// export const updateStoreInfoAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/store-info", payload); 
-//   return response.data;
-// };
-
-// // 🔒 Update Security API
-// export const updateSecurityAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/security", payload);
-//   return response.data;
-// };
-
-// // 🏦 Get Bank Details
-// export const getBankDetailsAPI = async () => {
-//   const response = await API.get("/seller/settings/bank-details"); 
-//   return response.data;
-// };
-
-// // 🏦 Update Bank Details
-// export const updateBankDetailsAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/bank-details", payload);
-//   return response.data;
-// };
-
-// // 📍 Get Pickup Address
-// export const getPickupAddressAPI = async () => {
-//   const response = await API.get("/seller/settings/pickup-address"); 
-//   return response.data;
-// };
-
-// // 📍 Update Pickup Address
-// export const updatePickupAddressAPI = async (payload) => {
-//   const response = await API.put("/seller/settings/pickup-address", payload);
-//   return response.data;
-// };
+export const updateNotificationPreferencesAPI = async (preferences) => {
+  const { data } = await api.put(`${sellerPath()}/store-setup`, {
+    notificationPreferences: preferences,
+  });
+  return data;
+};

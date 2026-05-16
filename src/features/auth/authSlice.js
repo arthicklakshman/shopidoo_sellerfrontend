@@ -12,6 +12,14 @@ const handleAuthFulfilled = (state, action) => {
   localStorage.setItem('sellerUser', JSON.stringify(action.payload.user));
 };
 
+export const googleLoginSeller = createAsyncThunk('auth/googleLogin', async (credential, { rejectWithValue }) => {
+  try {
+    const { data } = await authService.googleLogin(credential);
+    if (data.data.user.role !== 'seller') throw new Error('Access restricted to sellers.');
+    return data.data;
+  } catch (err) { return rejectWithValue(err.response?.data?.message || err.message); }
+});
+
 export const loginSeller = createAsyncThunk('auth/login', async (creds, { rejectWithValue }) => {
   try {
     const { data } = await authService.login(creds);
@@ -38,9 +46,24 @@ export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, { rejectWithVa
 const authSlice = createSlice({
   name: 'auth',
   initialState: { user: getUserFromStorage(), isAuthenticated: !!localStorage.getItem('sellerAccessToken'), loading: false, error: null },
-  reducers: { clearError: (state) => { state.error = null; } },
+  reducers: { 
+    clearError: (state) => { state.error = null; },
+    // 🌟 ADD THIS: Required by BasicInfo.jsx to sync state after Step 1
+    setCredentials: (state, action) => {
+      const { user, token } = action.payload;
+      state.user = user;
+      state.isAuthenticated = true;
+      if (token) {
+        localStorage.setItem('sellerAccessToken', token);
+      }
+      localStorage.setItem('sellerUser', JSON.stringify(user));
+    }
+  },
   extraReducers: (builder) => {
     builder
+      .addCase(googleLoginSeller.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(googleLoginSeller.fulfilled, handleAuthFulfilled)
+      .addCase(googleLoginSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(loginSeller.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(loginSeller.fulfilled, handleAuthFulfilled)
       .addCase(loginSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
@@ -59,5 +82,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, setCredentials } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,26 +1,21 @@
-// --- src/utils/bankHelpers.js ---
+export const findBankName = (ifscCode = '') => {
+  const code = ifscCode.trim().toUpperCase();
+  if (!code || code.length < 4) return '';
 
-const bankMap = {
-    "SBIN": "State Bank of India",
-    "HDFC": "HDFC Bank",
-    "ICIC": "ICICI Bank",
-    "BARB": "Bank of Baroda",
-    "PUNB": "Punjab National Bank",
-    "AXIS": "Axis Bank",
-    "KKBK": "Kotak Mahindra Bank",
-    "UTIB": "Axis Bank",
-    "IBKL": "IDBI Bank",
-    "YESB": "Yes Bank",
-    "CNRB": "Canara Bank",
-    "IDFB": "IDFC First Bank",
+  const bankCodes = {
+    SBIN: 'State Bank of India',
+    HDFC: 'HDFC Bank',
+    ICIC: 'ICICI Bank',
+    UTIB: 'Axis Bank',
+    PUNB: 'Punjab National Bank',
+    BARB: 'Bank of Baroda',
+    CNRB: 'Canara Bank',
+    IDIB: 'Indian Bank',
+    KKBK: 'Kotak Mahindra Bank',
+    YESB: 'Yes Bank',
+    INDB: 'IndusInd Bank',
+    FDRL: 'Federal Bank',
+  };
+
+  return bankCodes[code.slice(0, 4)] || 'Bank will be verified from IFSC';
 };
-
-/**
- * Derives the Bank Name from an 11-character IFSC string.
- */
-export const findBankName = (ifsc) => {
-    if (!ifsc || ifsc.length < 4) return "";
-    
-    const code = ifsc.substring(0, 4).toUpperCase();
-    return bankMap[code] || "Unknown Bank";
-};  

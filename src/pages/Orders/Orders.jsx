@@ -1,303 +1,397 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box, Typography, Card, TextField, InputAdornment, Button,
-  Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, IconButton, CircularProgress
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+
+import { useState, useEffect } from 'react';
+import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField } from '@mui/material';
+import { sellerService } from '../../services/seller.service';
+import { formatCurrency } from '../../utils/formatCurrency';
+import { formatDate } from '../../utils/formatDate';
+import OrderStatusChip from '../../components/shared/OrderStatusChip/OrderStatusChip';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
+import { generateInvoice } from '../../utils/generateInvoice';
+import DownloadIcon from '@mui/icons-material/Download';
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import Grid from '@mui/material/Grid';
+import Tooltip from '@mui/material/Tooltip';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import { getSellerOrders } from '../../features/orders/order.service';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import Button from '@mui/material/Button';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
-// ✅ Status Badge
-const StatusBadge = ({ status }) => {
-  const normalizedStatus = status?.toLowerCase();
-  let styles = { bg: '#f3f4f6', text: '#374151' };
+const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned'];
 
-  if (['paid', 'delivered'].includes(normalizedStatus))
-    styles = { bg: '#dcfce7', text: '#166534' };
-  else if (['pending', 'processing'].includes(normalizedStatus))
-    styles = { bg: '#fef08a', text: '#854d0e' };
-  else if (['in transit', 'shipped'].includes(normalizedStatus))
-    styles = { bg: '#dbeafe', text: '#1e40af' };
-  else if (normalizedStatus === 'cancelled')
-    styles = { bg: '#fee2e2', text: '#991b1b' };
+const DELIVERY_COLORS = {
+  delivered: { bg: '#e8f5e9', color: '#2e7d32' },
+  cancelled: { bg: '#fdecea', color: '#c62828' },
+  shipped: { bg: '#e3f2fd', color: '#1565c0' },
+  processing: { bg: '#fff8e1', color: '#f57f17' },
+  confirmed: { bg: '#e8f5e9', color: '#2e7d32' },
+  pending: { bg: '#f5f5f5', color: '#616161' },
+  refunded: { bg: '#f3e5f5', color: '#6a1b9a' },
+};
 
+const StatusBadge = ({ label, colorMap }) => {
+  const style = colorMap[label] || { bg: '#f5f5f5', color: '#616161' };
   return (
-    <Box sx={{
-      backgroundColor: styles.bg,
-      color: styles.text,
-      px: 1.5,
-      py: 0.5,
-      borderRadius: '6px',
-      display: 'inline-block',
-      fontSize: '13px',
-      fontWeight: 500
-    }}>
-      {status || '-'}
+    <Box component="span" sx={{ px: 1.5, py: 0.4, borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize', bgcolor: style.bg, color: style.color }}>
+      {label}
     </Box>
   );
 };
 
-export default function Orders() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('All Orders');
-  const [search, setSearch] = useState('');
+const getNextStatuses = (currentStatus) => {
+  if(currentStatus==="pending") return ["confirmed"];
+  if(currentStatus==="confirmed") return ["processing"];
+  if(currentStatus==="processing") return ["shipped"];
+  if(currentStatus==="shipped") return ["delivered"];
+  return [];
+};
 
-  // ✅ Fetch & Transform Data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const res = await getSellerOrders();
+const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
+  const [updating, setUpdating] = useState(false);
+  const dispatch = useDispatch();
 
-        if (res.success) {
-          const formatted = res.data.map((item) => ({
-            orderId: item.Order?.order_number || '',
-            customer: item.Order?.user?.fullName || '',
-            product: item.product?.name || '',
-            amount: `₹${item.price || 0}`,
-            payment: item.Order?.payment_status || '',
-            delivery: item.delivery_status || 'processing',
-            date: item.Order?.createdAt
-              ? new Date(item.Order.createdAt).toLocaleDateString()
-              : ''
-          }));
+  if (!order) return null;
 
-          setOrders(formatted);
-        }
-      } catch (err) {
-        console.error('Fetch Error:', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleStatusChange = async (newStatus) => {
+    setUpdating(true);
+    try {
+      await sellerService.updateOrderItemStatus(order.itemId, newStatus);
+      dispatch(showToast({ message: 'Status updated successfully', severity: 'success' }));
+      onStatusUpdate?.();
+      onClose();
+    } catch {
+      dispatch(showToast({ message: 'Failed to update status', severity: 'error' }));
+    } finally {
+      setUpdating(false);
+    }
+  };
 
-    loadData();
-  }, []);
-
-  // ✅ Filter + Search
-  const filteredOrders = orders.filter((order) => {
-    const matchSearch =
-      (order.orderId || '').toLowerCase().includes(search.toLowerCase()) ||
-      (order.customer || '').toLowerCase().includes(search.toLowerCase());
-
-    let matchFilter = true;
-
-    if (activeFilter === 'Pending')
-      matchFilter = (order.payment || '').toLowerCase() === 'pending';
-
-    if (activeFilter === 'Completed')
-      matchFilter = (order.delivery || '').toLowerCase() === 'delivered';
-
-    return matchSearch && matchFilter;
-  });
+  const addressString = typeof order.address === 'string' ? order.address : (order.address ? `${order.address.address_line1 || ''}\n${order.address.city || ''}, ${order.address.state || ''} ${order.address.pincode || ''}` : '-');
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#f9fafb', minHeight: '100vh' }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
-        Orders
-      </Typography>
-      <Typography variant="body2" sx={{ color: '#6b7280', mb: 3 }}>
-        Manage and track your orders
-      </Typography>
-
-      {/* 🔍 Search + Filter */}
-      <Card sx={{ p: 2, mb: 3, borderRadius: '12px', display: 'flex', gap: 2, justifyContent: 'space-between' }}>
-        <TextField
-          placeholder="Search orders..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size="small"
-          sx={{
-            width: '400px',
-            backgroundColor: '#f3f4f6',
-            borderRadius: '8px',
-            '& fieldset': { border: 'none' }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            )
-          }}
-        />
-
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {['All Orders', 'Pending', 'Completed'].map((f) => (
-            <Button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              variant={activeFilter === f ? 'contained' : 'outlined'}
-              sx={{ textTransform: 'none', borderRadius: '8px', boxShadow: 'none' }}
-            >
-              {f}
-            </Button>
-          ))}
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ pb: 0.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>Order Details - {order.orderNumber}</Typography>
+            <Typography variant="body2" color="text.secondary">View and manage order details and status.</Typography>
+          </Box>
+          <IconButton onClick={onClose} size="small"><CloseIcon fontSize="small" /></IconButton>
         </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 2 }}>
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Customer Name</Typography>
+            <Typography variant="body1">{order.customer || '-'}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Product</Typography>
+            <Typography variant="body1">{order.product || '-'}</Typography>
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Order Amount</Typography>
+            <Typography variant="body1" fontWeight={700}>{formatCurrency(Number(order.amount) || 0)}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Quantity</Typography>
+            <Typography variant="body1">{order.quantity ?? '-'}</Typography>
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Delivery Status</Typography>
+            <StatusBadge label={order.status || 'pending'} colorMap={DELIVERY_COLORS} />
+          </Grid>
+        </Grid>
+        <Divider sx={{ mb: 2.5 }} />
+        <Box sx={{ mb: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1 }}>
+            <LocationOnOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="body1" fontWeight={700}>Shipping Address</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{addressString}</Typography>
+        </Box>
+        <Divider sx={{ mb: 2.5 }} />
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
+            <AccessTimeOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="body1" fontWeight={700}>Order Timeline</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">Order Placed</Typography>
+            <Typography variant="body2" color="text.secondary">{order.createdAt ? formatDate(order.createdAt) : '-'}</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, borderRadius: 2, textTransform: 'none', fontWeight: 600 }} onClick={() => generateInvoice(order.rawItem, true)}>
+            Download Invoice
+          </Button>
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <Select value="" displayEmpty disabled={updating} onChange={(e) => handleStatusChange(e.target.value)} IconComponent={KeyboardArrowDownIcon} sx={{ borderRadius: 2, bgcolor: '#f5f5f5', fontWeight: 600, color: 'text.secondary' }} renderValue={() => 'Update Status'}>
+              {getNextStatuses(order?.status).map((status) => (
+                <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>{status}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const Orders = () => {
+  const dispatch = useDispatch();
+  const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState({});
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortFilter, setSortFilter] = useState('newest');
+  const [yearFilter, setYearFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+      sellerService.getOrders({
+        page,
+        limit: 15,
+        status: statusFilter || undefined,
+        sort: sortFilter,
+        year: yearFilter || undefined,
+        month: monthFilter || undefined,
+        date: dateFilter || undefined,
+      }).then(({ data }) => {
+      setOrders(data.data || []);
+      setPagination(data.pagination || {});
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+  load();
+}, [page, statusFilter, sortFilter, yearFilter, monthFilter, dateFilter]);
+
+  const handleStatusChange = async (itemId, status) => {
+    try {
+      await sellerService.updateOrderItemStatus(itemId, status);
+      dispatch(showToast({ message: 'Status updated.', severity: 'success' }));
+      load();
+    } catch (err) { dispatch(showToast({ message: err.response?.data?.message || 'Error updating status.', severity: 'error' })); }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Orders</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+  <FormControl size="small">
+    <Select
+      value={statusFilter}
+      onChange={(e) => {
+        setStatusFilter(e.target.value);
+        setPage(1);
+      }}
+      displayEmpty
+      sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+    >
+      <MenuItem value="">All Status</MenuItem>
+      {ALLOWED_STATUSES.map((status) => (
+        <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>
+          {status}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+
+  <FormControl size="small">
+    <Select
+      value={sortFilter}
+      onChange={(e) => {
+        setSortFilter(e.target.value);
+        setPage(1);
+      }}
+      sx={{ minWidth: 180, bgcolor: '#f5f5f5' }}
+    >
+      <MenuItem value="newest">Newest</MenuItem>
+      <MenuItem value="oldest">Oldest</MenuItem>
+      <MenuItem value="orderIdAsc">Order ID Increment</MenuItem>
+      <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
+    </Select>
+  </FormControl>
+  <FormControl size="small">
+  <Select
+    value={yearFilter}
+    onChange={(e) => {
+      setYearFilter(e.target.value);
+      setMonthFilter('');
+      setPage(1);
+    }}
+    displayEmpty
+    sx={{ minWidth: 120, bgcolor: '#f5f5f5' }}
+  >
+    <MenuItem value="">All Years</MenuItem>
+    <MenuItem value="2026">2026</MenuItem>
+    <MenuItem value="2025">2025</MenuItem>
+    <MenuItem value="2024">2024</MenuItem>
+  </Select>
+</FormControl>
+
+<FormControl size="small" disabled={!yearFilter}>
+  <Select
+    value={monthFilter}
+    onChange={(e) => {
+      setMonthFilter(e.target.value);
+      setPage(1);
+    }}
+    displayEmpty
+    sx={{ minWidth: 140, bgcolor: '#f5f5f5' }}
+  >
+    <MenuItem value="">All Months</MenuItem>
+    <MenuItem value="1">January</MenuItem>
+    <MenuItem value="2">February</MenuItem>
+    <MenuItem value="3">March</MenuItem>
+    <MenuItem value="4">April</MenuItem>
+    <MenuItem value="5">May</MenuItem>
+    <MenuItem value="6">June</MenuItem>
+    <MenuItem value="7">July</MenuItem>
+    <MenuItem value="8">August</MenuItem>
+    <MenuItem value="9">September</MenuItem>
+    <MenuItem value="10">October</MenuItem>
+    <MenuItem value="11">November</MenuItem>
+    <MenuItem value="12">December</MenuItem>
+  </Select>
+</FormControl>
+<TextField
+  type="date"
+  size="small"
+  value={dateFilter}
+  onChange={(e) => {
+    setDateFilter(e.target.value);
+    setYearFilter('');
+    setMonthFilter('');
+    setPage(1);
+  }}
+  sx={{
+    minWidth: 170,
+    bgcolor: '#f5f5f5',
+  }}
+  InputLabelProps={{
+    shrink: true,
+  }}
+/> 
+</Box>
+      <Card>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'Update', 'View'].map((h) => (
+                  <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading
+                ? Array(5).fill(0).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array(8).fill(0).map((__, j) => <TableCell key={j}><Box sx={{ height: 20, bgcolor: 'action.hover', borderRadius: 1 }} /></TableCell>)}
+                  </TableRow>
+                ))
+                : orders.length === 0
+                  ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                        <Typography color="text.secondary">No orders yet.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )
+                  : orders.map((item) => (
+                    <TableRow key={item.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                         {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {(item.Order || item.order)?.user?.name || 'â€”'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography></TableCell>
+                      <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
+                      <TableCell><OrderStatusChip status={item.status} /></TableCell>
+                      <TableCell>
+                        <FormControl size="small" sx={{ minWidth: 130 }}>
+                          <Select
+                            value={item.status || 'pending'}
+                            displayEmpty
+                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                          >
+                            {ALLOWED_STATUSES.map((s) => (
+                              <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title="View Details">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedOrder({
+                                itemId: item.id,
+                                orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
+                                customer: (item.Order || item.order)?.user?.name || '-',
+                                product: item.product?.name || '-',
+                                quantity: item.quantity,
+                                amount: item.total_price,
+                                status: item.status,
+                                createdAt: item.created_at,
+                                address: (item.Order || item.order)?.address,
+                                rawItem: item
+                              });
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              }
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {pagination.totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <Pagination count={pagination.totalPages} page={page} onChange={(_, v) => setPage(v)} color="primary" />
+          </Box>
+        )}
       </Card>
-
-      {/* 📊 Table */}
-      <TableContainer component={Card} sx={{ borderRadius: '12px' }}>
-        <Table>
-          <TableHead sx={{ backgroundColor: '#f9fafb' }}>
-            <TableRow>
-              {['Order ID', 'Customer', 'Product', 'Amount', 'Payment', 'Delivery', 'Date', 'Actions'].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 600 }}>
-                  {h}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-
-          <TableBody>
-            {/* 🔄 Loading */}
-            {loading && (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            )}
-
-            {/* ❌ No Data */}
-            {!loading && filteredOrders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  No orders found
-                </TableCell>
-              </TableRow>
-            )}
-
-            {/* ✅ Data Rows */}
-            {!loading &&
-              filteredOrders.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.orderId}</TableCell>
-                  <TableCell>{row.customer}</TableCell>
-                  <TableCell>{row.product}</TableCell>
-                  <TableCell>{row.amount}</TableCell>
-                  <TableCell><StatusBadge status={row.payment} /></TableCell>
-                  <TableCell><StatusBadge status={row.delivery} /></TableCell>
-                  <TableCell>{row.date}</TableCell>
-                  <TableCell>
-                    <IconButton size="small">
-                      <VisibilityOutlinedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small">
-                      <FileDownloadOutlinedIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <OrderDetailDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        order={selectedOrder}
+        onStatusUpdate={load}
+      />
     </Box>
   );
-}
+};
 
-
-// import { useState, useEffect } from 'react';
-// import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl } from '@mui/material';
-// import { sellerService } from '../../services/seller.service';
-// import { formatCurrency } from '../../utils/formatCurrency';
-// import { formatDate } from '../../utils/formatDate';
-// import OrderStatusChip from '../../components/shared/OrderStatusChip/OrderStatusChip';
-// import { useDispatch } from 'react-redux';
-// import { showToast } from '../../features/ui/uiSlice';
-
-// const ALLOWED_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-
-// const Orders = () => {
-//   const dispatch = useDispatch();
-//   const [orders, setOrders] = useState([]);
-//   const [pagination, setPagination] = useState({});
-//   const [page, setPage] = useState(1);
-//   const [loading, setLoading] = useState(true);
-
-//   const load = () => {
-//     setLoading(true);
-//     sellerService.getOrders({ page, limit: 15 }).then(({ data }) => {
-//       setOrders(data.data || []);
-//       setPagination(data.pagination || {});
-//     }).finally(() => setLoading(false));
-//   };
-
-//   useEffect(() => { load(); }, [page]);
-
-//   const handleStatusChange = async (itemId, status) => {
-//     try {
-//       await sellerService.updateOrderItemStatus(itemId, status);
-//       dispatch(showToast({ message: 'Status updated.', severity: 'success' }));
-//       load();
-//     } catch (err) { dispatch(showToast({ message: err.response?.data?.message || 'Error updating status.', severity: 'error' })); }
-//   };
-
-//   return (
-//     <Box>
-//       <Typography variant="h5" fontWeight={700} gutterBottom>Orders</Typography>
-//       <Card>
-//         <TableContainer>
-//           <Table>
-//             <TableHead>
-//               <TableRow>
-//                 {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'Update'].map((h) => (
-//                   <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
-//                 ))}
-//               </TableRow>
-//             </TableHead>
-//             <TableBody>
-//               {loading
-//                 ? Array(5).fill(0).map((_, i) => (
-//                   <TableRow key={i}>
-//                     {Array(8).fill(0).map((__, j) => <TableCell key={j}><Box sx={{ height: 20, bgcolor: 'action.hover', borderRadius: 1 }} /></TableCell>)}
-//                   </TableRow>
-//                 ))
-//                 : orders.length === 0
-//                   ? (
-//                     <TableRow>
-//                       <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-//                         <Typography color="text.secondary">No orders yet.</Typography>
-//                       </TableCell>
-//                     </TableRow>
-//                   )
-//                   : orders.map((item) => (
-//                     <TableRow key={item.id} hover>
-//                       <TableCell><Typography variant="body2" fontWeight={600}>#{item.order?.order_number}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2">{item.order?.user?.name || '—'}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography></TableCell>
-//                       <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
-//                       <TableCell><OrderStatusChip status={item.status} /></TableCell>
-//                       <TableCell>
-//                         <FormControl size="small" sx={{ minWidth: 130 }}>
-//                           <Select
-//                             value={item.status}
-//                             onChange={(e) => handleStatusChange(item.id, e.target.value)}
-//                           >
-//                             {ALLOWED_STATUSES.map((s) => (
-//                               <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
-//                             ))}
-//                           </Select>
-//                         </FormControl>
-//                       </TableCell>
-//                     </TableRow>
-//                   ))
-//               }
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//         {pagination.totalPages > 1 && (
-//           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-//             <Pagination count={pagination.totalPages} page={page} onChange={(_, v) => setPage(v)} color="primary" />
-//           </Box>
-//         )}
-//       </Card>
-//     </Box>
-//   );
-// };
-
-// export default Orders;
+export default Orders;

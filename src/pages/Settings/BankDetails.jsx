@@ -12,7 +12,7 @@ import {
 // ✅ Custom Helper Imports 
 import { getBankDetailsAPI, updateBankDetailsAPI } from '../../features/settings/settings.service';
 import { findBankName } from '../../utils/bankHelpers';
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 
 // ----------------------------------------------------------------------
 // Styled Components

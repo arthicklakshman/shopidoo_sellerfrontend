@@ -7,13 +7,21 @@ import {
   TextField,
   InputLabel,
   Divider,
-  Switch
+  Switch,
+  InputAdornment
 } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useSelector } from 'react-redux';
 
 // ✅ Custom Helper Imports
-import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingsActions';
+import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
+
+// ✅ OTP Imports
+import { useOtp } from '../../utils/useOtp';
+import OtpModal from '../../components/shared/OtpModal/OtpModal';
+import GradientButton from '../../components/shared/GradientButton/GradientButton';
 
 // ----------------------------------------------------------------------
 // Styled Components
@@ -44,11 +52,42 @@ const getCustomInputStyles = (isEditing) => ({
   }
 });
 
+const VerifyButton = ({ onClick, isVerified }) => (
+  <GradientButton
+    type="button"
+    onClick={onClick}
+    disabled={isVerified}
+    sx={{
+      py: 0.6, px: 3, borderRadius: '6px', textTransform: 'none', fontSize: '0.875rem', minWidth: 'auto',
+      background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)',
+      boxShadow: 'none',
+      ...(isVerified && {
+        background: '#ecfdf5', color: '#059669', boxShadow: 'none',
+        '&:hover': { background: '#ecfdf5', boxShadow: 'none' },
+        '&.Mui-disabled': { background: '#ecfdf5', color: '#059669', WebkitTextFillColor: '#059669' } 
+      })
+    }}
+  >
+    {isVerified ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <CheckCircleIcon sx={{ fontSize: 16 }} /> Verified
+      </Box>
+    ) : 'Verify'}
+  </GradientButton>
+);
+
 // ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
 export default function Security() {
+  const { user } = useSelector(state => state.auth);
   const [isEditing, setIsEditing] = useState(false);
+
+  // OTP Hook
+  const { 
+    otpModal, otpLoading, otpError, isMobileVerified, isEmailVerified,
+    sendOtp, verifyOtp, resendOtp, closeOtpModal 
+  } = useOtp();
 
   // We mainly use savedData to remember the 2FA state if they cancel
   const [savedData, setSavedData] = useState({
@@ -56,7 +95,6 @@ export default function Security() {
   });
 
   const [form, setForm] = useState({
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
     twoFactor: savedData.twoFactor
@@ -77,7 +115,6 @@ export default function Security() {
 
   const handleCancel = () => {
     setForm({
-      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
       twoFactor: savedData.twoFactor
@@ -88,14 +125,11 @@ export default function Security() {
   };
 
   const handleSubmit = async () => {
-    console.log("🔥 Submit clicked");
-
-    const isPasswordChange = form.currentPassword || form.newPassword || form.confirmPassword;
+    const isPasswordChange = form.newPassword || form.confirmPassword;
 
     // ✅ Only validate when password is being changed
     if (isPasswordChange) {
       const temp = validateSecurity(form);
-      console.log("🚨 Validation result:", temp);
 
       if (Object.keys(temp).length > 0) {
         setErrors(temp);
@@ -107,23 +141,18 @@ export default function Security() {
       const payload = {};
 
       if (isPasswordChange) {
-        payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
+        payload.email = user.email || user.emailId; // Send email for reset
       }
 
       payload.twoFactor = form.twoFactor;
 
-      console.log("🚀 Sending payload:", payload); // 👈 Moved this AFTER payload is created
-
       const response = await updateSecurityAPI(payload);
-
-      console.log("✅ API Response:", response);
 
       if (response.success) {
         setSavedData({ twoFactor: form.twoFactor });
 
         setForm({
-          currentPassword: "",
           newPassword: "",
           confirmPassword: "",
           twoFactor: form.twoFactor
@@ -136,6 +165,16 @@ export default function Security() {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Update failed");
+    }
+  };
+
+  const handleVerifyClick = async (type, target) => {
+    if (!target) return alert(`No ${type} found for verification.`);
+    try {
+      await sendOtp(type, target);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Failed to send OTP.');
     }
   };
 
@@ -160,22 +199,6 @@ export default function Security() {
         </Box>
 
         <Box>
-          <StyledInputLabel>Current Password</StyledInputLabel>
-          <TextField
-            fullWidth
-            name="currentPassword"
-            type="password"
-            value={isEditing ? form.currentPassword : "********"}
-            onChange={handleChange}
-            disabled={!isEditing}
-            // Add a placeholder to tell them to type it!
-            placeholder={isEditing ? "Type your current password to verify" : ""}
-            variant="outlined"
-            size="small"
-            sx={getCustomInputStyles(isEditing)}
-            error={!!errors.currentPassword}
-            helperText={errors.currentPassword}
-          />
           <StyledInputLabel>New Password</StyledInputLabel>
           <TextField
             fullWidth
@@ -204,6 +227,51 @@ export default function Security() {
             sx={{ ...getCustomInputStyles(isEditing), mb: 0 }}
             error={!!errors.confirmPassword}
             helperText={errors.confirmPassword}
+          />
+        </Box>
+
+        <Divider sx={{ my: 4, borderColor: '#e5e7eb' }} />
+
+        {/* --- CONTACT VERIFICATION SECTION --- */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#111827', mb: 2 }}>
+            Contact Verification
+          </Typography>
+
+          <StyledInputLabel>Registered Email</StyledInputLabel>
+          <TextField
+            fullWidth
+            value={user?.email || user?.emailId || ''}
+            disabled
+            variant="outlined"
+            size="small"
+            sx={getCustomInputStyles(false)}
+            InputProps={{ endAdornment: ( 
+              <InputAdornment position="end">
+                <VerifyButton 
+                  onClick={() => handleVerifyClick('email', user?.email || user?.emailId)} 
+                  isVerified={isEmailVerified} 
+                />
+              </InputAdornment> 
+            )}} 
+          />
+
+          <StyledInputLabel>Registered Mobile Number</StyledInputLabel>
+          <TextField
+            fullWidth
+            value={user?.mobileNumber || user?.phone || ''}
+            disabled
+            variant="outlined"
+            size="small"
+            sx={{ ...getCustomInputStyles(false), mb: 0 }}
+            InputProps={{ endAdornment: ( 
+              <InputAdornment position="end">
+                <VerifyButton 
+                  onClick={() => handleVerifyClick('mobile', user?.mobileNumber || user?.phone)} 
+                  isVerified={isMobileVerified} 
+                />
+              </InputAdornment> 
+            )}} 
           />
         </Box>
 
@@ -245,6 +313,18 @@ export default function Security() {
         )}
 
       </CardContent>
+
+      {/* 🌟 OTP MODAL */}
+      <OtpModal
+        open={otpModal.isOpen}
+        onClose={closeOtpModal}
+        targetValue={otpModal.targetValue} 
+        type={otpModal.type}
+        onVerify={verifyOtp}
+        onResend={resendOtp}
+        isLoading={otpLoading}
+        error={otpError}
+      />
     </Card>
   );
 }

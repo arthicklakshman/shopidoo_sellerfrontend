@@ -17,7 +17,7 @@ import StoreInfo from "./StoreInfo";
 import BankDetails from "./BankDetails";
 import PickupAddress from "./PickupAddress";
 import Security from "./Security";
-import Notifications from "./Notifications";
+import Notifications from "./Notify";
 
 const Settings = () => {
   const [tab, setTab] = useState(0);

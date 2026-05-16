@@ -29,6 +29,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutSeller } from '../../features/auth/authSlice';
 
+const USER_FRONTEND_URL = import.meta.env.VITE_USER_FRONTEND_URL || 'http://localhost:5173/';
+
 // Helper component for the "What Happens Next" list
 const StepItem = ({ num, title, desc }) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2.5 }}>
@@ -75,8 +77,7 @@ export default function RegistrationSuccess() {
   const { user } = useSelector((s) => s.auth);
 
   const handleReturnToShop = () => {
-    // Navigate to user frontend
-    window.location.href = 'http://localhost:5173';
+    window.location.assign(USER_FRONTEND_URL);
   };
 
   return (

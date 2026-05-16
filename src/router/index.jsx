@@ -1,83 +1,111 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import PageLoader from '../components/common/PageLoader/PageLoader';
-import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
-import Support from '../pages/Support/Support';
+import { lazy, Suspense } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { useSelector } from "react-redux";
+import PageLoader from "../components/common/PageLoader/PageLoader";
+import SellerLayout from "../components/layout/SellerLayout/SellerLayout";
+import Support from "../pages/Support/Support";
+// For Inventory
 import Inventory from "../pages/Inventory/Inventory";
+//settings
+import Maintenance from "../pages/Maintenance/Maintenance";
+import Settings from "../pages/Settings/Setting";
 
-
-const Login = lazy(() => import('../pages/Auth/Login'));
-const Register = lazy(() => import('../pages/Auth/Register'));
-const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'));
-const Products = lazy(() => import('../pages/Products/Products'));
-const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
-const Orders = lazy(() => import('../pages/Orders/Orders'));
-const Analytics = lazy(() => import('../pages/Analytics/Analytics'));
-const Profile = lazy(() => import('../pages/Profile/Profile'));
-const Settings = lazy(() => import('../pages/Settings/Settings'));
-const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
-const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
-const RegistrationSuccess = lazy(() => import('../pages/Onboarding/RegistrationSuccess'))
-const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
-// const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
+const Login = lazy(() => import("../pages/Auth/Login"));
+const ForgotPassword = lazy(() => import("../pages/Auth/ForgotPassword"));
+// const Register = lazy(() => import('../pages/Auth/Register'));
+const OnboardingEntry = lazy(
+  () => import("../pages/Onboarding/OnboardingEntry"),
+);
+const SellerOnboarding = lazy(
+  () => import("../pages/Onboarding/SellerOnboarding"),
+);
+const RegistrationSuccess = lazy(
+  () => import("../pages/Onboarding/RegistrationSuccess"),
+);
+const Dashboard = lazy(() => import("../pages/Dashboard/Dashboard"));
+const Products = lazy(() => import("../pages/Products/Products"));
+const ProductForm = lazy(() => import("../pages/ProductForm/ProductForm"));
+const Orders = lazy(() => import("../pages/Orders/Orders"));
+const Analytics = lazy(() => import("../pages/Analytics/Analytics"));
+const Profile = lazy(() => import("../pages/Profile/Profile"));
+const Wallet = lazy(() => import("../pages/Wallet/Wallet"));
+const Coupons = lazy(() => import("../pages/Coupons/Coupons"));
+const Notifications = lazy(
+  () => import("../pages/Notifications/Notifications"),
+);
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
-  
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
-  
-  // 🛑 NEW: Completely block access to the internal dashboard unless seller is fully active
-  if (user && user.status !== 'active') {
-    return <Navigate to="/onboarding/success" replace />;
-  }
-  
+  if (user && user.role !== "seller") return <Navigate to="/login" replace />;
+
   return children;
 };
-
 
 const GuestRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth);
-  
-  // ✅ FIX: Only redirect if they are both authenticated AND active
-  if (isAuthenticated && user?.status === 'active') {
+  const { isAuthenticated, user } = useSelector((s) => s.auth || {});
+  const location = useLocation();
+
+  // 🌟 REVISED: Only redirect if we are on Login/Register and ALREADY registered.
+  // This completely stays out of the way of the onboarding flow.
+  const isAuthPath =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  if (isAuthenticated && user?.isRegistered && isAuthPath) {
     return <Navigate to="/dashboard" replace />;
   }
-  
-  return children;
-};
 
-// const GuestRoute = ({ children }) => {
-//   const { isAuthenticated } = useSelector((s) => s.auth);
-//   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
-// };
+  return children || null;
+};
 
 const AppRouter = () => (
   <BrowserRouter>
     <Suspense fallback={<PageLoader />}>
-
-
-
       <Routes>
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        {/* <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} /> */}
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <OnboardingEntry />
+            </GuestRoute>
+          }
+        />
+         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
 
-        {/* 🌐 START PAGE */}
-        <Route path="/" element={<OnboardingEntry />} />
-
-        {/* ✅ FIX: redirect */}
-        <Route path="/onboarding" element={<Navigate to="/onboarding/1" replace />} />
-
-        {/* 🧾 ONBOARDING FLOW */}
-        <Route path="/onboarding/:step" element={<SellerOnboarding />} />
 
         <Route path="/onboarding/success" element={<RegistrationSuccess />} />
 
-        {/* 👤 AUTH */}
-        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+        {/* 🌟 ADDED: Handle the base /onboarding URL by redirecting to Step 1 */}
+        <Route
+          path="/onboarding"
+          element={<Navigate to="/onboarding/1" replace />}
+        />
 
-        {/* 🔐 SELLER PANEL */}
-        <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
+        <Route path="/onboarding/:step" element={<SellerOnboarding />} />
+
+        <Route path="/maintenance" element={<Maintenance />} />
+        <Route   element={
+            <PrivateRoute>
+              <SellerLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/new" element={<ProductForm />} />
@@ -87,14 +115,12 @@ const AppRouter = () => (
           <Route path="/support" element={<Support />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/wallet" element={<Wallet />} />
           <Route path="/coupons" element={<Coupons />} />
-          {/* <Route path="/notifications" element={<Notifications />} /> */}
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
-
-        {/* ❌ FALLBACK */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-
       </Routes>
     </Suspense>
   </BrowserRouter>

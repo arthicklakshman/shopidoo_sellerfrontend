@@ -36,11 +36,11 @@ const baseComponents = {
 export const lightTheme = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#0B8457', light: '#A78BFA', dark: '#5B21B6', contrastText: '#fff' },
-    secondary: { main: '#0FB9B1',  light: '#34D399', dark: '#059669', contrastText: '#fff' },
-    background: { default: '#F5F7FA', paper: '#FFFFFF' },
+    primary: { main: '#7C3AED', light: '#A78BFA', dark: '#5B21B6', contrastText: '#fff' },
+    secondary: { main: '#10B981', light: '#34D399', dark: '#059669', contrastText: '#fff' },
+    background: { default: '#F5F3FF', paper: '#FFFFFF' },
     success: { main: '#059669' },
-    warning: { main: '#D97706' },                     
+    warning: { main: '#D97706' },
     error: { main: '#DC2626' },
   },
   typography: baseTypography,

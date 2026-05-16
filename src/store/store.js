@@ -5,20 +5,21 @@
 //   reducer: { auth: authReducer, ui: uiReducer },
 //   middleware: (g) => g({ serializableCheck: false }),
 // });
-import { configureStore } from '@reduxjs/toolkit';
 
+
+import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import uiReducer from '../features/ui/uiSlice';
 import onboardingReducer from '../features/onboarding/onboardingSlice';
 
 export const store = configureStore({
-  reducer: {
+  reducer: { 
     auth: authReducer,
     ui: uiReducer,
-    onboarding: onboardingReducer,   // ✅ ADDED
+    onboarding: onboardingReducer
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: false,
-    }),
+
+  middleware: (g) => g({
+    serializableCheck: false
+  }),
 });
