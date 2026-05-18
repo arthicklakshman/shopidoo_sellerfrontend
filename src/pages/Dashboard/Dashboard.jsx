@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Grid, Typography, Box, Card, CardContent, Skeleton, useTheme } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -15,6 +16,8 @@ const Dashboard = () => {
   const { user } = useSelector((s) => s.auth);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const cardLinkStyle = { textDecoration: 'none', display: 'block', cursor: 'pointer' };
 
   useEffect(() => {
     sellerService.getDashboard().then(({ data }) => setData(data.data)).finally(() => setLoading(false));
@@ -39,16 +42,39 @@ const Dashboard = () => {
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={InventoryIcon} color="primary" />
+          <Link to="/products" style={cardLinkStyle}>
+            <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={InventoryIcon} color="primary" />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Orders" value={stats?.totalOrders || 0} icon={ShoppingBagIcon} color="secondary" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard title="Total Orders" value={stats?.totalOrders || 0} icon={ShoppingBagIcon} color="secondary" />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Revenue" value={formatCurrency(stats?.totalRevenue || 0)} icon={AttachMoneyIcon} color="success" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard 
+              title="Total Revenue" 
+              value={formatCurrency(stats?.totalRevenue || 0)} 
+              icon={AttachMoneyIcon} 
+              color="success" 
+            />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Pending Orders" value={stats?.pendingOrders || 0} icon={PendingIcon} color="warning" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard title="Pending Orders" value={stats?.pendingOrders || 0} icon={PendingIcon} color="warning" />
+          </Link>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Link to="/returns" style={cardLinkStyle}>
+            <StatCard 
+              title="Total Returns" 
+              value={stats?.totalReturns || 0} 
+              icon={ShoppingBagIcon} 
+              color="error" 
+            />
+          </Link>
         </Grid>
       </Grid>
 

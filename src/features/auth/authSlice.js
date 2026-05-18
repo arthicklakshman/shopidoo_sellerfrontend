@@ -12,6 +12,14 @@ const handleAuthFulfilled = (state, action) => {
   localStorage.setItem('sellerUser', JSON.stringify(action.payload.user));
 };
 
+export const googleLoginSeller = createAsyncThunk('auth/googleLogin', async (credential, { rejectWithValue }) => {
+  try {
+    const { data } = await authService.googleLogin(credential);
+    if (data.data.user.role !== 'seller') throw new Error('Access restricted to sellers.');
+    return data.data;
+  } catch (err) { return rejectWithValue(err.response?.data?.message || err.message); }
+});
+
 export const loginSeller = createAsyncThunk('auth/login', async (creds, { rejectWithValue }) => {
   try {
     const { data } = await authService.login(creds);
@@ -53,6 +61,9 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(googleLoginSeller.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(googleLoginSeller.fulfilled, handleAuthFulfilled)
+      .addCase(googleLoginSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(loginSeller.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(loginSeller.fulfilled, handleAuthFulfilled)
       .addCase(loginSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })

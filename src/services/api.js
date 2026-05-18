@@ -38,7 +38,13 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const orig = error.config;
-    if (error.response?.status === 401 && !orig._retry) {
+    
+    // Skip token refresh for auth endpoints to preserve original 401 errors
+    const isAuthRoute = orig.url?.includes('/auth/login') || 
+                        orig.url?.includes('/auth/register') || 
+                        orig.url?.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && !orig._retry && !isAuthRoute) {
       if (isRefreshing) return new Promise((res, rej) => failedQueue.push({ resolve: res, reject: rej })).then((t) => { orig.headers.Authorization = `Bearer ${t}`; return api(orig); });
       orig._retry = true; isRefreshing = true;
       try {

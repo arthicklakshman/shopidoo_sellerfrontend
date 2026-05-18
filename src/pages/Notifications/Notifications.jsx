@@ -15,6 +15,7 @@ import {
   Button,
   Tooltip,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
@@ -23,6 +24,8 @@ import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   const { user } = useSelector((s) => s.auth);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,9 +138,9 @@ const Notifications = () => {
 
   const renderPayoutStatus = () => (
     <>
-      <Box sx={{ border: '1px solid #ffeeba', bgcolor: '#fffdf5', borderRadius: 3, p: 3 }}>
+      <Box sx={{ border: `1px solid ${isDarkMode ? theme.palette.warning.dark : '#ffeeba'}`, bgcolor: isDarkMode ? 'rgba(251, 191, 36, 0.05)' : '#fffdf5', borderRadius: 3, p: 3 }}>
         <Typography fontWeight={700} fontSize={22} mb={2}>💰 Payout Update</Typography>
-        <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: '#fff' }}>
+        <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: theme.palette.background.paper }}>
           <Typography color="text.secondary" sx={{ fontSize: 16 }}>
             {selectedNotification?.message}
           </Typography>
@@ -152,9 +155,9 @@ const Notifications = () => {
 
   const renderStatusUpdate = (title, color) => (
     <>
-      <Box sx={{ border: `1px solid ${color}44`, bgcolor: `${color}08`, borderRadius: 3, p: 3 }}>
+      <Box sx={{ border: `1px solid ${color}${isDarkMode ? '66' : '44'}`, bgcolor: `${color}${isDarkMode ? '15' : '08'}`, borderRadius: 3, p: 3 }}>
         <Typography fontWeight={700} fontSize={22} mb={2}>{title}</Typography>
-        <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: '#fff' }}>
+        <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: theme.palette.background.paper }}>
           <Typography color="text.secondary">{selectedNotification?.message}</Typography>
         </Paper>
       </Box>
@@ -214,13 +217,13 @@ const Notifications = () => {
               <Box
                 sx={{
                   p: 3,
-                  bgcolor: item.is_read ? '#fff' : '#f8f9ff',
+                  bgcolor: item.is_read ? theme.palette.background.paper : (isDarkMode ? 'rgba(124, 58, 237, 0.08)' : '#f8f9ff'),
                   transition: '0.2s',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   gap: 2,
-                  '&:hover': { bgcolor: '#f4f6fa' },
+                  '&:hover': { bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : '#f4f6fa' },
                 }}
               >
                 <Box sx={{ flex: 1 }}>
@@ -241,7 +244,10 @@ const Notifications = () => {
                     <IconButton
                       onClick={() => handleNavigate(item)}
                       sx={{
-                        width: 42, height: 42, bgcolor: '#f0f4ff', color: '#2563eb', border: '1px solid #dbe4ff',
+                        width: 42, height: 42, 
+                        bgcolor: isDarkMode ? 'rgba(37, 99, 235, 0.15)' : '#f0f4ff', 
+                        color: isDarkMode ? '#60a5fa' : '#2563eb', 
+                        border: `1px solid ${isDarkMode ? 'rgba(37, 99, 235, 0.3)' : '#dbe4ff'}`,
                         '&:hover': { bgcolor: '#2563eb', color: '#fff' },
                       }}
                     >
@@ -254,7 +260,10 @@ const Notifications = () => {
                       <IconButton
                         onClick={() => handleMarkAsRead(item)}
                         sx={{
-                          width: 42, height: 42, bgcolor: '#ecfdf5', color: '#16a34a', border: '1px solid #bbf7d0',
+                          width: 42, height: 42, 
+                          bgcolor: isDarkMode ? 'rgba(22, 163, 74, 0.15)' : '#ecfdf5', 
+                          color: isDarkMode ? '#4ade80' : '#16a34a', 
+                          border: `1px solid ${isDarkMode ? 'rgba(22, 163, 74, 0.3)' : '#bbf7d0'}`,
                           '&:hover': { bgcolor: '#16a34a', color: '#fff' },
                         }}
                       >
@@ -267,8 +276,11 @@ const Notifications = () => {
                     <IconButton
                       onClick={() => handleClick(item)}
                       sx={{
-                        width: 42, height: 42, bgcolor: '#f6f6f6', color: '#444', border: '1px solid #ddd',
-                        '&:hover': { bgcolor: '#222', color: '#fff' },
+                        width: 42, height: 42, 
+                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f6f6f6', 
+                        color: theme.palette.text.secondary, 
+                        border: `1px solid ${theme.palette.divider}`,
+                        '&:hover': { bgcolor: isDarkMode ? '#fff' : '#222', color: isDarkMode ? '#000' : '#fff' },
                       }}
                     >
                       <SupportAgentOutlinedIcon />
@@ -291,7 +303,7 @@ const Notifications = () => {
       >
         {selectedNotification && (
           <>
-            <Box sx={{ p: 3, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box>
                 <Typography fontWeight={700} fontSize={28}>{selectedNotification.title}</Typography>
                 <Typography color="text.secondary" fontSize={14}>

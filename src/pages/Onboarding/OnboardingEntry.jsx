@@ -21,6 +21,8 @@ import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
 import GradientText from '../../components/shared/GradientButton/GradientText';
 
+import sellerHero from '../../assets/seller_hero.png';
+
 const features = [
     { icon: <TrendingUpIcon />, title: 'Low Commission', desc: 'Keep more of what you earn' },
     { icon: <PeopleOutlineIcon />, title: 'High Visibility', desc: 'Reach millions of customers' },
@@ -75,7 +77,7 @@ export default function OnboardingEntry() {
                         <Box
                             sx={{
                                 width: '100%',
-                                height: { xs: '250px', sm: '350px' },
+                                aspectRatio: '16/9',
                                 borderRadius: '24px',
                                 overflow: 'hidden',
                                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
@@ -83,7 +85,7 @@ export default function OnboardingEntry() {
                             }}
                         >
                             <img
-                                src="https://images.unsplash.com/photo-1580828369019-2228f41df0a4?q=80&w=1000&auto=format&fit=crop"
+                                src={sellerHero}
                                 alt="Seller"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

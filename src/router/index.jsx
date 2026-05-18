@@ -12,6 +12,7 @@ import Settings from '../pages/Settings/Setting';
 
 
 const Login = lazy(() => import('../pages/Auth/Login'));
+const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 // const Register = lazy(() => import('../pages/Auth/Register'));
 const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
 const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
@@ -19,12 +20,15 @@ const RegistrationSuccess = lazy(() => import('../pages/Onboarding/RegistrationS
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'));
 const Products = lazy(() => import('../pages/Products/Products'));
 const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
+const SellerReviews = lazy(()=> import('../pages/SellerReviews/SellerReviews'));
 const Orders = lazy(() => import('../pages/Orders/Orders'));
 const Analytics = lazy(() => import('../pages/Analytics/Analytics'));
 const Profile = lazy(() => import('../pages/Profile/Profile'));
 const Wallet       = lazy(() => import('../pages/Wallet/Wallet'));
 const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
+const Returns = lazy(() => import('../pages/Returns/SellerReturns'));
+const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
 
 
 
@@ -44,8 +48,14 @@ const GuestRoute = ({ children }) => {
   // This completely stays out of the way of the onboarding flow.
   const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
   
-  if (isAuthenticated && user?.isRegistered && isAuthPath) {
-    return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated && isAuthPath) {
+    if (user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    
+    if (user?.seller_status === 'approved') {
+      return <Navigate to="/dashboard" replace />;
+    } else if (user?.seller_status === 'pending' || user?.seller_status === 'rejected') {
+      return <Navigate to="/onboarding/success" replace />;
+    }
   }
   
   return children || null;
@@ -56,6 +66,7 @@ const AppRouter = () => (
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         {/* <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} /> */}
         <Route 
           path="/register" 
@@ -91,6 +102,7 @@ const AppRouter = () => (
           <Route path="/products" element={<Products />} />
           <Route path="/products/new" element={<ProductForm />} />
           <Route path="/products/:id/edit" element={<ProductForm />} />
+          <Route path="/sellerreviews" element={<SellerReviews />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/support" element={<Support />} />
@@ -100,6 +112,8 @@ const AppRouter = () => (
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/returns" element={<Returns />} />
+          <Route path="/cms" element={<SellerCMS />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

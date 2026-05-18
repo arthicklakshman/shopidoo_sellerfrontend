@@ -30,6 +30,7 @@ import {
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import ReviewsIcon from '@mui/icons-material/Reviews';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -41,10 +42,11 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import CircleIcon from '@mui/icons-material/Circle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-
+import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
 import { logoutSeller } from '../../../features/auth/authSlice';
@@ -55,9 +57,12 @@ const DRAWER_WIDTH = 240;
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { label: 'Products', icon: InventoryIcon, path: '/products' },
+  { label: 'Reviews', icon:ReviewsIcon, path: '/sellerreviews'},
   { label: 'Orders', icon: ShoppingBagIcon, path: '/orders' },
+  { label: 'Returns', icon: AssignmentReturnIcon, path: '/returns' },
   { label: 'Inventory', icon: Inventory2Icon, path: '/inventory' },
   { label: 'Coupons', icon: LocalOfferIcon, path: '/coupons' },
+  { label: 'CMS', icon: CampaignIcon, path: '/cms' },
   { label: 'Analytics', icon: BarChartIcon, path: '/analytics' },
   { label: 'Support', icon: SupportAgentIcon, path: '/support' },
   { label: 'Wallet', icon: AccountBalanceWalletIcon, path: '/wallet' },

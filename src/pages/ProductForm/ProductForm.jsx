@@ -388,6 +388,25 @@ const ProductForm = () => {
       .catch(() => setCategoryAttributes([]));
   }, [form.category_id, form.subcategory_id]);
 
+  useEffect(() => {
+    let total = 0;
+    if (isFashionVariantCategory) {
+      colorGroups.forEach(group => {
+        group.sizes.forEach(size => {
+          total += (Number(size.stock_quantity) || 0);
+        });
+      });
+    } else if (variants.length > 0) {
+      variants.forEach(v => {
+        total += (Number(v.stock_quantity) || 0);
+      });
+    }
+
+    if (isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) {
+      setForm(prev => ({ ...prev, stock_quantity: total }));
+    }
+  }, [colorGroups, variants, isFashionVariantCategory]);
+
   const handleChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleAttributeChange = (attributeId) => (e) => {
@@ -881,7 +900,7 @@ const ProductForm = () => {
                       fullWidth required={(isFashionVariantCategory ? colorGroups.length === 0 : variants.length === 0)}
                       disabled={isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0}
                       placeholder="0"
-                      helperText={(isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) ? "Stock is aggregated from variants" : ""}
+                      helperText={(isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) ? "Automatically calculated from variants" : ""}
                       inputProps={{ min: 0 }}
                     />
                   </Grid>

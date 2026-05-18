@@ -26,6 +26,7 @@ import StepWrapper from '../components/StepWrapper';
 import NavigationButtons from '../components/NavigationButtons'; 
 import GradientButton from '../../../components/shared/GradientButton/GradientButton';
 import OtpModal from '../components/OtpModal';
+import onboardingOne from '../../../assets/onboarding_one.jpg';
 
 const StyledInputLabel = ({ children, required }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -156,22 +157,14 @@ export default function BasicInformation({ onNext, sellerId }) {
     setOtpError('');
 
     try {
-      if (otpModal.type === 'email') {
-        // 🌟 Call the real Node.js backend!
+      if (otpModal.type === 'email' || otpModal.type === 'mobile') {
+        // 🌟 Call the real Node.js backend for both Email and Mobile!
         await onboardingService.verifyEmailOtp(otpModal.targetValue, otpValue);
         
-        // If it doesn't throw an error, it was successful!
-        setIsEmailVerified(true);
+        if (otpModal.type === 'email') setIsEmailVerified(true);
+        if (otpModal.type === 'mobile') setIsMobileVerified(true);
+        
         setOtpModal({ isOpen: false, type: '', targetValue: '' });
-
-      } else if (otpModal.type === 'mobile') {
-        // Mobile is still using the fake "123456" logic for now
-        if (otpValue === "123456") { 
-          setIsMobileVerified(true);
-          setOtpModal({ isOpen: false, type: '', targetValue: '' });
-        } else {
-          setOtpError("Invalid code. Please try again. (Hint: use 123456)");
-        }
       }
     } catch (error) {
       // If the backend says the code is wrong or expired, show the red error in the modal
@@ -321,7 +314,9 @@ const handleResendOtp = async () => {
           <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', height: '100%' }}>
             <CardContent sx={{ p: { xs: 3, md: 4 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 3 }}>Quick & Secure Registration</Typography>
-              <Box sx={{ width: '100%', height: '220px', borderRadius: '12px', overflow: 'hidden', mb: 4, backgroundColor: '#f3f4f6' }}></Box>
+              <Box sx={{ width: '100%', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', mb: 4, backgroundColor: '#f3f4f6' }}>
+                <img src={onboardingOne} alt="Quick & Secure Registration" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {['Your data is encrypted and secure', 'OTP verification for security', 'Auto-save feature - never lose progress'].map((text, idx) => (
                   <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -411,7 +406,8 @@ const handleResendOtp = async () => {
       <OtpModal
         open={otpModal.isOpen}
         onClose={() => setOtpModal({ isOpen: false, type: '', targetValue: '' })}
-        email={otpModal.targetValue} 
+        targetValue={otpModal.targetValue} 
+        type={otpModal.type}
         onVerify={handleVerifyOtp}
         onResend={handleResendOtp}
         isLoading={otpLoading}
