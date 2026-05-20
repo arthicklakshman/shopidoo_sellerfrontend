@@ -76,7 +76,10 @@ const Profile = () => {
                 {user?.name?.[0]}
               </Avatar>
               <Typography fontWeight={700}>{user?.name}</Typography>
-              <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Seller ID: {user?.seller_id || `S${String(user?.id).padStart(5, '0')}`}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{user?.email}</Typography>
               <Typography variant="caption" sx={{ color: '#0FB9B1', fontWeight: 700 }}>Seller Account</Typography>
             </CardContent>
           </Card>

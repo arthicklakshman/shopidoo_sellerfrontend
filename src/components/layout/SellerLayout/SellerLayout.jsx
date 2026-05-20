@@ -96,7 +96,10 @@ const SellerLayout = () => {
   useEffect(() => {
   fetchNotifications();
 
-  socket.emit('join', `seller_${user?.id}`);
+  socket.emit('join', `seller_${user?.id}`, {
+    id: user?.id,
+    name: user?.storeName || user?.businessName || user?.name || 'Seller Store',
+  });
 
   const handleNewNotification = (data) => {
     console.log('SELLER NEW NOTIFICATION', data);
@@ -104,7 +107,9 @@ const SellerLayout = () => {
     if (
       data.type === 'product_status' ||
       data.type === 'support_reply' ||
-      data.type === 'payout_status'
+      data.type === 'payout_status' ||
+      data.type === 'new_order' ||
+      data.type === 'new_review'
     ) {
       setNotifications((prev) => {
         const exists = prev.some((n) => n.id === data.id);
@@ -165,7 +170,9 @@ useEffect(() => {
       (item) =>
         item.type === 'product_status' ||
         item.type === 'support_reply' ||
-        item.type === 'payout_status'
+        item.type === 'payout_status' ||
+        item.type === 'new_order' ||
+        item.type === 'new_review'
     );
 
     setNotifications(onlyProductNotifications);
@@ -218,6 +225,14 @@ useEffect(() => {
 
       if (item.type === 'payout_status') {
         navigate('/wallet');
+      }
+
+      if (item.type === 'new_order') {
+        navigate('/orders');
+      }
+
+      if (item.type === 'new_review') {
+        navigate('/sellerreviews');
       }
 
       handleCloseNotifications();
@@ -334,7 +349,11 @@ useEffect(() => {
               {user?.name}
             </Typography>
 
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+              Seller ID: {user?.seller_id || `S${String(user?.id).padStart(5, '0')}`}
+            </Typography>
+
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
               {user?.email}
             </Typography>
           </Box>
@@ -599,15 +618,25 @@ useEffect(() => {
             </Menu>
 
             <Tooltip title="Account">
-              <IconButton
+              <Box
                 onClick={(e) => setAnchorEl(e.currentTarget)}
-                size="small"
-                sx={{ ml: 1 }}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  ml: 2,
+                  cursor: 'pointer',
+                  p: 0.5,
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  }
+                }}
               >
                 <Avatar
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                     color: '#000',
                     fontWeight: 700,
@@ -616,7 +645,30 @@ useEffect(() => {
                 >
                   {user?.name?.[0]}
                 </Avatar>
-              </IconButton>
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{
+                      color: 'text.primary',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {user?.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: 'block',
+                      mt: 0.2,
+                      fontSize: '11px',
+                    }}
+                  >
+                    Seller ID: {user?.seller_id || `S${String(user?.id).padStart(5, '0')}`}
+                  </Typography>
+                </Box>
+              </Box>
             </Tooltip>
 
             <Menu
@@ -634,12 +686,46 @@ useEffect(() => {
               PaperProps={{
                 elevation: 4,
                 sx: {
-                  minWidth: 180,
+                  minWidth: 200,
                   mt: 1,
                   borderRadius: 2,
                 },
               }}
             >
+              {/* Profile Dropdown Header matching user screenshot */}
+              <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    color: '#000',
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  {user?.name?.[0]}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    noWrap
+                    sx={{
+                      color: 'text.primary',
+                      fontSize: 14,
+                    }}
+                  >
+                    {user?.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.2 }}>
+                    Seller ID: {user?.seller_id || `S${String(user?.id).padStart(5, '0')}`}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 0.5 }} />
+
               <MenuItem
                 onClick={() => {
                   setAnchorEl(null);

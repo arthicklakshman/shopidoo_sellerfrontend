@@ -40,13 +40,18 @@ const Notifications = () => {
     fetchNotifications();
 
     const room = `seller_${user?.id}`;
-    socket.emit('join', room);
+    socket.emit('join', room, {
+      id: user?.id,
+      name: user?.storeName || user?.businessName || user?.name || 'Seller Store',
+    });
 
     const handleNewNotification = (data) => {
       if (
         data.type === 'product_status' ||
         data.type === 'support_reply' ||
-        data.type === 'payout_status'
+        data.type === 'payout_status' ||
+        data.type === 'new_order' ||
+        data.type === 'new_review'
       ) {
         setNotifications((prev) => {
           const alreadyExists = prev.some((n) => n.id === data.id);
@@ -67,7 +72,7 @@ const Notifications = () => {
     try {
       setLoading(true);
       const res = await api.get('/notifications');
-      const sellerTypes = ['product_status', 'support_reply', 'payout_status'];
+      const sellerTypes = ['product_status', 'support_reply', 'payout_status', 'new_order', 'new_review'];
       const filtered = (res.data.data || []).filter((n) =>
         sellerTypes.includes(n.type)
       );
@@ -133,6 +138,10 @@ const Notifications = () => {
       navigate(`/support?highlight=${item.reference_id}`);
     } else if (item.type === 'payout_status') {
       navigate('/wallet');
+    } else if (item.type === 'new_order') {
+      navigate('/orders');
+    } else if (item.type === 'new_review') {
+      navigate('/sellerreviews');
     }
   };
 
@@ -317,6 +326,8 @@ const Notifications = () => {
               {selectedNotification.type === 'payout_status' && renderPayoutStatus()}
               {selectedNotification.type === 'product_status' && renderStatusUpdate('Product Status Update', '#6366f1')}
               {selectedNotification.type === 'support_reply' && renderStatusUpdate('Support Response', '#ff9800')}
+              {selectedNotification.type === 'new_order' && renderStatusUpdate('New Order Placed', '#0fb9b1')}
+              {selectedNotification.type === 'new_review' && renderStatusUpdate('New Product Review', '#0b8457')}
             </DialogContent>
           </>
         )}

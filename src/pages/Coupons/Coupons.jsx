@@ -612,8 +612,28 @@ const Coupons = () => {
         </Grid>
 
         <Stack direction="row" justifyContent="flex-end" mt={3} spacing={2}>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>
+          <Button
+            onClick={handleClose}
+            sx={{
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.hover' },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            sx={{
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 600,
+              '&:hover': {
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                opacity: 0.9,
+              },
+            }}
+          >
             {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
           </Button>
         </Stack>

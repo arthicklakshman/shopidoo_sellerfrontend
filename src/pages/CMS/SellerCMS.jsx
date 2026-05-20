@@ -67,7 +67,7 @@ const BannerPreviewImage = ({ src, alt }) => {
       <Box
         sx={{
           height: 200,
-          bgcolor: "#f0f0f0",
+          bgcolor: "action.hover",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -75,7 +75,7 @@ const BannerPreviewImage = ({ src, alt }) => {
           gap: 1,
         }}
       >
-        <ImageIcon sx={{ fontSize: 48, color: "#ccc" }} />
+        <ImageIcon sx={{ fontSize: 48, color: "text.secondary" }} />
         <Typography color="text.secondary" variant="body2">No image available</Typography>
       </Box>
     );
@@ -225,7 +225,7 @@ const SellerCMS = () => {
   const activeBanners = banners.filter((b) => b.status === "active").length;
 
   return (
-    <Box p={3} sx={{ background: "#f5f7fa", minHeight: "100vh" }}>
+    <Box p={3} sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
 
       <Typography variant="h4" fontWeight={700} color="text.primary">
         CMS Management
@@ -282,13 +282,16 @@ const SellerCMS = () => {
               {banners.map((b) => (
                 <TableRow
                   key={b.id}
-                  sx={{ "&:hover": { bgcolor: "#f9fffe" }, "& td": { fontSize: "0.85rem" } }}
+                  sx={{ 
+                    "&:hover": { bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(15, 185, 177, 0.08)' : '#f9fffe' }, 
+                    "& td": { fontSize: "0.85rem" } 
+                  }}
                 >
                   <TableCell>
                     <Avatar
                       src={getImageUrl(b.image)}
                       variant="rounded"
-                      sx={{ width: 52, height: 36, borderRadius: 1, border: "1px solid #eee" }}
+                      sx={{ width: 52, height: 36, borderRadius: 1, border: "1px solid", borderColor: "divider" }}
                     >
                       <ImageIcon fontSize="small" />
                     </Avatar>
@@ -453,12 +456,12 @@ const SellerCMS = () => {
         </DialogTitle>
         <DialogContent>
           {previewBanner && (
-            <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid #eee" }}>
+            <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
               <BannerPreviewImage
                 src={getImageUrl(previewBanner.image)}
                 alt={previewBanner.title}
               />
-              <Box sx={{ p: 2, bgcolor: "#fafffe" }}>
+              <Box sx={{ p: 2, bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(15, 185, 177, 0.08)' : '#fafffe' }}>
                 <Stack direction="row" spacing={2}>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Location</Typography>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Grid, Typography, Box, Card, CardContent, Skeleton, useTheme } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Grid, Typography, Box, Card, CardContent, Skeleton, useTheme, Avatar } from '@mui/material';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -34,6 +34,31 @@ const Dashboard = () => {
 
   const stats = data?.stats;
   const monthlyRevenue = data?.monthlyRevenue || [];
+
+  // Pad chart data with previous months if there is only 1 month to avoid flat line "plane" graph look
+  let chartData = [...monthlyRevenue];
+  if (chartData.length === 1) {
+    try {
+      const singlePoint = chartData[0];
+      const [yearStr, monthStr] = singlePoint.month.split('-');
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr);
+      const padded = [];
+      for (let i = 3; i > 0; i--) {
+        let prevMonth = month - i;
+        let prevYear = year;
+        if (prevMonth <= 0) {
+          prevMonth += 12;
+          prevYear -= 1;
+        }
+        const formattedMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        padded.push({ month: formattedMonth, revenue: 0 });
+      }
+      chartData = [...padded, singlePoint];
+    } catch (e) {
+      console.error('Error padding chart data:', e);
+    }
+  }
 
   return (
     <Box>
@@ -87,8 +112,8 @@ const Dashboard = () => {
                 ? <Typography color="text.secondary">No revenue data yet.</Typography>
                 : (
                   <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={monthlyRevenue}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} vertical={false} />
                       <XAxis dataKey="month" tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
                       <YAxis tick={{ fontSize: 12, fill: theme.palette.text.secondary }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                       <Tooltip 
@@ -96,8 +121,14 @@ const Dashboard = () => {
                         itemStyle={{ color: theme.palette.text.primary }}
                         formatter={(v) => [formatCurrency(v), 'Revenue']} 
                       />
-                      <Bar dataKey="revenue" fill={theme.palette.primary.main} radius={[6, 6, 0, 0]} />
-                    </BarChart>
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#0B8457" 
+                        strokeWidth={3}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 )}
             </CardContent>
