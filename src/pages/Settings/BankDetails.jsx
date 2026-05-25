@@ -6,7 +6,9 @@ import {
   CardContent,
   Grid,
   TextField,
-  InputLabel
+  InputLabel,
+  useTheme,
+  alpha
 } from '@mui/material';
 
 // ✅ Custom Helper Imports 
@@ -18,27 +20,28 @@ import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActio
 // Styled Components
 // ----------------------------------------------------------------------
 const StyledInputLabel = ({ children }) => (
-  <InputLabel sx={{ color: '#111827', fontSize: '14px', mb: 1, fontWeight: 400 }}>
+  <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 600 }}>
     {children}
   </InputLabel>
 );
 
 const getCustomInputStyles = (isEditing) => ({
-  backgroundColor: '#f3f4f6',
+  backgroundColor: 'action.hover',
   borderRadius: '8px',
-  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
+  '& .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'divider' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'primary.main' },
   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    border: isEditing ? '1px solid #3b82f6' : 'none',
+    border: isEditing ? '1px solid' : 'none',
+    borderColor: 'primary.main'
   },
   '& .MuiOutlinedInput-input': {
     padding: '10px 14px',
     fontSize: '14px',
-    color: '#111827',
-    WebkitTextFillColor: '#111827',
+    color: 'text.primary',
+    WebkitTextFillColor: (theme) => theme.palette.text.primary,
   },
   '& .Mui-disabled': {
-    WebkitTextFillColor: '#111827',
+    WebkitTextFillColor: (theme) => theme.palette.text.primary,
   }
 });
 
@@ -46,24 +49,21 @@ const getCustomInputStyles = (isEditing) => ({
 // Main Component
 // ----------------------------------------------------------------------
 export default function BankDetails() {
-
+  const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Keeps track of the real data so we can revert if the user clicks "Cancel"
   const [savedData, setSavedData] = useState({
     accountName: "",
     accountNumber: "",
-    routingNumber: "", // This stores the IFSC Code
+    routingNumber: "", 
     swiftCode: ""
   });
 
   const [form, setForm] = useState({ ...savedData });
   const [errors, setErrors] = useState({});
 
-  // 🔥 Automatically derive the Bank Name from the IFSC (routingNumber)
   const displayedBankName = findBankName(form.routingNumber);
 
-  // ---------------- API INTEGRATION ----------------
   useEffect(() => {
     const fetchBankDetails = async () => {
       try {
@@ -72,8 +72,8 @@ export default function BankDetails() {
           const dbData = {
             accountName: response.data.accountName || "",
             accountNumber: response.data.accountNumber || "",
-            routingNumber: response.data.routingNumber || "", // Mapped from ifscCode in backend
-            swiftCode: "" // Disabled for now
+            routingNumber: response.data.routingNumber || "", 
+            swiftCode: "" 
           };
           setSavedData(dbData);
           setForm(dbData);
@@ -85,37 +85,29 @@ export default function BankDetails() {
     fetchBankDetails();
   }, []);
 
-  // ---------------- HANDLERS ----------------
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const validate = () => {
     let temp = {};
-
     if (!form.accountName) temp.accountName = "Account holder name is required";
     if (!form.accountNumber) temp.accountNumber = "Account number is required";
     if (!form.routingNumber) temp.routingNumber = "IFSC code is required";
-    // bankName is auto-generated and swiftCode is disabled, so we skip validating them
-
     setErrors(temp);
     return Object.keys(temp).length === 0;
   };
 
   const handleCancel = () => {
-    setForm({ ...savedData }); // Revert to original data
+    setForm({ ...savedData }); 
     setErrors({});
     setIsEditing(false);
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
-
     try {
-      // Send data to backend
       const response = await updateBankDetailsAPI(form);
-      
       if (response.success) {
         setSavedData({ ...form });
         setIsEditing(false);
@@ -127,42 +119,39 @@ export default function BankDetails() {
     }
   };
 
-  // ---------------- UI ----------------
-
   return (
     <Card sx={{ 
       borderRadius: '12px', 
-      border: '1px solid #e5e7eb', 
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      border: 1, 
+      borderColor: 'divider', 
+      boxShadow: 'none',
       maxWidth: '1000px',
-      fontFamily: 'sans-serif'
+      bgcolor: 'background.paper'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
             Bank Account Details
           </Typography>
-
           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
         </Box>
 
         {/* Info Banner */}
         <Box sx={{
-          backgroundColor: '#f0f7ff',
-          border: '1px solid #bfdbfe',
+          backgroundColor: alpha(theme.palette.info.main, 0.1),
+          border: 1,
+          borderColor: alpha(theme.palette.info.main, 0.3),
           borderRadius: '8px',
           px: 2,
           py: 1.5,
           mb: 4
         }}>
-          <Typography sx={{ color: '#1e40af', fontSize: '14px' }}>
+          <Typography sx={{ color: theme.palette.info.main, fontSize: '14px', fontWeight: 500 }}>
             These details will be used for receiving payments from your sales.
           </Typography>
         </Box>
 
         <Grid container spacing={3}>
-          
           <Grid item xs={12} sm={6}>
             <StyledInputLabel>Account Holder Name</StyledInputLabel>
             <TextField
@@ -185,12 +174,12 @@ export default function BankDetails() {
             <TextField
               fullWidth
               name="bankName"
-              value={displayedBankName} // 🔥 Populated automatically from the utility
-              disabled={true}           // 🔥 Always disabled since it's automatic
+              value={displayedBankName}
+              disabled={true}           
               placeholder="Bank will be detected from IFSC"
               variant="outlined"
               size="small"
-              sx={getCustomInputStyles(false)} // 🔥 Keep the disabled styling
+              sx={getCustomInputStyles(false)} 
             />
           </Grid>
 
@@ -252,7 +241,6 @@ export default function BankDetails() {
                saveText="Update Bank Details" 
             />
         )}
-
       </CardContent>
     </Card>
   );

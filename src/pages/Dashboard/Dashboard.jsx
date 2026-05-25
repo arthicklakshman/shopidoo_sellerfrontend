@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Grid, Typography, Box, Card, CardContent, Skeleton } from '@mui/material';
+import { Link } from 'react-router-dom';
+import { Grid, Typography, Box, Card, CardContent, Skeleton, useTheme } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
@@ -11,9 +12,12 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { useSelector } from 'react-redux';
 
 const Dashboard = () => {
+  const theme = useTheme();
   const { user } = useSelector((s) => s.auth);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const cardLinkStyle = { textDecoration: 'none', display: 'block', cursor: 'pointer' };
 
   useEffect(() => {
     sellerService.getDashboard().then(({ data }) => setData(data.data)).finally(() => setLoading(false));
@@ -38,16 +42,39 @@ const Dashboard = () => {
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={InventoryIcon} color="primary" />
+          <Link to="/products" style={cardLinkStyle}>
+            <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={InventoryIcon} color="primary" />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Orders" value={stats?.totalOrders || 0} icon={ShoppingBagIcon} color="secondary" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard title="Total Orders" value={stats?.totalOrders || 0} icon={ShoppingBagIcon} color="secondary" />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total Revenue" value={formatCurrency(stats?.totalRevenue || 0)} icon={AttachMoneyIcon} color="success" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard 
+              title="Total Revenue" 
+              value={formatCurrency(stats?.totalRevenue || 0)} 
+              icon={AttachMoneyIcon} 
+              color="success" 
+            />
+          </Link>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Pending Orders" value={stats?.pendingOrders || 0} icon={PendingIcon} color="warning" />
+          <Link to="/orders" style={cardLinkStyle}>
+            <StatCard title="Pending Orders" value={stats?.pendingOrders || 0} icon={PendingIcon} color="warning" />
+          </Link>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Link to="/returns" style={cardLinkStyle}>
+            <StatCard 
+              title="Total Returns" 
+              value={stats?.totalReturns || 0} 
+              icon={ShoppingBagIcon} 
+              color="error" 
+            />
+          </Link>
         </Grid>
       </Grid>
 
@@ -61,11 +88,15 @@ const Dashboard = () => {
                 : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={monthlyRevenue}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
-                      <Bar dataKey="revenue" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
+                      <YAxis tick={{ fontSize: 12, fill: theme.palette.text.secondary }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.divider }}
+                        itemStyle={{ color: theme.palette.text.primary }}
+                        formatter={(v) => [formatCurrency(v), 'Revenue']} 
+                      />
+                      <Bar dataKey="revenue" fill={theme.palette.primary.main} radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

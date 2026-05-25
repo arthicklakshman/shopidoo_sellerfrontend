@@ -24,11 +24,13 @@ import {
   Menu,
   MenuItem,
   Badge,
+  alpha,
 } from '@mui/material';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import ReviewsIcon from '@mui/icons-material/Reviews';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -40,10 +42,11 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import CircleIcon from '@mui/icons-material/Circle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-
+import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
 import { logoutSeller } from '../../../features/auth/authSlice';
@@ -54,9 +57,12 @@ const DRAWER_WIDTH = 240;
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { label: 'Products', icon: InventoryIcon, path: '/products' },
+  { label: 'Reviews', icon:ReviewsIcon, path: '/sellerreviews'},
   { label: 'Orders', icon: ShoppingBagIcon, path: '/orders' },
+  { label: 'Returns', icon: AssignmentReturnIcon, path: '/returns' },
   { label: 'Inventory', icon: Inventory2Icon, path: '/inventory' },
   { label: 'Coupons', icon: LocalOfferIcon, path: '/coupons' },
+  { label: 'CMS', icon: CampaignIcon, path: '/cms' },
   { label: 'Analytics', icon: BarChartIcon, path: '/analytics' },
   { label: 'Support', icon: SupportAgentIcon, path: '/support' },
   { label: 'Wallet', icon: AccountBalanceWalletIcon, path: '/wallet' },
@@ -276,25 +282,22 @@ useEffect(() => {
                   background: active
                   ? 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)'
                   : 'transparent',
-                  color: active ? '#000' : 'text.primary',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                    color: '#000',
-                  },
-                  
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 40,
-                    color: active ? '#000' : 'text.secondary',
-                    '.MuiListItemButton-root:hover &': {
+                    color: active ? '#000' : 'text.primary',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      color: '#000',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: active ? '#000' : 'text.secondary',
+                    },
+                    '&:hover .MuiListItemIcon-root': {
                       color: '#000',
                     },
                   }}
                 >
-                  <Icon fontSize="small" />
-                </ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                    <Icon fontSize="small" />
+                  </ListItemIcon>
 
                 <ListItemText
                   primary={label}
@@ -317,7 +320,9 @@ useEffect(() => {
             sx={{
               width: 36,
               height: 36,
-              bgcolor: 'primary.main',
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 700,
               fontSize: 14,
             }}
           >
@@ -458,11 +463,11 @@ useEffect(() => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  borderBottom: '1px solid #eee',
+                  borderBottom: `1px solid ${theme.palette.divider}`,
                 }}
               >
                 <Box>
-                  <Typography fontWeight={700}>Notifications</Typography>
+                  <Typography fontWeight={700} color="text.primary">Notifications</Typography>
 
                   <Typography variant="caption" color="text.secondary">
                     {unreadCount} unread
@@ -473,8 +478,10 @@ useEffect(() => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'rgb(76, 175, 80)',
-                      fontWeight: 700,
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 800,
                       cursor: 'pointer',
                     }}
                     onClick={async () => {
@@ -517,10 +524,10 @@ useEffect(() => {
                         px: 2,
                         py: 1.5,
                         cursor: 'pointer',
-                        borderBottom: '1px solid #eee',
-                        bgcolor: item.is_read ? '#fff' : '#f5fff5',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        bgcolor: item.is_read ? 'background.paper' : alpha(theme.palette.success.main, 0.05),
                         '&:hover': {
-                          bgcolor: '#eef7ee',
+                          bgcolor: 'action.hover',
                         },
                       }}
                     >
@@ -529,7 +536,7 @@ useEffect(() => {
                           <CircleIcon
                             sx={{
                               fontSize: 10,
-                              color: 'rgb(76, 175, 80)',
+                              color: '#0FB9B1',
                               mt: 0.7,
                             }}
                           />
@@ -568,10 +575,6 @@ useEffect(() => {
                 )}
               </Box>
 
-             
-
-
-
             <Box
               onClick={() => {
                 handleCloseNotifications();
@@ -580,12 +583,14 @@ useEffect(() => {
               sx={{
                 py: 1.5,
                 textAlign: 'center',
-                color: 'rgb(76, 175, 80)',
-                fontWeight: 700,
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 800,
                 cursor: 'pointer',
-                borderTop: '1px solid #eee',
+                borderTop: `1px solid ${theme.palette.divider}`,
                 '&:hover': {
-                  bgcolor: '#f5fff5',
+                  bgcolor: 'action.hover',
                 },
               }}
             >
@@ -603,7 +608,9 @@ useEffect(() => {
                   sx={{
                     width: 32,
                     height: 32,
-                    bgcolor: 'primary.main',
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    color: '#000',
+                    fontWeight: 700,
                     fontSize: 14,
                   }}
                 >

@@ -1,6 +1,6 @@
 import { Card, CardContent, Box, Typography, Avatar } from '@mui/material';
 import { motion } from 'framer-motion';
-const StatCard = ({ title, value, subtitle, icon: Icon, color = 'primary', trend }) => (
+const StatCard = ({ title, value, subtitle, subValue, icon: Icon, color = 'primary', trend }) => (
   <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
     <Card>
       <CardContent>
@@ -8,6 +8,7 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color = 'primary', trend
           <Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>{title}</Typography>
             <Typography variant="h4" fontWeight={800}>{value}</Typography>
+            {subValue && <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 0.3 }}>{subValue}</Typography>}
             {subtitle && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{subtitle}</Typography>}
           </Box>
           <Avatar sx={{ bgcolor: `${color}.light`, width: 48, height: 48 }}>

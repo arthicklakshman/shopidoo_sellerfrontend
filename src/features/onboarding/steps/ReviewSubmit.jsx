@@ -171,7 +171,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#fafafa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <Box sx={{ maxWidth: '900px', mx: 'auto' }}>
         
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Box sx={{ textAlign: 'center', mb: 5 }}>
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827', mb: 1 }}>Review Your Application</Typography>
           <Typography sx={{ color: '#6b7280', fontSize: '15px' }}>Please review all information before submitting</Typography>
         </Box>
@@ -182,60 +182,45 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
           </Box>
         )}
 
-        {/* 🌟 STATIC SCROLL WRAPPER START */}
-        <Box 
-          sx={{ 
-            maxHeight: '550px', 
-            overflowY: 'auto', 
-            pr: 2, 
-            mb: 4,
-            '&::-webkit-scrollbar': { width: '6px' },
-            '&::-webkit-scrollbar-track': { background: 'transparent' },
-            '&::-webkit-scrollbar-thumb': { background: '#d1d5db', borderRadius: '4px' },
-            '&::-webkit-scrollbar-thumb:hover': { background: '#9ca3af' }
-          }}
-        >
-          {REVIEW_SECTIONS.map((section) => (
-            <SectionCard 
-              key={section.step} 
-              step={section.step} 
-              title={section.title} 
-              onEdit={() => handleEditClick(section.stepIndex)} 
-            >
-              <Grid container spacing={2}>
-                {section.fields.map((field, index) => (
-                  <Grid item xs={12} sm={field.fullWidth ? 12 : 6} key={index}>
-                    {field.isDocument ? (
-                      <DocumentItem label={field.label} isUploaded={field.isUploaded} />
-                    ) : (
-                      <InfoField label={field.label} value={field.value} verified={field.verified} />
-                    )}
-                  </Grid>
-                ))}
-              </Grid>
-            </SectionCard>
-          ))}
+        {REVIEW_SECTIONS.map((section) => (
+          <SectionCard 
+            key={section.step} 
+            step={section.step} 
+            title={section.title} 
+            onEdit={() => handleEditClick(section.stepIndex)} 
+          >
+            <Grid container spacing={2}>
+              {section.fields.map((field, index) => (
+                <Grid item xs={12} sm={field.fullWidth ? 12 : 6} key={index}>
+                  {field.isDocument ? (
+                    <DocumentItem label={field.label} isUploaded={field.isUploaded} />
+                  ) : (
+                    <InfoField label={field.label} value={field.value} verified={field.verified} />
+                  )}
+                </Grid>
+              ))}
+            </Grid>
+          </SectionCard>
+        ))}
 
-          <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: 2 }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Checkbox checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-                <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-                  <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I accept the Terms & Conditions </Box>
-                  <Box component="span" sx={{ color: '#4b5563' }}>By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-                <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-                  <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I agree to Seller Policies </Box>
-                  <Box component="span" sx={{ color: '#4b5563' }}>This includes product listing guidelines, return policies, and commission structure.</Box>
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-        {/* 🌟 STATIC SCROLL WRAPPER END */}
+        <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: 4 }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Checkbox checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
+              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I accept the Terms & Conditions </Box>
+                <Box component="span" sx={{ color: '#4b5563' }}>By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
+              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I agree to Seller Policies </Box>
+                <Box component="span" sx={{ color: '#4b5563' }}>This includes product listing guidelines, return policies, and commission structure.</Box>
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
 
         {/* 🌟 FIXED: Replaced standard buttons with your custom Gradient components */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
@@ -278,6 +263,12 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 
 
 
+
+
+
+
+
+
 // import React, { useState, useEffect } from 'react';
 // import {
 //   Box, Typography, Card, CardContent, Grid, Button, Checkbox, Avatar, CircularProgress
@@ -289,10 +280,8 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 // import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 // import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-// // 🌟 IMPORT SERVICE & CUSTOM BUTTONS
+// // 🌟 IMPORT SERVICE
 // import onboardingService from '../../../features/onboarding/onboarding.service';
-// import GradientButton from '../../../components/shared/GradientButton/GradientButton'; // Verify path!
-// import GradientOutlineButton from '../../../components/shared/GradientButton/GradientOutlineButton'; // Verify path!
 
 // // --- Reusable Internal Components ---
 // const InfoField = ({ label, value, verified = false }) => (
@@ -323,10 +312,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 //     <CardContent sx={{ p: { xs: 3, md: 4 } }}>
 //       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
 //         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-//           {/* 🌟 FIXED: Updated Avatar colors to match your theme */}
-//           <Avatar sx={{ bgcolor: '#e0f7f6', color: '#0B8457', width: 32, height: 32, fontSize: '14px', fontWeight: 'bold' }}>
-//             {step}
-//           </Avatar>
+//           <Avatar sx={{ bgcolor: '#6d28d9', width: 32, height: 32, fontSize: '14px', fontWeight: 600 }}>{step}</Avatar>
 //           <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827' }}>{title}</Typography>
 //         </Box>
 //         <Button 
@@ -502,48 +488,44 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 //           </CardContent>
 //         </Card>
 
-//         {/* 🌟 FIXED: Replaced standard buttons with your custom Gradient components */}
+//         {/* Final Actions */}
 //         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-//           <GradientOutlineButton 
+//           <Button 
+//             variant="outlined" 
 //             onClick={onBack} 
 //             disabled={isSubmitting} 
-//             sx={{ 
-//               flex: 1, 
-//               maxWidth: '300px', 
-//               py: 1.5, 
-//               fontSize: '16px',
-//               textTransform: 'none' // Keeps it matching original design
-//             }}
+//             sx={{ flex: 1, maxWidth: '300px', color: '#111827', borderColor: '#e5e7eb', textTransform: 'none', borderRadius: '8px', py: 1.5, fontWeight: 600, '&:hover': { borderColor: '#9ca3af', backgroundColor: '#f9fafb' } }}
 //           >
 //             &larr; Back
-//           </GradientOutlineButton>
+//           </Button>
 
-//           <GradientButton
+//           <Button
+//             variant="contained"
 //             disabled={!isSubmitEnabled}
 //             onClick={handleSubmit}
 //             startIcon={!isSubmitting && <ShieldOutlinedIcon />}
 //             sx={{
 //               flex: 2,
+//               textTransform: 'none',
+//               borderRadius: '8px',
 //               py: 1.5,
 //               fontSize: '16px',
-//               textTransform: 'none', // Keeps it matching original design
+//               fontWeight: 600,
 //               ...(isSubmitEnabled && {
-//                 boxShadow: '0 4px 14px 0 rgba(11, 132, 87, 0.39)' // Updated glow to match green theme
-//               })
+//                 background: 'linear-gradient(to right, #10b981, #2563eb)',
+//                 color: '#ffffff',
+//                 boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.39)'
+//               }),
+//               '&.Mui-disabled': {
+//                 backgroundColor: '#e5e7eb',
+//                 color: '#9ca3af'
+//               }
 //             }}
 //           >
 //             {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Submit Application'}
-//           </GradientButton>
+//           </Button>
 //         </Box>
 //       </Box>
 //     </Box>
 //   );
-// }
-
-
-
-
-
-
-
-
+// } 

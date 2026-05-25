@@ -76,9 +76,9 @@ export const updatePickupAddressAPI = async (form) => {
 };
 
 export const updateSecurityAPI = async (payload) => {
-  if (payload.newPassword) {
-    await api.post('/auth/reset-password', {
-      email: payload.email,
+  if (payload.currentPassword && payload.newPassword) {
+    await api.put('/auth/change-password', {
+      currentPassword: payload.currentPassword,
       newPassword: payload.newPassword,
     });
   }

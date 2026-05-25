@@ -6,6 +6,28 @@ import { showToast } from '../../features/ui/uiSlice';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import api from '../../services/api';
 
+const gradientButtonStyle = {
+  height: 40,
+  px: 2,
+  borderRadius: '8px',
+  textTransform: 'none',
+  fontSize: 13,
+  fontWeight: 600,
+  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+  color: '#000',
+  boxShadow: 'none',
+  '&:hover': {
+    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+    color: '#000',
+    boxShadow: 'none',
+  },
+  '&.Mui-disabled': {
+    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+    color: 'rgba(0, 0, 0, 0.38)',
+    opacity: 0.7
+  }
+};
+
 const Profile = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
@@ -41,10 +63,21 @@ const Profile = () => {
         <Grid item xs={12} md={4}>
           <Card sx={{ textAlign: 'center', py: 4 }}>
             <CardContent>
-              <Avatar sx={{ width: 80, height: 80, mx: 'auto', bgcolor: 'primary.main', fontSize: 28, mb: 1.5 }}>{user?.name?.[0]}</Avatar>
+              <Avatar sx={{ 
+                width: 80, 
+                height: 80, 
+                mx: 'auto', 
+                background: 'linear-gradient(135deg, #0FB9B1 0%, #0B8457 100%)',
+                color: '#000',
+                fontSize: 28, 
+                mb: 1.5,
+                fontWeight: 700
+              }}>
+                {user?.name?.[0]}
+              </Avatar>
               <Typography fontWeight={700}>{user?.name}</Typography>
               <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
-              <Typography variant="caption" color="primary" fontWeight={600}>Seller Account</Typography>
+              <Typography variant="caption" sx={{ color: '#0FB9B1', fontWeight: 700 }}>Seller Account</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -56,7 +89,7 @@ const Profile = () => {
               <Box component="form" onSubmit={handleProfileSave}>
                 <TextField label="Name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} fullWidth sx={{ mb: 2 }} />
                 <TextField label="Phone" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} fullWidth sx={{ mb: 2 }} />
-                <Button type="submit" variant="contained" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+                <Button type="submit" variant="contained" disabled={saving} sx={gradientButtonStyle}>{saving ? 'Saving...' : 'Save Changes'}</Button>
               </Box>
             </CardContent>
           </Card>
@@ -66,7 +99,7 @@ const Profile = () => {
               <Box component="form" onSubmit={handlePasswordChange}>
                 <TextField label="Current Password" type="password" value={pwForm.currentPassword} onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))} fullWidth sx={{ mb: 2 }} />
                 <TextField label="New Password" type="password" value={pwForm.newPassword} onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))} fullWidth sx={{ mb: 2 }} />
-                <Button type="submit" variant="contained" color="warning">Update Password</Button>
+                <Button type="submit" variant="contained" sx={gradientButtonStyle}>Update Password</Button>
               </Box>
             </CardContent>
           </Card>

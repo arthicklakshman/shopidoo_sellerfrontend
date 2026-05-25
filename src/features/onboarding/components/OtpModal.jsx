@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Modal, IconButton, TextField, CircularProgress } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import MarkEmailReadOutlinedIcon from '@mui/icons-material/MarkEmailReadOutlined';
+import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 
 import GradientButton from "../../../components/shared/GradientButton/GradientButton";
-import GradientOutlineButton from '../../../components/shared/GradientButton/GradientOutlineButton';
 
 const modalStyle = {
   position: 'absolute',
@@ -22,7 +22,7 @@ const modalStyle = {
   outline: 'none',
 };
 
-export default function OtpModal({ open, onClose, email, onVerify, onResend, isLoading, error }) {
+export default function OtpModal({ open, onClose, targetValue, type, onVerify, onResend, isLoading, error }) {
   const [otp, setOtp] = useState(new Array(6).fill(""));
   const [timer, setTimer] = useState(60);
   const inputRefs = useRef([]);
@@ -124,16 +124,20 @@ export default function OtpModal({ open, onClose, email, onVerify, onResend, isL
 
         {/* Header Icon & Text */}
         <Box sx={{ p: 2, borderRadius: '50%', backgroundColor: '#ecfdf5', mb: 2 }}>
-          <MarkEmailReadOutlinedIcon sx={{ fontSize: 40, color: '#059669' }} />
+          {type === 'email' ? (
+            <MarkEmailReadOutlinedIcon sx={{ fontSize: 40, color: '#059669' }} />
+          ) : (
+            <PhoneIphoneIcon sx={{ fontSize: 40, color: '#059669' }} />
+          )}
         </Box>
         
         <Typography variant="h5" fontWeight={700} color="#111827" mb={1}>
-          Verify Your Email
+          Verify Your {type === 'email' ? 'Email' : 'Mobile'}
         </Typography>
         
         <Typography variant="body2" color="#6b7280" textAlign="center" mb={4}>
           We sent a 6-digit verification code to<br/>
-          <Box component="span" fontWeight={600} color="#111827">{email}</Box>
+          <Box component="span" fontWeight={600} color="#111827">{targetValue}</Box>
         </Typography>
 
         {/* 6-Box OTP Inputs */}
@@ -176,7 +180,7 @@ export default function OtpModal({ open, onClose, email, onVerify, onResend, isL
             onClick={submitOtp} 
             disabled={otp.join("").length !== 6 || isLoading}
           >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Verify Email'}
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : `Verify ${type === 'email' ? 'Email' : 'Mobile'}`}
           </GradientButton>
         </Box>
 

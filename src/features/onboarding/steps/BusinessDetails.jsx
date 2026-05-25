@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Grid, TextField, Switch,
-  MenuItem, InputLabel, Tooltip, FormHelperText, Autocomplete
+  MenuItem, InputLabel, Tooltip, FormHelperText,Autocomplete
 } from '@mui/material';
 
 // Icons
@@ -178,121 +178,91 @@ export default function BusinessDetails({ onBack, onNext }) {
           )}
 
           <StepWrapper>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 2 }}>Business Details</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 4 }}>Business Details</Typography>
 
-            {/* 🌟 STATIC SCROLL WRAPPER START */}
-            <Box 
-              sx={{ 
-                maxHeight: '550px', 
-                overflowY: 'auto', 
-                pr: 2, 
-                mb: 3,
-                '&::-webkit-scrollbar': { width: '6px' },
-                '&::-webkit-scrollbar-track': { background: 'transparent' },
-                '&::-webkit-scrollbar-thumb': { background: '#d1d5db', borderRadius: '4px' },
-                '&::-webkit-scrollbar-thumb:hover': { background: '#9ca3af' }
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box>
+                <StyledInputLabel required>Business Name</StyledInputLabel>
+                <TextField name="businessName" value={formData.businessName} onChange={handleInputChange} fullWidth placeholder="Your registered business name" variant="outlined" size="small" error={!!errors.businessName} helperText={errors.businessName} sx={customInputStyles} />
+              </Box>
+
+              <Box>
+                <StyledInputLabel required>Display Store Name</StyledInputLabel>
+                <TextField name="displayStoreName" value={formData.displayStoreName} onChange={handleInputChange} fullWidth placeholder="Name visible to customers" variant="outlined" size="small" error={!!errors.displayStoreName} sx={customInputStyles} />
+                {errors.displayStoreName ? <FormHelperText error>{errors.displayStoreName}</FormHelperText> : <Typography sx={{ color: '#6b7280', fontSize: '12px', mt: 1, ml: 0.5 }}>This is how your store will appear to customers</Typography>}
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '8px', p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>I have GST Registration</Typography>
+                  <Tooltip title="GST is optional for certain businesses"><HelpOutlineIcon sx={{ fontSize: 16, color: '#9ca3af', cursor: 'pointer' }} /></Tooltip>
+                </Box>
+                <Switch checked={formData.hasGst} onChange={handleSwitchChange} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffffff' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#030712', opacity: 1 } }} />
+              </Box>
+
+              {formData.hasGst && (
                 <Box>
-                  <StyledInputLabel required>Business Name</StyledInputLabel>
-                  <TextField name="businessName" value={formData.businessName} onChange={handleInputChange} fullWidth placeholder="Your registered business name" variant="outlined" size="small" error={!!errors.businessName} helperText={errors.businessName} sx={customInputStyles} />
+                  <StyledInputLabel required>GST Number</StyledInputLabel>
+                  <TextField name="gstNumber" value={formData.gstNumber} onChange={handleInputChange} fullWidth placeholder="e.g., 22AAAAA0000A1Z5" variant="outlined" size="small" error={!!errors.gstNumber} helperText={errors.gstNumber} sx={customInputStyles} />
                 </Box>
+              )}
 
-                <Box>
-                  <StyledInputLabel required>Display Store Name</StyledInputLabel>
-                  <TextField name="displayStoreName" value={formData.displayStoreName} onChange={handleInputChange} fullWidth placeholder="Name visible to customers" variant="outlined" size="small" error={!!errors.displayStoreName} sx={customInputStyles} />
-                  {errors.displayStoreName ? <FormHelperText error>{errors.displayStoreName}</FormHelperText> : <Typography sx={{ color: '#6b7280', fontSize: '12px', mt: 1, ml: 0.5 }}>This is how your store will appear to customers</Typography>}
-                </Box>
+              <Box>
+                <StyledInputLabel required>Aadhaar Number</StyledInputLabel>
+                <TextField name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleInputChange} fullWidth placeholder="12-digit Aadhaar number" variant="outlined" size="small" error={!!errors.aadhaarNumber} helperText={errors.aadhaarNumber} sx={customInputStyles} />
+              </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '8px', p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>I have GST Registration</Typography>
-                    <Tooltip title="GST is optional for certain businesses"><HelpOutlineIcon sx={{ fontSize: 16, color: '#9ca3af', cursor: 'pointer' }} /></Tooltip>
-                  </Box>
-                  <Switch checked={formData.hasGst} onChange={handleSwitchChange} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffffff' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#030712', opacity: 1 } }} />
-                </Box>
+              <Box>
+                <StyledInputLabel required>PAN Number</StyledInputLabel>
+                <TextField name="panNumber" value={formData.panNumber} onChange={handleInputChange} fullWidth placeholder="e.g., ABCDE1234F" variant="outlined" size="small" error={!!errors.panNumber} helperText={errors.panNumber} sx={customInputStyles} />
+              </Box>
 
-                {formData.hasGst && (
-                  <Box>
-                    <StyledInputLabel required>GST Number</StyledInputLabel>
-                    <TextField name="gstNumber" value={formData.gstNumber} onChange={handleInputChange} fullWidth placeholder="e.g., 22AAAAA0000A1Z5" variant="outlined" size="small" error={!!errors.gstNumber} helperText={errors.gstNumber} sx={customInputStyles} />
-                  </Box>
-                )}
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827', mt: 2, mb: 1 }}>Business Address</Typography>
 
-                <Box>
-                  <StyledInputLabel required>Aadhaar Number</StyledInputLabel>
-                  <TextField name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleInputChange} fullWidth placeholder="12-digit Aadhaar number" variant="outlined" size="small" error={!!errors.aadhaarNumber} helperText={errors.aadhaarNumber} sx={customInputStyles} />
-                </Box>
+              <Box>
+                <StyledInputLabel required>Address Line 1</StyledInputLabel>
+                <TextField name="addressLine1" value={formData.addressLine1} onChange={handleInputChange} fullWidth placeholder="Building name, street" variant="outlined" size="small" error={!!errors.addressLine1} helperText={errors.addressLine1} sx={customInputStyles} />
+              </Box>
 
-                <Box>
-                  <StyledInputLabel required>PAN Number</StyledInputLabel>
-                  <TextField name="panNumber" value={formData.panNumber} onChange={handleInputChange} fullWidth placeholder="e.g., ABCDE1234F" variant="outlined" size="small" error={!!errors.panNumber} helperText={errors.panNumber} sx={customInputStyles} />
-                </Box>
+              <Box>
+                <StyledInputLabel>Address Line 2</StyledInputLabel>
+                <TextField name="addressLine2" value={formData.addressLine2} onChange={handleInputChange} fullWidth placeholder="Landmark (optional)" variant="outlined" size="small" sx={customInputStyles} />
+              </Box>
 
-                {/* 🌟 STICKY SUB-HEADING */}
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 700, 
-                    color: '#111827', 
-                    mt: 2, 
-                    mb: 1,
-                    position: 'sticky', 
-                    top: 0, 
-                    backgroundColor: '#fff', 
-                    zIndex: 1, 
-                    py: 1 
-                  }}
-                >
-                  Business Address
-                </Typography>
-
-                <Box>
-                  <StyledInputLabel required>Address Line 1</StyledInputLabel>
-                  <TextField name="addressLine1" value={formData.addressLine1} onChange={handleInputChange} fullWidth placeholder="Building name, street" variant="outlined" size="small" error={!!errors.addressLine1} helperText={errors.addressLine1} sx={customInputStyles} />
-                </Box>
-
-                <Box>
-                  <StyledInputLabel>Address Line 2</StyledInputLabel>
-                  <TextField name="addressLine2" value={formData.addressLine2} onChange={handleInputChange} fullWidth placeholder="Landmark (optional)" variant="outlined" size="small" sx={customInputStyles} />
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <StyledInputLabel required>City</StyledInputLabel>
-                    <TextField name="city" value={formData.city} onChange={handleInputChange} fullWidth placeholder="City" variant="outlined" size="small" error={!!errors.city} helperText={errors.city} sx={customInputStyles} />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledInputLabel required>Pincode</StyledInputLabel>
-                    <TextField name="pincode" value={formData.pincode} onChange={handleInputChange} fullWidth placeholder="6-digit pincode" variant="outlined" size="small" error={!!errors.pincode} helperText={errors.pincode} sx={customInputStyles} />
-                  </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <StyledInputLabel required>City</StyledInputLabel>
+                  <TextField name="city" value={formData.city} onChange={handleInputChange} fullWidth placeholder="City" variant="outlined" size="small" error={!!errors.city} helperText={errors.city} sx={customInputStyles} />
                 </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledInputLabel required>Pincode</StyledInputLabel>
+                  <TextField name="pincode" value={formData.pincode} onChange={handleInputChange} fullWidth placeholder="6-digit pincode" variant="outlined" size="small" error={!!errors.pincode} helperText={errors.pincode} sx={customInputStyles} />
+                </Grid>
+              </Grid>
 
-               <Box>
-                  <StyledInputLabel required>State</StyledInputLabel>
-                  <Autocomplete
-                    options={INDIAN_STATES}
-                    value={formData.state || null}
-                    onChange={(event, newValue) => {
-                      handleInputChange({ target: { name: 'state', value: newValue || '' } });
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Search and select state"
-                        variant="outlined"
-                        size="small"
-                        error={!!errors.state}
-                        helperText={errors.state}
-                        sx={customInputStyles}
-                      />
-                    )}
-                  />
-                </Box>
+             <Box>
+                <StyledInputLabel required>State</StyledInputLabel>
+                <Autocomplete
+                  options={INDIAN_STATES}
+                  value={formData.state || null}
+                  // Autocomplete uses a different onChange signature, so we map it to your existing handler
+                  onChange={(event, newValue) => {
+                    handleInputChange({ target: { name: 'state', value: newValue || '' } });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search and select state"
+                      variant="outlined"
+                      size="small"
+                      error={!!errors.state}
+                      helperText={errors.state}
+                      sx={customInputStyles}
+                    />
+                  )}
+                />
               </Box>
             </Box>
-            {/* 🌟 STATIC SCROLL WRAPPER END */}
 
             <NavigationButtons
               onBack={onBack}

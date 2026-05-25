@@ -12,8 +12,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 
 // Shared Components & Hooks
-import { useOtp } from '../../utils/useOtp'; 
-import OtpModal from '../../components/shared/OtpModal/OtpModal';
+import { useOtp } from '../../hooks/useOtp'; 
+import OtpModal from '../../features/onboarding/components/OtpModal';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
 import { validateEmail, validateMobile, validatePassword } from '../../utils/validation';
 import { authService } from '../../services/auth.service'; 

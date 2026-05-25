@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTheme, alpha } from "@mui/material";
 import api from "../../services/api";
 
 const BASE = "/payout-requests";
 
-const STATUS_STYLES = {
-  pending:   { bg: "#fff8e1", color: "#b45309", dot: "#f59e0b" },
-  completed: { bg: "#ecfdf5", color: "#065f46", dot: "#10b981" },
-  rejected:  { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
-};
-
 function StatusBadge({ status }) {
+  const theme = useTheme();
   const key = (status || "pending").toLowerCase();
-  const s = STATUS_STYLES[key] || STATUS_STYLES.pending;
+  
+  const styles = {
+    pending:   { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark, dot: theme.palette.warning.main },
+    completed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark, dot: theme.palette.success.main },
+    rejected:  { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark, dot: theme.palette.error.main },
+  };
+
+  const s = styles[key] || styles.pending;
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
@@ -32,19 +35,17 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-// ✅ never show negative — clamp to 0
 function fmt(n) {
   return Math.max(0, Number(n || 0)).toLocaleString("en-IN");
 }
 
-// ── Withdraw Modal ─────────────────────────────────────────────────────────────
 function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
+  const theme = useTheme();
   const [amount,    setAmount]    = useState("");
   const [bankAcc,   setBankAcc]   = useState("");
   const [storeName, setStoreName] = useState("");
   const [error,     setError]     = useState("");
 
-  // ✅ clamp to 0 so modal never shows negative balance
   const available = Math.max(0, Number(wallet?.available_balance || 0));
 
   const handleConfirm = () => {
@@ -58,14 +59,15 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
 
   const inputStyle = {
     width: "100%", height: 46, padding: "0 14px",
-    border: "1.5px solid #e5e7eb", borderRadius: 12,
-    fontSize: "0.875rem", color: "#111827", outline: "none",
-    boxSizing: "border-box", background: "#fafafa",
+    border: `1.5px solid ${theme.palette.divider}`, borderRadius: 12,
+    fontSize: "0.875rem", color: theme.palette.text.primary, outline: "none",
+    boxSizing: "border-box", background: theme.palette.background.paper,
     transition: "border-color 0.2s, box-shadow 0.2s",
     fontFamily: "'DM Sans', sans-serif",
   };
+
   const focus = e => { e.target.style.borderColor = "#0b8457"; e.target.style.boxShadow = "0 0 0 3px rgba(11,132,87,0.1)"; };
-  const blur  = e => { e.target.style.borderColor = "#e5e7eb"; e.target.style.boxShadow = "none"; };
+  const blur  = e => { e.target.style.borderColor = theme.palette.divider; e.target.style.boxShadow = "none"; };
 
   return (
     <div
@@ -73,8 +75,9 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        width: 460, background: "#fff", borderRadius: 20, padding: 28,
-        boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+        width: 460, background: theme.palette.background.paper, borderRadius: 20, padding: 28,
+        boxShadow: theme.shadows[10],
+        border: `1px solid ${theme.palette.divider}`,
         animation: "wm-in 0.22s cubic-bezier(0.34,1.56,0.64,1)",
         maxHeight: "90vh", overflowY: "auto",
       }}>
@@ -83,20 +86,18 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           @keyframes wm-spin { to { transform: rotate(360deg); } }
         `}</style>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#111827" }}>💸 Request Payout</h2>
-            <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#9ca3af" }}>Submit a withdrawal request to the admin</p>
+            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: theme.palette.text.primary }}>💸 Request Payout</h2>
+            <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: theme.palette.text.secondary }}>Submit a withdrawal request to the admin</p>
           </div>
           <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e5e7eb",
-            background: "#f9fafb", cursor: "pointer", fontSize: "0.9rem",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280",
+            width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${theme.palette.divider}`,
+            background: theme.palette.background.paper, cursor: "pointer", fontSize: "0.9rem",
+            display: "flex", alignItems: "center", justifyContent: "center", color: theme.palette.text.secondary,
           }}>✕</button>
         </div>
 
-        {/* Balance Banner */}
         <div style={{
           background: "linear-gradient(135deg, #0b8457 0%, #059669 100%)",
           borderRadius: 14, padding: "14px 18px", marginBottom: 22, color: "#fff",
@@ -113,10 +114,9 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           <div style={{ fontSize: "2rem", opacity: 0.7 }}>🏦</div>
         </div>
 
-        {/* Amount */}
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Amount (₹) *</label>
+        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Amount (₹) *</label>
         <div style={{ position: "relative", marginBottom: 8 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#6b7280", fontWeight: 700, pointerEvents: "none" }}>₹</span>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: theme.palette.text.secondary, fontWeight: 700, pointerEvents: "none" }}>₹</span>
           <input
             type="number" placeholder="0.00" value={amount}
             onChange={e => setAmount(e.target.value)}
@@ -125,18 +125,17 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           />
         </div>
 
-        {/* Quick % buttons */}
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {[25, 50, 75, 100].map(pct => {
             const val = Math.floor(available * pct / 100);
             return (
               <button key={pct} onClick={() => setAmount(String(val))} style={{
                 flex: 1, padding: "5px 0", borderRadius: 8,
-                border: "1.5px solid #e5e7eb", background: "#f9fafb",
-                fontSize: "0.72rem", fontWeight: 700, color: "#374151", cursor: "pointer",
+                border: `1.5px solid ${theme.palette.divider}`, background: theme.palette.background.paper,
+                fontSize: "0.72rem", fontWeight: 700, color: theme.palette.text.primary, cursor: "pointer",
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "#0b8457"; e.currentTarget.style.color = "#0b8457"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = theme.palette.divider; e.currentTarget.style.color = theme.palette.text.primary; }}
               >
                 {pct}%
               </button>
@@ -144,8 +143,7 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           })}
         </div>
 
-        {/* Store Name */}
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Store Name *</label>
+        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Store Name *</label>
         <input
           type="text" placeholder="Your store name" value={storeName}
           onChange={e => setStoreName(e.target.value)}
@@ -153,8 +151,7 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           style={{ ...inputStyle, marginBottom: 16 }}
         />
 
-        {/* Bank Account */}
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Bank Account Number *</label>
+        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Bank Account Number *</label>
         <input
           type="text" placeholder="e.g. 1234567890" value={bankAcc}
           onChange={e => setBankAcc(e.target.value)}
@@ -162,33 +159,30 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           style={{ ...inputStyle, marginBottom: 16, fontFamily: "'DM Mono', monospace" }}
         />
 
-        {/* Info */}
         <div style={{
-          background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10,
-          padding: "10px 14px", marginBottom: 16, fontSize: "0.78rem", color: "#065f46",
+          background: alpha(theme.palette.success.main, 0.1), border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`, borderRadius: 10,
+          padding: "10px 14px", marginBottom: 16, fontSize: "0.78rem", color: theme.palette.success.dark,
           display: "flex", gap: 8,
         }}>
           <span>ℹ️</span>
           <span>Your request will be reviewed by the admin within 1–3 business days. Make sure your bank details are correct.</span>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{
-            background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10,
-            padding: "9px 14px", marginBottom: 14, fontSize: "0.78rem", color: "#991b1b",
+            background: alpha(theme.palette.error.main, 0.1), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, borderRadius: 10,
+            padding: "9px 14px", marginBottom: 14, fontSize: "0.78rem", color: theme.palette.error.dark,
           }}>
             ⚠️ {error}
           </div>
         )}
 
-        {/* Submit */}
         <button
           onClick={handleConfirm}
           disabled={loading}
           style={{
             width: "100%", height: 48,
-            background: loading ? "#9ca3af" : "#0b8457",
+            background: loading ? theme.palette.action.disabledBackground : "#0b8457",
             color: "#fff", border: "none", borderRadius: 12,
             fontSize: "0.9rem", fontWeight: 700,
             cursor: loading ? "not-allowed" : "pointer",
@@ -210,8 +204,8 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
   );
 }
 
-// ── Main Wallet Component ──────────────────────────────────────────────────────
 export default function Wallet() {
+  const theme = useTheme();
   const [wallet,        setWallet]        = useState(null);
   const [history,       setHistory]       = useState([]);
   const [walletLoading, setWalletLoading] = useState(true);
@@ -258,8 +252,6 @@ export default function Wallet() {
     fetchHistory();
   }, [fetchWallet, fetchHistory]);
 
-  // ✅ POSTs to POST /payout-requests — admin sees it immediately as "pending"
-  // NOTE: Backend balance check removed — admin verifies manually
   const handleWithdraw = async ({ amount, bank_account, store_name }) => {
     setSubmitting(true);
     try {
@@ -274,14 +266,13 @@ export default function Wallet() {
     }
   };
 
-  // ✅ clamp available balance to 0 minimum throughout
   const avail = Math.max(0, Number(wallet?.available_balance || 0));
 
   const statCards = [
-    { label: "Total Earnings",         value: wallet?.total_earnings,       sub: "All-time earnings",     icon: "💼", iconBg: "#f3e8ff", accent: "#9333ea" },
-    { label: "Available to Withdraw",  value: avail,                        sub: "Ready for payout",      icon: "📈", iconBg: "#dcfce7", accent: "#16a34a", action: true },
-    { label: "Settlement in Progress", value: wallet?.settlement_balance,   sub: "Will be released soon", icon: "⏱️", iconBg: "#dbeafe", accent: "#3b82f6" },
-    { label: "Pending Orders Value",   value: wallet?.pending_orders_value, sub: "Not delivered yet",     icon: "📦", iconBg: "#fef3c7", accent: "#f59e0b" },
+    { label: "Total Earnings",         value: wallet?.total_earnings,       sub: "All-time earnings",     icon: "💼", iconBg: alpha("#9333ea", 0.1), accent: "#9333ea" },
+    { label: "Available to Withdraw",  value: avail,                        sub: "Ready for payout",      icon: "📈", iconBg: alpha("#16a34a", 0.1), accent: "#16a34a", action: true },
+    { label: "Settlement in Progress", value: wallet?.settlement_balance,   sub: "Will be released soon", icon: "⏱️", iconBg: alpha("#3b82f6", 0.1), accent: "#3b82f6" },
+    { label: "Pending Orders Value",   value: wallet?.pending_orders_value, sub: "Not delivered yet",     icon: "📦", iconBg: alpha("#f59e0b", 0.1), accent: "#f59e0b" },
   ];
 
   return (
@@ -289,23 +280,23 @@ export default function Wallet() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
         .wl-wrap * { box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
-        .wl-wrap { min-height: 100vh; background: #f7f8fa; padding: 36px 32px; }
+        .wl-wrap { min-height: 100vh; background: ${theme.palette.background.default}; padding: 36px 32px; }
 
         .wl-header { margin-bottom: 28px; }
-        .wl-header h1 { font-size: 1.6rem; font-weight: 700; color: #111827; margin: 0 0 4px; letter-spacing: -0.3px; }
-        .wl-header p  { font-size: 0.875rem; color: #6b7280; margin: 0; }
+        .wl-header h1 { font-size: 1.6rem; font-weight: 700; color: ${theme.palette.text.primary}; margin: 0 0 4px; letter-spacing: -0.3px; }
+        .wl-header p  { font-size: 0.875rem; color: ${theme.palette.text.secondary}; margin: 0; }
 
         .wl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
 
-        .wl-stat { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 22px; position: relative; overflow: hidden; transition: box-shadow 0.2s; }
-        .wl-stat:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.07); }
+        .wl-stat { background: ${theme.palette.background.paper}; border-radius: 16px; border: 1px solid ${theme.palette.divider}; padding: 22px; position: relative; overflow: hidden; transition: box-shadow 0.2s; }
+        .wl-stat:hover { box-shadow: ${theme.shadows[4]}; }
         .wl-stat-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
         .wl-stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; margin-bottom: 12px; }
-        .wl-stat-label { font-size: 0.72rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
-        .wl-stat-value { font-size: 1.5rem; font-weight: 800; color: #111827; font-family: 'DM Mono', monospace; letter-spacing: -0.5px; }
-        .wl-stat-sub { font-size: 0.78rem; color: #9ca3af; margin-top: 3px; }
+        .wl-stat-label { font-size: 0.72rem; font-weight: 700; color: ${theme.palette.text.disabled}; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+        .wl-stat-value { font-size: 1.5rem; font-weight: 800; color: ${theme.palette.text.primary}; font-family: 'DM Mono', monospace; letter-spacing: -0.5px; }
+        .wl-stat-sub { font-size: 0.78rem; color: ${theme.palette.text.secondary}; margin-top: 3px; }
 
-        .wl-skeleton { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+        .wl-skeleton { background: linear-gradient(90deg,${theme.palette.action.hover} 25%,${theme.palette.divider} 50%,${theme.palette.action.hover} 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
         .wl-withdraw-btn { margin-top: 14px; width: 100%; height: 40px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.18s, transform 0.1s, box-shadow 0.18s; }
@@ -313,27 +304,27 @@ export default function Wallet() {
         .wl-withdraw-btn:active:not(:disabled) { transform: scale(0.98); }
         .wl-withdraw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        .wl-requests-card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 24px 28px; }
+        .wl-requests-card { background: ${theme.palette.background.paper}; border-radius: 16px; border: 1px solid ${theme.palette.divider}; padding: 24px 28px; }
         .wl-req-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .wl-req-title { font-size: 1rem; font-weight: 700; color: #111827; }
-        .wl-req-badge { background: #ecfdf5; color: #0b8457; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+        .wl-req-title { font-size: 1rem; font-weight: 700; color: ${theme.palette.text.primary}; }
+        .wl-req-badge { background: ${alpha(theme.palette.success.main, 0.1)}; color: ${theme.palette.success.dark}; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
 
         .wl-table-wrap { overflow-x: auto; margin: 0 -28px; padding: 0 28px; }
         table.wl-table { width: 100%; border-collapse: collapse; }
-        .wl-table thead tr { border-bottom: 1.5px solid #f3f4f6; }
-        .wl-table th { padding: 10px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
-        .wl-table td { padding: 13px 12px; border-bottom: 1px solid #f9fafb; font-size: 0.875rem; color: #374151; vertical-align: middle; }
+        .wl-table thead tr { border-bottom: 1.5px solid ${theme.palette.divider}; }
+        .wl-table th { padding: 10px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; color: ${theme.palette.text.disabled}; text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
+        .wl-table td { padding: 13px 12px; border-bottom: 1px solid ${theme.palette.divider}; font-size: 0.875rem; color: ${theme.palette.text.primary}; vertical-align: middle; }
         .wl-table tbody tr:last-child td { border-bottom: none; }
-        .wl-table tbody tr:hover { background: #fafbfc; }
+        .wl-table tbody tr:hover { background: ${theme.palette.action.hover}; }
 
-        .wl-amount-cell { font-family: 'DM Mono', monospace; font-weight: 700; color: #111827; }
-        .wl-txn-cell { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: #374151; background: #f3f4f6; padding: 3px 8px; border-radius: 6px; display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .wl-amount-cell { font-family: 'DM Mono', monospace; font-weight: 700; color: ${theme.palette.text.primary}; }
+        .wl-txn-cell { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: ${theme.palette.text.primary}; background: ${theme.palette.action.hover}; padding: 3px 8px; border-radius: 6px; display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        .wl-empty { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; color: #9ca3af; }
+        .wl-empty { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; color: ${theme.palette.text.disabled}; }
         .wl-empty-icon { font-size: 2.4rem; opacity: 0.4; margin-bottom: 10px; }
         .wl-empty-text { font-size: 0.875rem; text-align: center; line-height: 1.6; }
 
-        .wl-spinner { width: 22px; height: 22px; border: 2.5px solid #e5e7eb; border-top-color: #0b8457; border-radius: 50%; animation: wl-spin 0.7s linear infinite; margin: 0 auto 10px; }
+        .wl-spinner { width: 22px; height: 22px; border: 2.5px solid ${theme.palette.divider}; border-top-color: #0b8457; border-radius: 50%; animation: wl-spin 0.7s linear infinite; margin: 0 auto 10px; }
         @keyframes wl-spin { to { transform: rotate(360deg); } }
 
         .wl-toast { position: fixed; bottom: 28px; right: 28px; display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 12px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.15); animation: wl-slideup 0.3s ease; z-index: 9999; max-width: 320px; }
@@ -350,7 +341,6 @@ export default function Wallet() {
           <p>Request and track your earnings withdrawals</p>
         </div>
 
-        {/* Stat Cards */}
         <div className="wl-grid">
           {statCards.map((card, i) => (
             <div className="wl-stat" key={i}>
@@ -375,22 +365,20 @@ export default function Wallet() {
           ))}
         </div>
 
-        {/* Total Requests mini card */}
         <div style={{
-          background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb",
+          background: theme.palette.background.paper, borderRadius: 16, border: `1px solid ${theme.palette.divider}`,
           padding: "18px 22px", marginBottom: 24,
           display: "flex", alignItems: "center", gap: 16,
           position: "relative", overflow: "hidden",
         }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "#3b82f6" }} />
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📋</div>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: alpha("#3b82f6", 0.1), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📋</div>
           <div>
-            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.6px" }}>Total Requests</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", fontFamily: "'DM Mono', monospace" }}>{history.length}</div>
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: theme.palette.text.disabled, textTransform: "uppercase", letterSpacing: "0.6px" }}>Total Requests</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 800, color: theme.palette.text.primary, fontFamily: "'DM Mono', monospace" }}>{history.length}</div>
           </div>
         </div>
 
-        {/* Request History */}
         <div className="wl-requests-card">
           <div className="wl-req-header">
             <div className="wl-req-title">Request History</div>
@@ -418,21 +406,21 @@ export default function Wallet() {
                     const txnId = item.transaction_id || item.transactionId || null;
                     return (
                       <tr key={item.id}>
-                        <td style={{ color: "#9ca3af", fontSize: "0.8rem" }}>{i + 1}</td>
+                        <td style={{ color: theme.palette.text.disabled, fontSize: "0.8rem" }}>{i + 1}</td>
                         <td><span className="wl-amount-cell">₹{Number(item.amount).toLocaleString("en-IN")}</span></td>
-                        <td style={{ fontSize: "0.82rem" }}>{item.store_name || "—"}</td>
-                        <td style={{ fontSize: "0.82rem", fontFamily: "monospace" }}>{item.bank_account || "—"}</td>
+                        <td style={{ fontSize: "0.82rem", color: theme.palette.text.primary }}>{item.store_name || "—"}</td>
+                        <td style={{ fontSize: "0.82rem", fontFamily: "monospace", color: theme.palette.text.primary }}>{item.bank_account || "—"}</td>
                         <td><StatusBadge status={item.status} /></td>
                         <td>
                           {txnId
                             ? <span className="wl-txn-cell" title={txnId}>{txnId}</span>
-                            : <span style={{ color: "#d1d5db", fontSize: "0.8rem" }}>—</span>
+                            : <span style={{ color: theme.palette.text.disabled, fontSize: "0.8rem" }}>—</span>
                           }
                         </td>
-                        <td style={{ fontSize: "0.82rem", color: "#6b7280" }}>{formatDate(item.createdAt || item.created_at)}</td>
-                        <td style={{ fontSize: "0.82rem", color: "#6b7280" }}>
+                        <td style={{ fontSize: "0.82rem", color: theme.palette.text.secondary }}>{formatDate(item.createdAt || item.created_at)}</td>
+                        <td style={{ fontSize: "0.82rem", color: theme.palette.text.secondary }}>
                           {item.status === "pending"
-                            ? <span style={{ color: "#d1d5db" }}>—</span>
+                            ? <span style={{ color: theme.palette.text.disabled }}>—</span>
                             : formatDate(item.processedAt || item.processed_at)
                           }
                         </td>

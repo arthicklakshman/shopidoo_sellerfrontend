@@ -1,9 +1,3 @@
-// 👉 Add API integration (POST/PUT)
-// 👉 Add GET API to auto-fill existing bank details
-// 👉 Add Toast instead of alert (professional UX)
-
-
-
 import { useState } from "react";
 import { Box, Typography, Paper, Button } from "@mui/material";
 
@@ -41,7 +35,7 @@ const Settings = () => {
   return (
     <Box p={3}>
       {/* Title */}
-      <Typography variant="h5" fontWeight="bold">
+      <Typography variant="h5" fontWeight="bold" color="text.primary">
         Settings
       </Typography>
 
@@ -56,8 +50,11 @@ const Settings = () => {
           gap: 1,
           p: 1,
           borderRadius: 3,
-          backgroundColor: "#f1f3f5",
+          bgcolor: "action.hover",
           width: "fit-content",
+          border: 1,
+          borderColor: 'divider',
+          boxShadow: 'none',
         }}
       >
         {tabs.map((item, index) => (
@@ -70,9 +67,12 @@ const Settings = () => {
               textTransform: "none",
               px: 2,
               py: 1,
-              color: tab === index ? "#000" : "#555",
-              backgroundColor: tab === index ? "#fff" : "transparent",
-              boxShadow: tab === index ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+              color: tab === index ? "text.primary" : "text.secondary",
+              bgcolor: tab === index ? "background.paper" : "transparent",
+              boxShadow: tab === index ? 1 : "none",
+              "&:hover": {
+                bgcolor: tab === index ? "background.paper" : "action.selected",
+              },
             }}
           >
             {item.label}

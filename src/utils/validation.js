@@ -99,14 +99,20 @@ export const validateIFSC = (ifsc) => {
 
 
 
+//   update password   
 export const validateSecurity = (form) => {
   let errors = {};
 
   const isChangingPassword =
+    form.currentPassword ||
     form.newPassword ||
     form.confirmPassword;
 
   if (isChangingPassword) {
+
+    if (!form.currentPassword) {
+      errors.currentPassword = "Current password is required";
+    }
 
     if (!form.newPassword) {
       errors.newPassword = "New password is required";
@@ -114,6 +120,15 @@ export const validateSecurity = (form) => {
 
     if (!form.confirmPassword) {
       errors.confirmPassword = "Confirm password is required";
+    }
+
+    // ❌ new === current
+    if (
+      form.currentPassword &&
+      form.newPassword &&
+      form.currentPassword === form.newPassword
+    ) {
+      errors.newPassword = "New password must be different from current password";
     }
 
     // ❌ mismatch

@@ -7,7 +7,7 @@ import {
     CardContent,
     Grid,
     Button,
-    Avatar, ListSubheader,
+    Avatar,
 } from '@mui/material';
 
 import { useNavigate } from 'react-router-dom';
@@ -21,10 +21,7 @@ import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
 import GradientText from '../../components/shared/GradientButton/GradientText';
 
-
-//images
-import sellerregistrationimg from '../../assets/sellerregisterationfront.jpg';
-
+import sellerHero from '../../assets/seller_hero.png';
 
 const features = [
     { icon: <TrendingUpIcon />, title: 'Low Commission', desc: 'Keep more of what you earn' },
@@ -80,7 +77,7 @@ export default function OnboardingEntry() {
                         <Box
                             sx={{
                                 width: '100%',
-                                height: { xs: '250px', sm: '350px' },
+                                aspectRatio: '16/9',
                                 borderRadius: '24px',
                                 overflow: 'hidden',
                                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
@@ -88,7 +85,7 @@ export default function OnboardingEntry() {
                             }}
                         >
                             <img
-                                src={sellerregistrationimg}
+                                src={sellerHero}
                                 alt="Seller"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import {
@@ -19,14 +18,20 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  useTheme,
+  alpha,
+  IconButton
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import WarningIcon from "@mui/icons-material/Warning";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
 const LOW_STOCK_DEFAULT = 10;
 
 const Inventory = () => {
+  const theme = useTheme();
   const [data, setData] = useState({
     totalProducts: 0,
     lowStockCount: 0,
@@ -38,6 +43,7 @@ const Inventory = () => {
   const [editStock, setEditStock] = useState({});
   const [openBulk, setOpenBulk] = useState(false);
   const [bulkData, setBulkData] = useState({});
+  const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
     fetchInventory();
@@ -52,6 +58,13 @@ const Inventory = () => {
     }
   };
 
+  const toggleRow = (id) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const getStatus = (stock, alert = LOW_STOCK_DEFAULT) => {
     if (stock === 0) return { label: "Out of Stock", color: "error" };
     if (stock <= alert) return { label: "Low Stock", color: "warning" };
@@ -62,34 +75,41 @@ const Inventory = () => {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleStockChange = (id, value) => {
+  const handleStockChange = (key, value) => {
     setEditStock({
       ...editStock,
-      [id]: value,
+      [key]: value,
     });
   };
 
-  const updateStock = async (id) => {
+  const updateStock = async (productId, variantId = null) => {
     try {
-      const quantity = Number(editStock[id]);
+      const key = variantId ? `v-${variantId}` : `p-${productId}`;
+      const quantity = Number(editStock[key]);
       if (isNaN(quantity) || quantity < 0) return;
 
-      await api.patch(`/products/${id}/stock`, { quantity });
+      await api.patch(`/products/${productId}/stock`, { 
+        quantity,
+        variant_id: variantId 
+      });
       fetchInventory();
     } catch (err) {
       console.error(err);
     }
   };
 
-  // 🔥 NEW: RESTOCK FUNCTION (NO UI CHANGE)
-  const handleRestock = async (product) => {
+  const handleRestock = async (item) => {
     try {
-      const increaseBy = product.low_stock_alert || LOW_STOCK_DEFAULT;
+      const isVariant = !!item.parentId;
+      const productId = isVariant ? item.parentId : item.id;
+      const variantId = isVariant ? item.id : null;
 
-      const newQuantity = product.stock_quantity + increaseBy;
+      const increaseBy = item.low_stock_alert || LOW_STOCK_DEFAULT;
+      const newQuantity = item.stock_quantity + increaseBy;
 
-      await api.patch(`/products/${product.id}/stock`, {
+      await api.patch(`/products/${productId}/stock`, {
         quantity: newQuantity,
+        variant_id: variantId
       });
 
       fetchInventory();
@@ -100,29 +120,174 @@ const Inventory = () => {
 
   const handleBulkUpdate = async () => {
     try {
-      for (let id in bulkData) {
-        const quantity = Number(bulkData[id]);
-        if (isNaN(quantity) || quantity < 0) continue;
+      const updates = [];
+      Object.keys(bulkData).forEach(key => {
+        const quantity = Number(bulkData[key]);
+        if (isNaN(quantity) || quantity < 0) return;
 
-        await api.patch(`/products/${id}/stock`, { quantity });
+        if (key.startsWith('v-')) {
+          const [vId, pId] = key.replace('v-', '').split('-');
+          updates.push({ product_id: pId, variant_id: vId, quantity });
+        } else {
+          const pId = key.replace('p-', '');
+          updates.push({ product_id: pId, quantity });
+        }
+      });
+
+      if (updates.length > 0) {
+        await api.patch('/products/inventory/bulk-update', { updates });
       }
 
       setOpenBulk(false);
+      setBulkData({});
       fetchInventory();
     } catch (err) {
       console.error(err);
     }
   };
 
-  const lowStockProducts = data.products.filter(
-    (p) =>
-      p.stock_quantity > 0 &&
-      p.stock_quantity <= (p.low_stock_alert || LOW_STOCK_DEFAULT)
-  );
+  const lowStockItems = [];
+  data.products.forEach(p => {
+    const alertThreshold = p.low_stock_alert || LOW_STOCK_DEFAULT;
+    if (p.variants && p.variants.length > 0) {
+      p.variants.forEach(v => {
+        if (v.stock_quantity > 0 && v.stock_quantity <= alertThreshold) {
+          const attrs = v.variant_attributes || {};
+          const attrStr = Object.values(attrs).join(" / ");
+          lowStockItems.push({
+            ...v,
+            name: `${p.name} (${attrStr})`,
+            parentName: p.name,
+            parentId: p.id,
+            low_stock_alert: alertThreshold
+          });
+        }
+      });
+    } else {
+      if (p.stock_quantity > 0 && p.stock_quantity <= alertThreshold) {
+        lowStockItems.push(p);
+      }
+    }
+  });
+
+  const renderStockRow = (item, isVariant = false, parentId = null, parentAlert = null) => {
+    const id = item.id;
+    const key = isVariant ? `v-${id}` : `p-${id}`;
+    const alertThreshold = isVariant ? parentAlert : (item.low_stock_alert || LOW_STOCK_DEFAULT);
+    const hasVariants = !isVariant && item.variants && item.variants.length > 0;
+    const isExpanded = !isVariant && expandedRows[id];
+
+    let displayName = item.name;
+    if (isVariant) {
+      const attrs = item.variant_attributes || {};
+      displayName = `↳ ${Object.values(attrs).join(" / ")}`;
+    }
+
+    let status = getStatus(item.stock_quantity, alertThreshold);
+    if (hasVariants && !isVariant) {
+      const variantStatuses = item.variants.map(v => getStatus(v.stock_quantity, alertThreshold));
+      const anyLow = variantStatuses.some(s => s.label === "Low Stock" || s.label === "Out of Stock");
+      const allOut = variantStatuses.every(s => s.label === "Out of Stock");
+      
+      if (allOut) {
+        status = { label: "Out of Stock", color: "error" };
+      } else if (anyLow) {
+        status = { label: "Low Stock", color: "warning" };
+      }
+    }
+
+    return (
+      <TableRow key={key} sx={{ borderBottom: isVariant ? 'none' : '1px solid', borderColor: 'divider' }}>
+        <TableCell sx={{ 
+          pl: isVariant ? "64px" : "16px",
+          color: isVariant ? theme.palette.text.secondary : theme.palette.text.primary,
+          fontSize: isVariant ? "14px" : "inherit",
+          py: 1.5
+        }}>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            {!isVariant && hasVariants && (
+              <IconButton size="small" onClick={() => toggleRow(id)} sx={{ p: 0.5 }}>
+                {isExpanded ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowRightIcon fontSize="small" />}
+              </IconButton>
+            )}
+            <Typography variant="body2" color="inherit" fontWeight={isVariant ? 400 : 600}>
+              {displayName}
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell color="text.secondary">{item.sku || "-"}</TableCell>
+
+        <TableCell>
+          <Typography
+            fontWeight={600}
+            sx={{
+              color: `${status.color}.main`,
+            }}
+          >
+            {hasVariants && !isVariant ? "units" : `${item.stock_quantity} units`}
+          </Typography>
+        </TableCell>
+
+        <TableCell color="text.secondary">{alertThreshold}</TableCell>
+
+        <TableCell>
+          <Chip label={status.label} color={status.color} size="small" sx={{ fontWeight: 600 }} />
+        </TableCell>
+
+        <TableCell align="center">
+          <Box display="flex" gap={1} justifyContent="center">
+            <input
+              type="number"
+              disabled={hasVariants && !isVariant}
+              placeholder={hasVariants && !isVariant ? "Variant Product" : ""}
+              value={hasVariants && !isVariant ? "" : (editStock[key] ?? item.stock_quantity)}
+              onChange={(e) => handleStockChange(key, e.target.value)}
+              style={{
+                width: hasVariants && !isVariant ? "140px" : "80px",
+                padding: "8px",
+                borderRadius: "8px",
+                border: "1px solid",
+                borderColor: theme.palette.divider,
+                backgroundColor: hasVariants && !isVariant ? theme.palette.action.disabledBackground : theme.palette.action.hover,
+                color: theme.palette.text.primary,
+                outline: 'none',
+                fontSize: "14px"
+              }}
+            />
+
+            <Button
+              variant="contained"
+              size="small"
+              disabled={hasVariants && !isVariant}
+              onClick={() => updateStock(isVariant ? parentId : id, isVariant ? id : null)}
+              sx={{
+                background: hasVariants && !isVariant ? theme.palette.action.disabledBackground : 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                color: hasVariants && !isVariant ? theme.palette.text.disabled : '#000',
+                fontWeight: 600,
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                  color: '#000',
+                  boxShadow: '0 4px 12px rgba(15, 185, 177, 0.3)'
+                },
+                '&.Mui-disabled': {
+                  background: theme.palette.action.disabledBackground,
+                  color: theme.palette.text.disabled,
+                }
+              }}
+            >
+              Update
+            </Button>
+          </Box>
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight="bold">
+      <Typography variant="h5" fontWeight="bold" color="text.primary">
         Inventory Management
       </Typography>
       <Typography color="text.secondary" mb={3}>
@@ -139,11 +304,11 @@ const Inventory = () => {
 
       <Grid container spacing={2} mb={3}>
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Total Products</Typography>
-                <Typography variant="h5">{data.totalProducts}</Typography>
+                <Typography color="text.secondary" variant="body2">Total Items</Typography>
+                <Typography variant="h5" color="text.primary" fontWeight={700}>{data.totalProducts}</Typography>
               </Box>
               <Inventory2Icon color="success" />
             </CardContent>
@@ -151,11 +316,11 @@ const Inventory = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Low Stock</Typography>
-                <Typography variant="h5" color="warning.main">
+                <Typography color="text.secondary" variant="body2">Low Stock</Typography>
+                <Typography variant="h5" color="warning.main" fontWeight={700}>
                   {data.lowStockCount}
                 </Typography>
               </Box>
@@ -165,11 +330,11 @@ const Inventory = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
             <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
               <Box>
-                <Typography>Out of Stock</Typography>
-                <Typography variant="h5" color="error.main">
+                <Typography color="text.secondary" variant="body2">Out of Stock</Typography>
+                <Typography variant="h5" color="error.main" fontWeight={700}>
                   {data.outOfStockCount}
                 </Typography>
               </Box>
@@ -179,16 +344,20 @@ const Inventory = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
         <Box display="flex" justifyContent="space-between" mb={2}>
-          <Typography fontWeight="bold">Stock Levels</Typography>
+          <Typography fontWeight="bold" color="text.primary">Stock Levels</Typography>
          <Button
             variant="outlined"
             onClick={() => setOpenBulk(true)}
             sx={{
-              bgcolor: '#fff',
-              color: 'rgb(76, 175, 80)',
-              borderColor: 'rgb(76, 175, 80)',
+              bgcolor: 'background.paper',
+              color: 'success.main',
+              borderColor: 'success.main',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.success.main, 0.05),
+                borderColor: 'success.main',
+              }
             }}
           >
             Bulk Update
@@ -198,145 +367,146 @@ const Inventory = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>SKU</TableCell>
-              <TableCell>Stock</TableCell>
-              <TableCell>Alert</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="center">Update Stock</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Name</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>SKU</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Stock</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Alert</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Status</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 700, color: 'text.secondary' }}>Update Stock</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
-            {filteredProducts.map((p) => {
-              const status = getStatus(
-                p.stock_quantity,
-                p.low_stock_alert || LOW_STOCK_DEFAULT
-              );
-
-              return (
-                <TableRow key={p.id}>
-                  <TableCell>{p.name}</TableCell>
-                  <TableCell>{p.sku || "-"}</TableCell>
-
-                  <TableCell>
-                    <Typography
-                      sx={{
-                        color:
-                          p.stock_quantity === 0
-                            ? "red"
-                            : p.stock_quantity <= (p.low_stock_alert || LOW_STOCK_DEFAULT)
-                            ? "orange"
-                            : "green",
-                      }}
-                    >
-                      {p.stock_quantity} units
-                    </Typography>
-                  </TableCell>
-
-                  <TableCell>{p.low_stock_alert || LOW_STOCK_DEFAULT}</TableCell>
-
-                  <TableCell>
-                    <Chip label={status.label} color={status.color} size="small" />
-                  </TableCell>
-
-                  <TableCell align="center">
-                    <Box display="flex" gap={1} justifyContent="center">
-                      <input
-                        type="number"
-                        value={editStock[p.id] ?? p.stock_quantity}
-                        onChange={(e) =>
-                          handleStockChange(p.id, e.target.value)
-                        }
-                        style={{
-                          width: "80px",
-                          padding: "6px",
-                          borderRadius: "6px",
-                          border: "1px solid #ccc",
-                        }}
-                      />
-
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => updateStock(p.id)}
-                        sx={{
-                          background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                          color: '#000',
-                          '&:hover': {
-                            background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                            color: '#000',
-                          },
-                        }}
-                      >
-                        Update
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filteredProducts.flatMap((p) => [
+              renderStockRow(p),
+              ...(p.variants && expandedRows[p.id] ? p.variants.map((v) => renderStockRow(v, true, p.id, p.low_stock_alert)) : [])
+            ])}
           </TableBody>
         </Table>
       </Paper>
 
       {/* LOW STOCK */}
-      <Paper sx={{ p: 2, borderLeft: "4px solid orange" }}>
-        <Typography fontWeight="bold" mb={2}>
-          ⚠ Low Stock Alerts
-        </Typography>
+      {lowStockItems.length > 0 && (
+        <Paper sx={{ p: 2, borderLeft: "4px solid", borderColor: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.05), boxShadow: 'none' }}>
+          <Typography fontWeight="bold" mb={2} color="warning.main" display="flex" alignItems="center" gap={1}>
+            <WarningIcon fontSize="small" /> Low Stock Alerts
+          </Typography>
 
-        {lowStockProducts.map((p) => (
-          <Box
-            key={p.id}
-            sx={{
-              p: 2,
-              mb: 1,
-              bgcolor: "#fff3cd",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box>
-              <Typography>{p.name}</Typography>
-              <Typography variant="caption">
-                Only {p.stock_quantity} units remaining
-              </Typography>
-            </Box>
+          {lowStockItems.map((item) => {
+             const key = item.parentId ? `ls-v-${item.id}` : `ls-p-${item.id}`;
+             return (
+              <Box
+                key={key}
+                sx={{
+                  p: 2,
+                  mb: 1,
+                  bgcolor: 'background.paper',
+                  borderRadius: '8px',
+                  border: 1,
+                  borderColor: alpha(theme.palette.warning.main, 0.2),
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: 'center'
+                }}
+              >
+                <Box>
+                  <Typography fontWeight={600} color="text.primary">{item.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Only {item.stock_quantity} units remaining (Alert at {item.low_stock_alert || LOW_STOCK_DEFAULT})
+                  </Typography>
+                </Box>
 
-            {/* 🔥 ONLY CHANGE HERE */}
-            <Button onClick={() => handleRestock(p)}>Restock</Button>
-          </Box>
-        ))}
-      </Paper>
+                <Button 
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleRestock(item)}
+                  sx={{
+                     bgcolor: 'warning.main',
+                     color: '#fff',
+                     textTransform: 'none',
+                     fontWeight: 600,
+                     '&:hover': { bgcolor: 'warning.dark' }
+                  }}
+                >
+                  Restock
+                </Button>
+              </Box>
+            );
+          })}
+        </Paper>
+      )}
 
-      <Dialog open={openBulk} onClose={() => setOpenBulk(false)}>
-        <DialogTitle>Bulk Update Stock</DialogTitle>
-
-        <DialogContent>
-          {data.products.map((p) => (
-            <TextField
-              key={p.id}
-              label={p.name}
-              type="number"
-              fullWidth
-              margin="dense"
-              onChange={(e) =>
-                setBulkData({
-                  ...bulkData,
-                  [p.id]: e.target.value,
-                })
-              }
-            />
-          ))}
+      <Dialog open={openBulk} onClose={() => setOpenBulk(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: 'text.primary' }}>Bulk Update Stock</DialogTitle>
+        <DialogContent dividers>
+          {data.products.map((p) => {
+            const hasVariants = p.variants && p.variants.length > 0;
+            return (
+              <Box key={p.id} sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" color="text.primary" fontWeight={700} mb={hasVariants ? 1 : 0.5}>
+                  {p.name}
+                  {hasVariants && <Chip label="Variant Product" size="small" sx={{ ml: 1, height: 18, fontSize: '0.6rem' }} />}
+                </Typography>
+                
+                {!hasVariants ? (
+                  <TextField
+                    type="number"
+                    fullWidth
+                    size="small"
+                    placeholder="Enter new quantity"
+                    onChange={(e) =>
+                      setBulkData({
+                        ...bulkData,
+                        [`p-${p.id}`]: e.target.value,
+                      })
+                    }
+                  />
+                ) : (
+                  <Box sx={{ ml: 2, mt: 1 }}>
+                    {p.variants.map((v) => {
+                      const attrs = v.variant_attributes || {};
+                      const attrStr = Object.values(attrs).join(" / ");
+                      return (
+                        <Box key={v.id} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Typography variant="caption" sx={{ minWidth: 100 }}>{attrStr}</Typography>
+                          <TextField
+                            type="number"
+                            size="small"
+                            placeholder="Qty"
+                            sx={{ width: 100 }}
+                            onChange={(e) =>
+                              setBulkData({
+                                ...bulkData,
+                                [`v-${v.id}-${p.id}`]: e.target.value,
+                              })
+                            }
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
 
           <Button
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+              color: '#000',
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': {
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                color: '#000',
+              }
+            }}
             variant="contained"
             onClick={handleBulkUpdate}
           >
-            Update All
+            Update All Stock
           </Button>
         </DialogContent>
       </Dialog>
