@@ -49,13 +49,15 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
   const available = Math.max(0, Number(wallet?.available_balance || 0));
 
   const handleConfirm = () => {
-    setError("");
-    const num = Number(amount);
-    if (!amount || isNaN(num) || num <= 0) { setError("Please enter a valid amount"); return; }
-    if (!storeName.trim())                 { setError("Please enter your store name"); return; }
-    if (!bankAcc.trim())                   { setError("Please enter your bank account number"); return; }
-    onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
-  };
+  setError("");
+  const num = Number(amount);
+  if (!amount || isNaN(num) || num <= 0) { setError("Please enter a valid amount"); return; }
+  if (available <= 0)  { setError("You have no available balance to withdraw."); return; }
+  if (num > available) { setError(`Insufficient balance. Max available: ₹${available.toLocaleString("en-IN")}`); return; }
+  if (!storeName.trim()) { setError("Please enter your store name"); return; }
+  if (!bankAcc.trim())   { setError("Please enter your bank account number"); return; }
+  onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
+};
 
   const inputStyle = {
     width: "100%", height: 46, padding: "0 14px",
@@ -222,7 +224,7 @@ export default function Wallet() {
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
     try {
-      const res = await api.get(`${BASE}/wallet`);
+      const res = await api.get("/wallet");
       setWallet(res.data.data);
     } catch {
       showToast("Failed to load wallet data", "error");
@@ -271,7 +273,7 @@ export default function Wallet() {
   const statCards = [
     { label: "Total Earnings",         value: wallet?.total_earnings,       sub: "All-time earnings",     icon: "💼", iconBg: alpha("#9333ea", 0.1), accent: "#9333ea" },
     { label: "Available to Withdraw",  value: avail,                        sub: "Ready for payout",      icon: "📈", iconBg: alpha("#16a34a", 0.1), accent: "#16a34a", action: true },
-    { label: "Settlement in Progress", value: wallet?.settlement_balance,   sub: "Will be released soon", icon: "⏱️", iconBg: alpha("#3b82f6", 0.1), accent: "#3b82f6" },
+    { label: "Settlement in Progress", value: wallet?.settlement_in_progress,   sub: "Will be released soon", icon: "⏱️", iconBg: alpha("#3b82f6", 0.1), accent: "#3b82f6" },
     { label: "Pending Orders Value",   value: wallet?.pending_orders_value, sub: "Not delivered yet",     icon: "📦", iconBg: alpha("#f59e0b", 0.1), accent: "#f59e0b" },
   ];
 
@@ -299,8 +301,25 @@ export default function Wallet() {
         .wl-skeleton { background: linear-gradient(90deg,${theme.palette.action.hover} 25%,${theme.palette.divider} 50%,${theme.palette.action.hover} 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-        .wl-withdraw-btn { margin-top: 14px; width: 100%; height: 40px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.18s, transform 0.1s, box-shadow 0.18s; }
-        .wl-withdraw-btn:hover:not(:disabled) { background: #15803d; box-shadow: 0 4px 14px rgba(22,163,74,0.3); }
+        .wl-withdraw-btn { 
+  margin-top: 14px; 
+  width: 100%; 
+  height: 40px; 
+  background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
+  color: #000; 
+  border: none; 
+  border-radius: 10px; 
+  font-size: 0.85rem; 
+  font-weight: 700; 
+  cursor: pointer; 
+  transition: all 0.18s ease;
+}
+
+.wl-withdraw-btn:hover:not(:disabled) { 
+  background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
+  opacity: 0.9;
+  box-shadow: 0 4px 14px rgba(11,132,87,0.3); 
+}
         .wl-withdraw-btn:active:not(:disabled) { transform: scale(0.98); }
         .wl-withdraw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 

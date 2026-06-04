@@ -1,40 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Card,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  Chip,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Avatar,
-  Tooltip,
-  Paper,
-  Divider,
-  useTheme
+  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Typography, Chip, IconButton, Button, Dialog, DialogTitle, DialogContent,
+  DialogActions, TextField, MenuItem, Avatar, Tooltip, Paper, Divider, useTheme
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { returnService } from '../../services/return.service';
 import { formatDate } from '../../utils/formatDate';
 
-const STATUS_COLORS = {
-  pending: 'warning',
-  approved: 'success',
-  rejected: 'error',
-  picked_up: 'info',
-  refunded: 'primary',
-  replacement_sent: 'secondary'
+const STATUS_CONFIG = {
+  pending:            { label: 'Pending',            color: 'warning'   },
+  return_requested:   { label: 'Return Requested',   color: 'warning'   },
+  approved:           { label: 'Approved',            color: 'success'   },
+  rejected:           { label: 'Rejected',            color: 'error'     },
+  picked_up:          { label: 'Picked Up',           color: 'info'      },
+  returned:           { label: 'Returned',            color: 'info'      },
+  refunded:           { label: 'Refunded',            color: 'success'   },
+  replacement_sent:   { label: 'Replacement Sent',   color: 'secondary' },
+};
+
+const StatusChip = ({ status }) => {
+  const config = STATUS_CONFIG[status] || { label: status, color: 'default' };
+  return (
+    <Chip
+      label={config.label}
+      size="small"
+      color={config.color}
+      sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.65rem' }}
+    />
+  );
 };
 
 const SellerReturns = () => {
@@ -57,38 +51,40 @@ const SellerReturns = () => {
     }
   };
 
-  useEffect(() => {
-    fetchReturns();
-  }, []);
+  useEffect(() => { fetchReturns(); }, []);
 
-  const handleUpdateStatus = async () => {
-    try {
-      await returnService.updateReturnStatus(selectedReturn.id, {
-        status: statusUpdate.status,
-        seller_response: statusUpdate.response
-      });
-      setOpenDetail(false);
-      fetchReturns();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const handleUpdateStatus = async () => {
+  try {
+    // Changed updateSellerReturnStatus to updateReturnStatus
+    await returnService.updateReturnStatus(selectedReturn.id, {
+      status: statusUpdate.status,
+      seller_response: statusUpdate.response,
+    });
+    setOpenDetail(false);
+    fetchReturns();
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography sx={{ fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1, color: isDark ? '#FFFFFF' : 'text.primary', mb: 0.6 }}>
+        <Typography sx={{
+          fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1,
+          color: isDark ? '#FFFFFF' : 'text.primary', mb: 0.6,
+        }}>
           Return Requests
         </Typography>
         <Typography sx={{ fontSize: 14, color: 'text.secondary', fontWeight: 400 }}>
           Manage and respond to customer return requests for your products.
         </Typography>
       </Box>
-      
-      <TableContainer component={Paper} sx={{ 
-        borderRadius: 3, 
-        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(0,0,0,0.05)', 
-        overflow: 'hidden' 
+
+      <TableContainer component={Paper} sx={{
+        borderRadius: 3,
+        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
+        overflow: 'hidden',
       }}>
         <Table>
           <TableHead sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'grey.50' }}>
@@ -112,10 +108,9 @@ const SellerReturns = () => {
               <TableRow key={req.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar variant="rounded" src={req.product?.images?.[0]?.image_url} sx={{ 
-                      width: 45, 
-                      height: 45, 
-                      bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'grey.100' 
+                    <Avatar variant="rounded" src={req.product?.images?.[0]?.image_url} sx={{
+                      width: 45, height: 45,
+                      bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'grey.100',
                     }}>
                       {req.product?.name?.charAt(0)}
                     </Avatar>
@@ -132,28 +127,23 @@ const SellerReturns = () => {
                   <Typography variant="body2">{req.reason}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip 
-                    label={req.status.toUpperCase()} 
-                    size="small" 
-                    color={STATUS_COLORS[req.status]} 
-                    sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.65rem' }}
-                  />
+                  <StatusChip status={req.status} />
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{formatDate(req.created_at)}</Typography>
                 </TableCell>
                 <TableCell align="right">
                   <Tooltip title="View & Respond">
-                    <IconButton 
+                    <IconButton
                       onClick={() => {
                         setSelectedReturn(req);
                         setStatusUpdate({ status: req.status, response: req.seller_response || '' });
                         setOpenDetail(true);
                       }}
-                      sx={{ 
+                      sx={{
                         color: '#0FB9B1',
                         bgcolor: isDark ? 'rgba(15, 185, 177, 0.15)' : 'rgba(15, 185, 177, 0.1)',
-                        '&:hover': { bgcolor: '#0FB9B1', color: 'white' }
+                        '&:hover': { bgcolor: '#0FB9B1', color: 'white' },
                       }}
                     >
                       <VisibilityOutlinedIcon fontSize="small" />
@@ -171,13 +161,17 @@ const SellerReturns = () => {
         <DialogContent dividers>
           {selectedReturn && (
             <Box sx={{ py: 1 }}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="overline" color="text.secondary" fontWeight={700}>Current Status</Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  <StatusChip status={selectedReturn.status} />
+                </Box>
+              </Box>
+
               <Box sx={{ mb: 3 }}>
                 <Typography variant="overline" color="text.secondary" fontWeight={700}>Customer Issue Description</Typography>
-                <Paper variant="outlined" sx={{ 
-                  p: 2, 
-                  bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'grey.50', 
-                  mt: 0.5, 
-                  borderRadius: 2 
+                <Paper variant="outlined" sx={{
+                  p: 2, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'grey.50', mt: 0.5, borderRadius: 2,
                 }}>
                   <Typography variant="body2">{selectedReturn.message}</Typography>
                 </Paper>
@@ -187,10 +181,10 @@ const SellerReturns = () => {
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Customer Uploaded Proof</Typography>
                   <Box sx={{ mt: 1, textAlign: 'center' }}>
-                    <img 
-                      src={selectedReturn.proof_image} 
-                      alt="Proof" 
-                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} 
+                    <img
+                      src={selectedReturn.proof_image}
+                      alt="Proof"
+                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
                     />
                   </Box>
                 </Box>
@@ -198,47 +192,47 @@ const SellerReturns = () => {
 
               <Divider sx={{ my: 3 }} />
 
-              <Typography variant="overline" color="primary" fontWeight={800}>Respond to Request</Typography>
-              <TextField
-                select
-                fullWidth
-                label="Update Request Status"
-                value={statusUpdate.status}
-                onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
-                margin="normal"
-                variant="filled"
-              >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="picked_up">Item Picked Up</MenuItem>
-                <MenuItem value="replacement_sent">Replacement Dispatched</MenuItem>
-              </TextField>
+            <Typography variant="overline" color="primary" fontWeight={800}>Respond to Request</Typography>
+<TextField
+  select fullWidth label="Update Request Status"
+  value={statusUpdate.status}
+  onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
+  margin="normal" variant="filled"
+>
+  {/* 👇 ADD THESE 4 LINES TO FIX THE WARNING 👇 */}
+  {statusUpdate.status === 'pending' && <MenuItem value="pending">Pending</MenuItem>}
+  {statusUpdate.status === 'return_requested' && <MenuItem value="return_requested">Return Requested</MenuItem>}
+  {statusUpdate.status === 'approved' && <MenuItem value="approved">Approved</MenuItem>}
+  {statusUpdate.status === 'rejected' && <MenuItem value="rejected">Rejected</MenuItem>}
+
+  {/* Your existing options remain below */}
+  <MenuItem value="picked_up">Item Picked Up</MenuItem>
+  <MenuItem value="replacement_sent">Replacement Dispatched</MenuItem>
+</TextField>
 
               <TextField
-                fullWidth
-                label="Your Response to Customer"
-                multiline
-                rows={4}
+                fullWidth label="Your Response to Customer"
+                multiline rows={4}
                 value={statusUpdate.response}
                 onChange={(e) => setStatusUpdate({ ...statusUpdate, response: e.target.value })}
                 margin="normal"
                 placeholder="Provide details about the pickup or replacement process..."
               />
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Note: Refunds are typically processed by the platform administrator.
+                Note: Refunds are processed by the platform administrator.
               </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setOpenDetail(false)} sx={{ fontWeight: 700 }}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleUpdateStatus} 
-            sx={{ 
-              fontWeight: 700, 
-              px: 4,
+          <Button
+            variant="contained"
+            onClick={handleUpdateStatus}
+            sx={{
+              fontWeight: 700, px: 4,
               background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-              '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
+              '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' },
             }}
           >
             Update Status

@@ -25,16 +25,20 @@ import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import Button from '@mui/material/Button';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
-const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned'];
+const ALLOWED_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned', 'return_requested',
+  'replacement_sent',];
 
 const DELIVERY_COLORS = (theme) => ({
-  delivered: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
-  cancelled: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
-  shipped: { bg: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
-  processing: { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
-  confirmed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
-  pending: { bg: theme.palette.action.hover, color: theme.palette.text.secondary },
-  refunded: { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
+  delivered:          { bg: alpha(theme.palette.success.main, 0.1),   color: theme.palette.success.dark },
+  cancelled:          { bg: alpha(theme.palette.error.main, 0.1),     color: theme.palette.error.dark },
+  shipped:            { bg: alpha(theme.palette.info.main, 0.1),      color: theme.palette.info.dark },
+  processing:         { bg: alpha(theme.palette.warning.main, 0.1),   color: theme.palette.warning.dark },
+  confirmed:          { bg: alpha(theme.palette.success.main, 0.1),   color: theme.palette.success.dark },
+  pending:            { bg: theme.palette.action.hover,                color: theme.palette.text.secondary },
+  refunded:           { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
+  returned:           { bg: alpha(theme.palette.info.main, 0.1),      color: theme.palette.info.dark },
+  return_requested:   { bg: alpha(theme.palette.warning.main, 0.15),  color: theme.palette.warning.dark }, 
+  replacement_sent:   { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark }, 
 });
 
 const StatusBadge = ({ label, colorMap }) => {
@@ -50,6 +54,7 @@ const getNextStatuses = (currentStatus) => {
   if(currentStatus==="confirmed") return ["processing"];
   if(currentStatus==="processing") return ["shipped"];
   if(currentStatus==="shipped") return ["delivered"];
+  if (currentStatus === 'return_requested') return [];
   return [];
 };
 
@@ -336,12 +341,13 @@ const Orders = () => {
                       <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
                       <TableCell><OrderStatusChip status={item.status} /></TableCell>
                       <TableCell>
-                        <FormControl size="small" sx={{ minWidth: 130 }}>
-                          <Select
-                            value={item.status || 'pending'}
-                            displayEmpty
-                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                          >
+                            <FormControl size="small" sx={{ minWidth: 130 }}>
+  <Select
+    value={item.status || 'pending'}
+    displayEmpty
+    disabled={['return_requested', 'returned', 'refunded', 'replacement_sent'].includes(item.status)} // ← ADD
+    onChange={(e) => handleStatusChange(item.id, e.target.value)}
+  >
                             {ALLOWED_STATUSES.map((s) => (
                               <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
                             ))}
