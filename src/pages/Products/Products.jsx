@@ -103,23 +103,6 @@ const Products = () => {
     });
   }, [categories]);
 
-  // const load = () => {
-  //   setLoading(true);
-  //   setFetchError('');
-  //   sellerService.getProducts({
-  //     page,
-  //     limit: 10,
-  //     search: deferredSearch || undefined,
-  //     category: categoryFilter || undefined,
-  //     status: statusFilter || undefined,
-  //   }).then(({ data }) => {
-  //     setProducts(data.data || []);
-  //     setPagination(data.pagination || {});
-  //   }).catch((err) => {
-  //     setFetchError(getErrorMessage(err));
-  //   }).finally(() => setLoading(false));
-  // };
-    // Replace your entire load function in Products.jsx with this
   const load = async () => {
   setLoading(true);
   setFetchError('');

@@ -160,9 +160,7 @@ export default function BankDetails({ onBack, onNext }) {
       ),
       accountNumber: validateAccountNumber(formData.accountNumber),
       ifscCode: validateIFSC(formData.ifscCode),
-      bankProofImage: formData.bankProofImage
-        ? null
-        : "Please upload a bank document",
+      bankProofImage: null,
     };
 
     const actualErrors = Object.entries(newErrors).reduce(
@@ -439,7 +437,7 @@ export default function BankDetails({ onBack, onNext }) {
               </Box>
 
               <Box>
-                <StyledInputLabel required>
+                <StyledInputLabel>
                   Cancelled Cheque / Passbook Upload
                 </StyledInputLabel>
                 <Box

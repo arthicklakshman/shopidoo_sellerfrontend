@@ -20,7 +20,7 @@ export const getStoreInfoAPI = async () => {
     ...data,
     data: {
       ...data.data,
-      email: data.data?.emailId || data.data?.email,
+      email: data.data?.email || data.data?.email,
       logo: data.data?.storeLogo,
     },
   };
@@ -29,7 +29,7 @@ export const getStoreInfoAPI = async () => {
 export const updateStoreInfoAPI = async (form) => {
   const { data } = await api.put(`${sellerPath()}/store-setup`, {
     storeName: form.storeName,
-    emailId: form.email,
+    email: form.email,
     phone: form.phone,
     description: form.description,
     categories: form.categories,

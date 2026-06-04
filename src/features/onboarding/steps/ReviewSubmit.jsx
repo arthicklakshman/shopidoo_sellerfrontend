@@ -125,8 +125,8 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
       step: "1", title: "Basic Information", stepIndex: 1,
       fields: [
         { label: "Full Name", value: data.step1.fullName },
-        { label: "Email", value: data.step1.emailId, verified: true },
-        { label: "Mobile Number", value: data.step1.mobileNumber, verified: true },
+        { label: "Email", value: data.step1.email, verified: true },
+        { label: "Phone", value: data.step1.phone, verified: true },
         { label: "Business Type", value: data.step1.businessType ? data.step1.businessType.replace('_', ' ').toUpperCase() : '' },
       ]
     },
@@ -391,8 +391,8 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 //       step: "1", title: "Basic Information", stepIndex: 1,
 //       fields: [
 //         { label: "Full Name", value: data.step1.fullName },
-//         { label: "Email", value: data.step1.emailId, verified: true },
-//         { label: "Mobile Number", value: data.step1.mobileNumber, verified: true },
+//         { label: "Email", value: data.step1.email, verified: true },
+//         { label: "Phone", value: data.step1.phone, verified: true },
 //         { label: "Business Type", value: data.step1.businessType ? data.step1.businessType.replace('_', ' ').toUpperCase() : '' },
 //       ]
 //     },
