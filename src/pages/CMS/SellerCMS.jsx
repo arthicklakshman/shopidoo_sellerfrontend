@@ -442,7 +442,9 @@ const SellerCMS = () => {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpen(false)} sx={{ textTransform: "none" }}>Cancel</Button>
+          <Button onClick={() => setOpen(false)} sx={{textTransform: "none",
+    color: "#000",
+    fontWeight: 600 }}>Cancel</Button>
           <Button variant="contained" onClick={handleSave} sx={BTN_STYLE}>
             {editingBanner ? "Update Banner" : "Create Banner"}
           </Button>

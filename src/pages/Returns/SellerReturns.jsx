@@ -229,7 +229,10 @@ const SellerReturns = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography sx={{ fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1, color: isDark ? '#FFFFFF' : 'text.primary', mb: 0.6 }}>
+        <Typography sx={{
+          fontSize: { xs: 28, md: 24 }, fontWeight: 500, lineHeight: 1.1,
+          color: isDark ? '#FFFFFF' : 'text.primary', mb: 0.6,
+        }}>
           Return Requests
         </Typography>
         <Typography sx={{ fontSize: 14, color: 'text.secondary', fontWeight: 400 }}>
@@ -382,10 +385,9 @@ const SellerReturns = () => {
               <TableRow key={req.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar variant="rounded" src={req.product?.images?.[0]?.image_url} sx={{ 
-                      width: 45, 
-                      height: 45, 
-                      bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'grey.100' 
+                    <Avatar variant="rounded" src={req.product?.images?.[0]?.image_url} sx={{
+                      width: 45, height: 45,
+                      bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'grey.100',
                     }}>
                       {req.product?.name?.charAt(0)}
                     </Avatar>
@@ -434,7 +436,7 @@ const SellerReturns = () => {
                 </TableCell>
                 <TableCell align="right">
                   <Tooltip title="View & Respond">
-                    <IconButton 
+                    <IconButton
                       onClick={() => {
                         setSelectedReturn(req);
                         setStatusUpdate({ status: req.status, response: req.seller_response || '' });
@@ -446,10 +448,10 @@ const SellerReturns = () => {
                         setErrorMsg('');
                         setOpenDetail(true);
                       }}
-                      sx={{ 
+                      sx={{
                         color: '#0FB9B1',
                         bgcolor: isDark ? 'rgba(15, 185, 177, 0.15)' : 'rgba(15, 185, 177, 0.1)',
-                        '&:hover': { bgcolor: '#0FB9B1', color: 'white' }
+                        '&:hover': { bgcolor: '#0FB9B1', color: 'white' },
                       }}
                     >
                       <VisibilityOutlinedIcon fontSize="small" />
@@ -545,11 +547,8 @@ const SellerReturns = () => {
 
               <Box sx={{ mb: 3 }}>
                 <Typography variant="overline" color="text.secondary" fontWeight={700}>Customer Issue Description</Typography>
-                <Paper variant="outlined" sx={{ 
-                  p: 2, 
-                  bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'grey.50', 
-                  mt: 0.5, 
-                  borderRadius: 2 
+                <Paper variant="outlined" sx={{
+                  p: 2, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'grey.50', mt: 0.5, borderRadius: 2,
                 }}>
                   <Typography variant="body2">{selectedReturn.message}</Typography>
                 </Paper>
@@ -559,10 +558,10 @@ const SellerReturns = () => {
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Image Proof</Typography>
                   <Box sx={{ mt: 1, textAlign: 'center' }}>
-                    <img 
-                      src={selectedReturn.proof_image} 
-                      alt="Proof" 
-                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} 
+                    <img
+                      src={selectedReturn.proof_image}
+                      alt="Proof"
+                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
                     />
                   </Box>
                 </Box>
@@ -719,20 +718,20 @@ const SellerReturns = () => {
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Button
-                          variant="outlined"
-                          component="label"
-                          fullWidth
-                          disabled={uploadingEvidence}
-                          sx={{ 
-                            textTransform: 'none',
-                            borderColor: '#0FB9B1',
-                            color: '#0FB9B1',
-                            '&:hover': {
-                              borderColor: '#0B8457',
-                              color: '#0B8457',
-                              backgroundColor: 'rgba(15, 185, 177, 0.04)'
-                            }
-                          }}
+                           variant="outlined"
+                           component="label"
+                           fullWidth
+                           disabled={uploadingEvidence}
+                           sx={{ 
+                             textTransform: 'none',
+                             borderColor: '#0FB9B1',
+                             color: '#0FB9B1',
+                             '&:hover': {
+                               borderColor: '#0B8457',
+                               color: '#0B8457',
+                               backgroundColor: 'rgba(15, 185, 177, 0.04)'
+                             }
+                           }}
                         >
                           Upload Condition Photo
                           <input
@@ -831,6 +830,9 @@ const SellerReturns = () => {
                     <MenuItem value="pending">Pending</MenuItem>
                     <MenuItem value="approved">Approve Return</MenuItem>
                     <MenuItem value="rejected">Reject Return</MenuItem>
+                    {statusUpdate.status === 'return_requested' && (
+                      <MenuItem value="return_requested">Return Requested</MenuItem>
+                    )}
                     {selectedReturn.status === 'customer_shipped' && (
                       <MenuItem value="received_by_seller">Received By Seller</MenuItem>
                     )}
@@ -842,6 +844,9 @@ const SellerReturns = () => {
                     )}
                     {selectedReturn.status === 'return_in_transit' && (
                       <MenuItem value="returned_to_seller">Returned To Seller</MenuItem>
+                    )}
+                    {!['pending', 'approved', 'rejected', 'customer_shipped', 'reverse_pickup_scheduled', 'picked_up', 'return_in_transit'].includes(statusUpdate.status) && (
+                      <MenuItem value={statusUpdate.status}>{statusUpdate.status.toUpperCase().replace(/_/g, ' ')}</MenuItem>
                     )}
                   </TextField>
 

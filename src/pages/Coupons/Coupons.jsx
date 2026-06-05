@@ -612,30 +612,34 @@ const Coupons = () => {
         </Grid>
 
         <Stack direction="row" justifyContent="flex-end" mt={3} spacing={2}>
+          <Button onClick={handleClose}   disabled={saving}
+  sx={{
+    color: '#000',
+    fontWeight: 600
+  }}>Cancel</Button>
           <Button
-            onClick={handleClose}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'action.hover' },
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            sx={{
-              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-              color: '#000',
-              fontWeight: 600,
-              '&:hover': {
-                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                opacity: 0.9,
-              },
-            }}
-          >
-            {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
-          </Button>
+  variant="contained"
+  onClick={handleSubmit}
+  disabled={saving}
+  sx={{
+    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+    color: '#000',
+    fontWeight: 600,
+    borderRadius: '10px',
+    px: 3,
+    textTransform: 'none',
+    '&:hover': {
+      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+      color: '#000',
+    },
+    '&:disabled': {
+      background: '#bdbdbd',
+      color: '#666',
+    }
+  }}
+>
+  {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+</Button>
         </Stack>
       </Box>
     </Modal>

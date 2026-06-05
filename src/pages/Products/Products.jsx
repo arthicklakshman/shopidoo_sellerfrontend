@@ -37,6 +37,7 @@ import { sellerService } from '../../services/seller.service';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import EmptyState from '../../components/common/EmptyState/EmptyState';
+import api from '../../services/api';
 
 const PRODUCT_STATUSES = ['pending', 'approved', 'blocked'];
 
@@ -74,6 +75,39 @@ const getStockLabel = (quantity) => {
   return 'Out of Stock';
 };
 
+// ─── Commission hook ──────────────────────────────────────────────────────────
+function useCommissionMap(products) {
+  const [commissionMap, setCommissionMap] = useState({});
+
+  useEffect(() => {
+    if (!products.length) return;
+    api.get('/settings').then(res => {
+      const raw = res.data?.dataValues || res.data?.data || res.data;
+      let slabs = raw?.commissionSlabs;
+      if (typeof slabs === 'string') {
+        try { slabs = JSON.parse(slabs); } catch { slabs = []; }
+      }
+      if (!Array.isArray(slabs)) return;
+
+      const map = {};
+      products.forEach(product => {
+        const p = Number(product.price);
+        const matched = slabs
+          .sort((a, b) => b.minPrice - a.minPrice)
+          .find(s =>
+            p >= Number(s.minPrice) &&
+            (s.maxPrice === null || s.maxPrice === '' || p <= Number(s.maxPrice))
+          );
+        map[product.id] = matched ? Number(matched.commission) : 0;
+      });
+      setCommissionMap(map);
+    }).catch(() => {});
+  }, [products]);
+
+  return commissionMap;
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const Products = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -85,16 +119,18 @@ const Products = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter,setDateFilter]=useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [fetchError, setFetchError] = useState('');
   const [allProductsVisible, setAllProductsVisible] = useState(true);
   const [togglingAllProducts, setTogglingAllProducts] = useState(false);
   const [togglingProductId, setTogglingProductId] = useState(null);
   const deferredSearch = useDeferredValue(search);
 
+  // Commission map: { [productId]: commissionAmount }
+  const commissionMap = useCommissionMap(products);
+
   const categoryFilterOptions = useMemo(() => {
     const seen = new Set();
-
     return categories.filter((category) => {
       const normalizedName = String(category?.name || '').trim().toLowerCase();
       if (!normalizedName || seen.has(normalizedName)) return false;
@@ -103,60 +139,43 @@ const Products = () => {
     });
   }, [categories]);
 
-  // const load = () => {
-  //   setLoading(true);
-  //   setFetchError('');
-  //   sellerService.getProducts({
-  //     page,
-  //     limit: 10,
-  //     search: deferredSearch || undefined,
-  //     category: categoryFilter || undefined,
-  //     status: statusFilter || undefined,
-  //   }).then(({ data }) => {
-  //     setProducts(data.data || []);
-  //     setPagination(data.pagination || {});
-  //   }).catch((err) => {
-  //     setFetchError(getErrorMessage(err));
-  //   }).finally(() => setLoading(false));
-  // };
-    // Replace your entire load function in Products.jsx with this
   const load = async () => {
-  setLoading(true);
-  setFetchError('');
+    setLoading(true);
+    setFetchError('');
 
-  try {
-    const { data } = await sellerService.getProducts({
-      page,
-      limit: 10,
-      search: deferredSearch || undefined,
-      category: categoryFilter || undefined,
-      status: statusFilter || undefined,
-      date: dateFilter || undefined,
-    });
+    try {
+      const { data } = await sellerService.getProducts({
+        page,
+        limit: 10,
+        search: deferredSearch || undefined,
+        category: categoryFilter || undefined,
+        status: statusFilter || undefined,
+        date: dateFilter || undefined,
+      });
 
-    const productList =
-      Array.isArray(data?.data) ? data.data :
-      Array.isArray(data?.products) ? data.products :
-      Array.isArray(data?.data?.products) ? data.data.products :
-      [];
+      const productList =
+        Array.isArray(data?.data) ? data.data :
+        Array.isArray(data?.products) ? data.products :
+        Array.isArray(data?.data?.products) ? data.data.products :
+        [];
 
-    setProducts(productList);
-    setPagination(
-      data?.pagination ||
-      data?.data?.pagination || {
-        totalItems: productList.length,
-        totalPages: 1,
-        currentPage: 1,
-      }
-    );
-  } catch (error) {
-    setFetchError(getErrorMessage(error));
-    setProducts([]);
-    setPagination({});
-  } finally {
-    setLoading(false);
-  }
-};
+      setProducts(productList);
+      setPagination(
+        data?.pagination ||
+        data?.data?.pagination || {
+          totalItems: productList.length,
+          totalPages: 1,
+          currentPage: 1,
+        }
+      );
+    } catch (error) {
+      setFetchError(getErrorMessage(error));
+      setProducts([]);
+      setPagination({});
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     sellerService.getCategories().then(({ data }) => {
@@ -187,32 +206,19 @@ const Products = () => {
     }
   };
 
-  
   const handleToggleAllProducts = async () => {
     setTogglingAllProducts(true);
-
     try {
       const { data } = await sellerService.toggleAllProductsVisibility();
       const visible = Boolean(data?.data?.is_active);
-
       setAllProductsVisible(visible);
       setProducts((prev) => prev.map((product) => ({ ...product, is_active: visible })));
-
-      dispatch(
-        showToast({
-          message: visible
-            ? 'All products visible to users'
-            : 'All products hidden from users',
-          severity: 'success',
-        })
-      );
+      dispatch(showToast({
+        message: visible ? 'All products visible to users' : 'All products hidden from users',
+        severity: 'success',
+      }));
     } catch (err) {
-      dispatch(
-        showToast({
-          message: getErrorMessage(err),
-          severity: 'error',
-        })
-      );
+      dispatch(showToast({ message: getErrorMessage(err), severity: 'error' }));
     } finally {
       setTogglingAllProducts(false);
     }
@@ -220,51 +226,32 @@ const Products = () => {
 
   const handleToggleProductVisibility = async (productId) => {
     if (!allProductsVisible) {
-      dispatch(
-        showToast({
-          message: 'Please turn ON the main "Show To Users" button first.',
-          severity: 'warning',
-        })
-      );
+      dispatch(showToast({
+        message: 'Please turn ON the main "Show To Users" button first.',
+        severity: 'warning',
+      }));
       return;
     }
-
     setTogglingProductId(productId);
-
     try {
       const { data } = await sellerService.toggleProductVisibility(productId);
       const updatedProduct = data?.data;
       const nextIsActive = Boolean(updatedProduct?.is_active);
-
-      setProducts((prev) => {
-        return prev.map((product) =>
-          product.id === productId
-            ? { ...product, is_active: nextIsActive }
-            : product
-        );
-      });
-
-      dispatch(
-        showToast({
-          message: nextIsActive
-            ? 'Product visible to users'
-            : 'Product hidden from users',
-          severity: 'success',
-        })
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.id === productId ? { ...product, is_active: nextIsActive } : product
+        )
       );
+      dispatch(showToast({
+        message: nextIsActive ? 'Product visible to users' : 'Product hidden from users',
+        severity: 'success',
+      }));
     } catch (err) {
-      dispatch(
-        showToast({
-          message: getErrorMessage(err),
-          severity: 'error',
-        })
-      );
+      dispatch(showToast({ message: getErrorMessage(err), severity: 'error' }));
     } finally {
       setTogglingProductId(null);
     }
   };
-
-  
 
   return (
     <Box
@@ -365,19 +352,14 @@ const Products = () => {
               size="small"
               sx={{
                 minWidth: { xs: '100%', md: 280 },
-                '& .MuiInputBase-input::placeholder': {
-                  color: 'text.disabled',
-                  opacity: 1,
-                },
+                '& .MuiInputBase-input::placeholder': { color: 'text.disabled', opacity: 1 },
                 '& .MuiOutlinedInput-root': {
                   height: 40,
                   borderRadius: '8px',
                   bgcolor: 'background.default',
                   color: 'text.primary',
                   fontSize: 13,
-                  '& fieldset': {
-                    borderColor: 'divider',
-                  },
+                  '& fieldset': { borderColor: 'divider' },
                 },
               }}
               InputProps={{
@@ -446,22 +428,22 @@ const Products = () => {
             </FormControl>
 
             <TextField
-                type="date"
-                size="small"
-                value={dateFilter}
-                onChange={(e)=>{
+              type="date"
+              size="small"
+              value={dateFilter}
+              onChange={(e) => {
                 setDateFilter(e.target.value);
                 setPage(1);
-                }}
-                sx={{
-                minWidth:180,
-                '& .MuiOutlinedInput-root':{
-                    height:40,
-                    borderRadius:'8px',
-                    bgcolor:'background.default'
-                }
-                }}
-                />
+              }}
+              sx={{
+                minWidth: 180,
+                '& .MuiOutlinedInput-root': {
+                  height: 40,
+                  borderRadius: '8px',
+                  bgcolor: 'background.default',
+                },
+              }}
+            />
 
             <Button
               variant="contained"
@@ -514,158 +496,174 @@ const Products = () => {
                     ))}
                   </TableRow>
                 ))
-                : products.map((product) => (
-                  <TableRow
-                    key={product.id}
-                    hover
-                    sx={{
-                      '&:last-child td': { borderBottom: 0 },
-                      '&:hover': { bgcolor: 'action.hover' },
-                    }}
-                  >
+                : products.map((product) => {
+                  const commission = commissionMap[product.id] ?? 0;
+                  const totalPrice = Number(product.price) + commission;
 
-                    <TableCell sx={tableBodyCellSx}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
-                        <Avatar
-                          variant="rounded"
-                          src={product.images?.[0]?.image_url}
-                          imgProps={{ style: { objectFit: 'contain' } }}
+                  return (
+                    <TableRow
+                      key={product.id}
+                      hover
+                      sx={{
+                        '&:last-child td': { borderBottom: 0 },
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      {/* Product */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
+                          <Avatar
+                            variant="rounded"
+                            src={product.images?.[0]?.image_url}
+                            imgProps={{ style: { objectFit: 'contain' } }}
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: '6px',
+                              bgcolor: '#F2F4F7',
+                              border: '1px solid #EAECF0',
+                            }}
+                          >
+                            {product.name?.[0]}
+                          </Avatar>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary' }} noWrap>
+                              {product.name}
+                            </Typography>
+                            <Typography sx={{ mt: 0.25, fontSize: 13, color: 'text.secondary' }}>
+                              {getProductCode(product)}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+
+                      {/* Category */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{product.category?.name || '-'}</Typography>
+                        {product.subcategory?.name && (
+                          <Typography sx={{ mt: 0.25, fontSize: 12, color: 'text.secondary' }}>
+                            {product.subcategory.name}
+                          </Typography>
+                        )}
+                      </TableCell>
+
+                      {/* ── Price (base + commission) ── */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
+                          {formatCurrency(totalPrice)}
+                        </Typography>
+                        {commission > 0 && (
+                          <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.25 }}>
+                            ₹{Number(product.price).toLocaleString('en-IN')} + ₹{commission} commission
+                          </Typography>
+                        )}
+                      </TableCell>
+
+                      {/* Stock */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Typography
                           sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '6px',
-                            bgcolor: '#F2F4F7',
-                            border: '1px solid #EAECF0',
+                            fontSize: 13,
+                            color: product.stock_quantity > 0 ? 'text.secondary' : 'error.main',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {product.name?.[0]}
-                        </Avatar>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary' }} noWrap>
-                            {product.name}
-                          </Typography>
-                          <Typography sx={{ mt: 0.25, fontSize: 13, color: 'text.secondary' }}>
-                            {getProductCode(product)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-
-                    <TableCell sx={tableBodyCellSx}>
-                      <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{product.category?.name || '-'}</Typography>
-                      {product.subcategory?.name && (
-                        <Typography sx={{ mt: 0.25, fontSize: 12, color: 'text.secondary' }}>
-                          {product.subcategory.name}
+                          {getStockLabel(product.stock_quantity)}
                         </Typography>
-                      )}
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell sx={tableBodyCellSx}>
-                      <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{formatCurrency(product.price)}</Typography>
-                    </TableCell>
+                      {/* Status */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Stack spacing={0.75} alignItems="flex-start">
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              px: 1.25,
+                              minWidth: 82,
+                              height: 24,
+                              borderRadius: 999,
+                              fontWeight: 500,
+                              fontSize: 12,
+                              color: STATUS_STYLES[product.admin_status || 'pending'].color,
+                              bgcolor: STATUS_STYLES[product.admin_status || 'pending'].background,
+                            }}
+                          >
+                            {STATUS_STYLES[product.admin_status || 'pending'].label.toLowerCase()}
+                          </Box>
+                          <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
+                            {product.admin_status === 'approved' && product.is_active
+                              ? 'Visible to users'
+                              : product.admin_status === 'approved' && !product.is_active
+                                ? 'Hidden from users'
+                                : product.admin_status === 'blocked'
+                                ? 'Hidden from users'
+                                : 'Waiting for admin approval'}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
 
-                    <TableCell sx={tableBodyCellSx}>
-                      <Typography
-                        sx={{
-                          fontSize: 13,
-                          color: product.stock_quantity > 0 ? 'text.secondary' : 'error.main',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {getStockLabel(product.stock_quantity)}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={tableBodyCellSx}>
-                      <Stack spacing={0.75} alignItems="flex-start">
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            px: 1.25,
-                            minWidth: 82,
-                            height: 24,
-                            borderRadius: 999,
-                            fontWeight: 500,
-                            fontSize: 12,
-                            color: STATUS_STYLES[product.admin_status || 'pending'].color,
-                            bgcolor: STATUS_STYLES[product.admin_status || 'pending'].background,
-                          }}
-                        >
-                          {STATUS_STYLES[product.admin_status || 'pending'].label.toLowerCase()}
-                        </Box>
-                        <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
-                          {product.admin_status === 'approved' && product.is_active
-                            ? 'Visible to users'
-                            : product.admin_status === 'approved' && !product.is_active
-                              ? 'Hidden from users'
-                              : product.admin_status === 'blocked'
-                              ? 'Hidden from users'
-                              : 'Waiting for admin approval'}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-
-                    <TableCell sx={tableBodyCellSx}>
-                      <Stack spacing={0.5} alignItems="flex-start">
-                        <Box onClick={() => {
-                          if (!allProductsVisible) {
-                            dispatch(
-                              showToast({
+                      {/* Visible toggle */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Stack spacing={0.5} alignItems="flex-start">
+                          <Box onClick={() => {
+                            if (!allProductsVisible) {
+                              dispatch(showToast({
                                 message: 'Please turn ON the main "Show To Users" button first.',
                                 severity: 'warning',
-                              })
-                            );
-                          }
-                        }}>
-                          <Switch
-                            checked={Boolean(product.is_active)}
-                            onChange={() => handleToggleProductVisibility(product.id)}
-                            color="success"
-                            disabled={
-                              !allProductsVisible ||
-                              togglingProductId === product.id ||
-                              product.admin_status !== 'approved'
+                              }));
                             }
-                          />
-                        </Box>
-                        <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
-                          {!allProductsVisible
-                            ? 'Turn ON main button first'
-                            : product.admin_status !== 'approved'
-                            ? 'Approve first'
-                            : product.is_active
-                              ? 'ON'
-                              : 'OFF'}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
+                          }}>
+                            <Switch
+                              checked={Boolean(product.is_active)}
+                              onChange={() => handleToggleProductVisibility(product.id)}
+                              color="success"
+                              disabled={
+                                !allProductsVisible ||
+                                togglingProductId === product.id ||
+                                product.admin_status !== 'approved'
+                              }
+                            />
+                          </Box>
+                          <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
+                            {!allProductsVisible
+                              ? 'Turn ON main button first'
+                              : product.admin_status !== 'approved'
+                              ? 'Approve first'
+                              : product.is_active
+                                ? 'ON'
+                                : 'OFF'}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
 
-                    <TableCell sx={tableBodyCellSx}>
-                      <Stack direction="row" spacing={0.25}>
-                        <Tooltip title="Edit product">
-                          <IconButton
-                            size="small"
-                            onClick={() => navigate(`/products/${product.id}/edit`)}
-                            sx={{ color: 'text.primary' }}
-                          >
-                            <EditOutlinedIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete product">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(product.id)}
-                            sx={{ color: '#D92D20' }}
-                          >
-                            <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      {/* Actions */}
+                      <TableCell sx={tableBodyCellSx}>
+                        <Stack direction="row" spacing={0.25}>
+                          <Tooltip title="Edit product">
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/products/${product.id}/edit`)}
+                              sx={{ color: 'text.primary' }}
+                            >
+                              <EditOutlinedIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete product">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(product.id)}
+                              sx={{ color: '#D92D20' }}
+                            >
+                              <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
 
               {!loading && products.length === 0 && (
                 <TableRow>
