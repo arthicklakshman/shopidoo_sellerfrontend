@@ -22,7 +22,9 @@ import {
   Tooltip,
   Paper,
   Divider,
-  useTheme
+  Alert,
+  useTheme,
+  Grid
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { returnService } from '../../services/return.service';
@@ -34,7 +36,46 @@ const STATUS_COLORS = {
   rejected: 'error',
   picked_up: 'info',
   refunded: 'primary',
-  replacement_sent: 'secondary'
+  replacement_sent: 'secondary',
+  return_requested: 'warning',
+  seller_review: 'warning',
+  return_approved: 'success',
+  return_rejected: 'error',
+  awaiting_customer_shipment: 'info',
+  customer_shipped: 'info',
+  reverse_pickup_scheduled: 'info',
+  return_in_transit: 'info',
+  received_by_seller: 'success',
+  returned_to_seller: 'success',
+  inspection_pending: 'warning',
+  refund_pending: 'warning',
+  refund_processing: 'warning',
+  refund_approved: 'success',
+  refund_completed: 'primary',
+  replacement_dispatched: 'secondary',
+};
+
+const STAGE_LABELS = {
+  seller_review: 'Seller Review',
+  reverse_pickup: 'Reverse Pickup',
+  customer_shipment: 'Customer Shipment',
+  inspection: 'Inspection',
+  refund_processing: 'Refund Processing'
+};
+
+const SLA_STATUS_COLORS = {
+  active: 'primary',
+  paused: 'warning',
+  overdue: 'error',
+  completed: 'success',
+  cancelled: 'default',
+};
+
+const getActiveSla = (req) => {
+  if (!req.slaLogs || req.slaLogs.length === 0) return null;
+  const active = req.slaLogs.find(log => ['active', 'paused', 'overdue'].includes(log.status));
+  if (active) return active;
+  return req.slaLogs[req.slaLogs.length - 1];
 };
 
 const SellerReturns = () => {
@@ -43,6 +84,57 @@ const SellerReturns = () => {
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', response: '' });
+  
+  // Inspection & Refund states
+  const [inspectionResult, setInspectionResult] = useState('Approve Refund');
+  const [inspectionNotes, setInspectionNotes] = useState('');
+  const [inspectionImages, setInspectionImages] = useState([]);
+  const [inspectionVideo, setInspectionVideo] = useState('');
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [metrics, setMetrics] = useState(null);
+
+  const handleUploadImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingEvidence(true);
+    setErrorMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('proof', file);
+      const res = await returnService.uploadProof(formData);
+      const url = res.data?.data?.url;
+      if (url) {
+        setInspectionImages(prev => [...prev, url]);
+      }
+    } catch (err) {
+      setErrorMsg('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingEvidence(false);
+    }
+  };
+
+  const handleUploadVideo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingEvidence(true);
+    setErrorMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('proof', file);
+      const res = await returnService.uploadProof(formData);
+      const url = res.data?.data?.url;
+      if (url) {
+        setInspectionVideo(url);
+      }
+    } catch (err) {
+      setErrorMsg('Failed to upload video. Please try again.');
+    } finally {
+      setUploadingEvidence(false);
+    }
+  };
+
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -57,11 +149,32 @@ const SellerReturns = () => {
     }
   };
 
+  const fetchMetrics = async () => {
+    try {
+      const res = await returnService.getSellerMetrics();
+      setMetrics(res.data?.data || res.data || null);
+    } catch (err) {
+      console.error('Error fetching seller metrics:', err);
+    }
+  };
+
   useEffect(() => {
     fetchReturns();
+    fetchMetrics();
   }, []);
 
   const handleUpdateStatus = async () => {
+    setErrorMsg('');
+    
+    // Prevent receiving returns without customer tracking data and receipts uploaded (Self Shipping only)
+    const isSelfShip = !selectedReturn.returnShipment || selectedReturn.returnShipment.shippingMode === 'self';
+    if (isSelfShip && (statusUpdate.status === 'received_by_seller' || statusUpdate.status === 'inspection_pending')) {
+      if (!selectedReturn.return_tracking_number || !selectedReturn.return_receipt_url) {
+        setErrorMsg('Verification Error: Customer must submit a tracking number and courier receipt before you can receive the product.');
+        return;
+      }
+    }
+
     try {
       await returnService.updateReturnStatus(selectedReturn.id, {
         status: statusUpdate.status,
@@ -69,7 +182,46 @@ const SellerReturns = () => {
       });
       setOpenDetail(false);
       fetchReturns();
+      fetchMetrics();
     } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to update status');
+      console.error(err);
+    }
+  };
+
+  const handleInspectionSubmit = async () => {
+    setErrorMsg('');
+    try {
+      await returnService.submitInspection(selectedReturn.id, {
+        result: inspectionResult,
+        notes: inspectionNotes,
+        inspection_images: inspectionImages,
+        inspection_video: inspectionVideo
+      });
+      setOpenDetail(false);
+      fetchReturns();
+      fetchMetrics();
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to submit inspection');
+      console.error(err);
+    }
+  };
+
+  const handleRefundSubmit = async () => {
+    setErrorMsg('');
+    if (!refundAmount || parseFloat(refundAmount) <= 0) {
+      setErrorMsg('Please enter a valid refund amount.');
+      return;
+    }
+    try {
+      await returnService.processRefund(selectedReturn.id, {
+        amount: parseFloat(refundAmount)
+      });
+      setOpenDetail(false);
+      fetchReturns();
+      fetchMetrics();
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to process refund');
       console.error(err);
     }
   };
@@ -84,6 +236,122 @@ const SellerReturns = () => {
           Manage and respond to customer return requests for your products.
         </Typography>
       </Box>
+
+      {/* Performance Metrics Panel */}
+      {metrics && metrics.enabled !== false && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              p: 2.5, 
+              borderRadius: 3, 
+              background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+              border: '1px solid',
+              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bbf7d0',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'translateY(-4px)' }
+            }}>
+              <Typography variant="caption" fontWeight={700} color={isDark ? 'success.light' : 'success.dark'} sx={{ textTransform: 'uppercase' }}>
+                Return Quality Score
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 1.5 }}>
+                <Typography variant="h4" fontWeight={800} color={isDark ? '#fff' : 'success.dark'}>
+                  {metrics.sellerReturnScore !== undefined ? Math.round(metrics.sellerReturnScore) : 100}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">/100</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                {metrics.sellerReturnScore >= 90 ? 'Excellent performance' : metrics.sellerReturnScore >= 75 ? 'Good performance' : 'Action required'}
+              </Typography>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              p: 2.5, 
+              borderRadius: 3, 
+              background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fefafd, #fae8ff)',
+              border: '1px solid',
+              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#f5d0fe',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'translateY(-4px)' }
+            }}>
+              <Typography variant="caption" fontWeight={700} color={isDark ? 'secondary.light' : 'secondary.dark'} sx={{ textTransform: 'uppercase' }}>
+                Response Speed
+              </Typography>
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="h5" fontWeight={800}>
+                  {metrics.firstResponseTime ? `${metrics.firstResponseTime} hrs` : '0 hrs'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">Avg First Response Time</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                Avg Resolution: {metrics.avgResolutionTime ? `${metrics.avgResolutionTime} hrs` : '0 hrs'}
+              </Typography>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              p: 2.5, 
+              borderRadius: 3, 
+              background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+              border: '1px solid',
+              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#fde68a',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'translateY(-4px)' }
+            }}>
+              <Typography variant="caption" fontWeight={700} color={isDark ? 'warning.light' : 'warning.dark'} sx={{ textTransform: 'uppercase' }}>
+                Dispute Health
+              </Typography>
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="h5" fontWeight={800}>
+                  {metrics.disputeRate ? `${metrics.disputeRate}%` : '0%'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">Customer Dispute Rate</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                Open Disputes: {metrics.openDisputes || 0}
+              </Typography>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              p: 2.5, 
+              borderRadius: 3, 
+              background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+              border: '1px solid',
+              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bae6fd',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.2s',
+              '&:hover': { transform: 'translateY(-4px)' }
+            }}>
+              <Typography variant="caption" fontWeight={700} color={isDark ? 'info.light' : 'info.dark'} sx={{ textTransform: 'uppercase' }}>
+                Activity Overview
+              </Typography>
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="h5" fontWeight={800}>
+                  {metrics.totalReturns || 0}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">Total Return Requests</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                Refund Completion Rate: {metrics.refundApprovalRate ? `${metrics.refundApprovalRate}%` : '0%'}
+              </Typography>
+            </Card>
+          </Grid>
+          {metrics.cachedAt && (
+            <Grid item xs={12} sx={{ mt: -1.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                * Metrics cached hourly. Last updated: {formatDate(metrics.cachedAt)}
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+      )}
       
       <TableContainer component={Paper} sx={{ 
         borderRadius: 3, 
@@ -95,8 +363,10 @@ const SellerReturns = () => {
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>SLA Status</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
               <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
             </TableRow>
@@ -104,7 +374,7 @@ const SellerReturns = () => {
           <TableBody>
             {returns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
                   <Typography color="text.secondary" variant="body1">No return requests found.</Typography>
                 </TableCell>
               </TableRow>
@@ -129,15 +399,35 @@ const SellerReturns = () => {
                   <Typography variant="body2" fontWeight={600}>{req.user?.name}</Typography>
                 </TableCell>
                 <TableCell>
+                  <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: 'primary.main' }}>
+                    {req.return_type || 'refund'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
                   <Typography variant="body2">{req.reason}</Typography>
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={req.status.toUpperCase()} 
+                    label={req.status.toUpperCase().replace(/_/g, ' ')} 
                     size="small" 
-                    color={STATUS_COLORS[req.status]} 
+                    color={STATUS_COLORS[req.status] || 'default'} 
                     sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.65rem' }}
                   />
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const activeSla = getActiveSla(req);
+                    if (!activeSla) return <Typography variant="caption" color="text.secondary">-</Typography>;
+                    const label = `${STAGE_LABELS[activeSla.stage] || activeSla.stage}: ${activeSla.status.toUpperCase()}`;
+                    return (
+                      <Chip 
+                        label={label.replace(/_/g, ' ')} 
+                        size="small" 
+                        color={SLA_STATUS_COLORS[activeSla.status] || 'default'} 
+                        sx={{ fontWeight: 700, borderRadius: 1.5, fontSize: '0.65rem' }}
+                      />
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{formatDate(req.created_at)}</Typography>
@@ -148,6 +438,12 @@ const SellerReturns = () => {
                       onClick={() => {
                         setSelectedReturn(req);
                         setStatusUpdate({ status: req.status, response: req.seller_response || '' });
+                        setInspectionResult('Approve Refund');
+                        setInspectionNotes(req.inspection_notes || '');
+                        setInspectionImages([]);
+                        setInspectionVideo('');
+                        setRefundAmount(req.refund_amount || '');
+                        setErrorMsg('');
                         setOpenDetail(true);
                       }}
                       sx={{ 
@@ -171,6 +467,82 @@ const SellerReturns = () => {
         <DialogContent dividers>
           {selectedReturn && (
             <Box sx={{ py: 1 }}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="overline" color="text.secondary" fontWeight={700}>Return Request Information</Typography>
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary" display="block">Type</Typography>
+                    <Typography variant="body2" fontWeight={700} color="primary" sx={{ textTransform: 'uppercase' }}>
+                      {selectedReturn.return_type || 'refund'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary" display="block">Current Status</Typography>
+                    <Typography variant="body2" fontWeight={700}>{selectedReturn.status.toUpperCase().replace(/_/g, ' ')}</Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* SLA Information */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="overline" color="text.secondary" fontWeight={700}>SLA Information</Typography>
+                {(!selectedReturn.slaLogs || selectedReturn.slaLogs.length === 0) ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>No SLA tracking history available.</Typography>
+                ) : (
+                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {selectedReturn.slaLogs.map((log) => {
+                      return (
+                        <Paper key={log.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderColor: log.status === 'overdue' ? 'error.light' : log.status === 'paused' ? 'warning.light' : 'divider' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" fontWeight={700} color={log.status === 'overdue' ? 'error.main' : 'text.primary'}>
+                              {STAGE_LABELS[log.stage] || log.stage}
+                            </Typography>
+                            <Chip 
+                              label={log.status.toUpperCase()} 
+                              size="small" 
+                              color={SLA_STATUS_COLORS[log.status] || 'default'} 
+                              sx={{ fontWeight: 800, fontSize: '0.55rem', height: 18 }}
+                            />
+                          </Box>
+                          <Grid container spacing={1}>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" color="text.secondary" display="block">Started</Typography>
+                              <Typography variant="caption" fontWeight={600}>{formatDate(log.startedAt || log.started_at)}</Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" color="text.secondary" display="block">Due Date</Typography>
+                              <Typography variant="caption" fontWeight={700} color={log.status === 'overdue' ? 'error.main' : 'text.primary'}>
+                                {formatDate(log.dueAt || log.due_at)}
+                              </Typography>
+                            </Grid>
+                          </Grid>
+                          {log.pausedAt && (
+                            <Typography variant="caption" color="warning.dark" display="block" sx={{ mt: 0.5 }}>
+                              Paused: {log.pauseReason} ({formatDate(log.pausedAt)})
+                            </Typography>
+                          )}
+                          {log.completedAt && (
+                            <Typography variant="caption" color="success.main" display="block" sx={{ mt: 0.5 }}>
+                              Completed: {formatDate(log.completedAt)}
+                            </Typography>
+                          )}
+                          {log.escalation && (
+                            <Box sx={{ mt: 1, p: 1, bgcolor: log.escalation.status === 'open' ? 'error.50' : 'grey.50', borderRadius: 1, border: '1px solid', borderColor: log.escalation.status === 'open' ? 'error.light' : 'divider' }}>
+                              <Typography variant="caption" fontWeight={700} color={log.escalation.status === 'open' ? 'error.main' : 'text.secondary'} display="block">
+                                Escalation: {log.escalation.status.toUpperCase()} ({log.escalation.priority.toUpperCase()})
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                Reason: {log.escalation.reason} | Assigned: {log.escalation.assignedRole}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Box>
+
               <Box sx={{ mb: 3 }}>
                 <Typography variant="overline" color="text.secondary" fontWeight={700}>Customer Issue Description</Typography>
                 <Paper variant="outlined" sx={{ 
@@ -185,7 +557,7 @@ const SellerReturns = () => {
 
               {selectedReturn.proof_image && (
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" color="text.secondary" fontWeight={700}>Customer Uploaded Proof</Typography>
+                  <Typography variant="overline" color="text.secondary" fontWeight={700}>Image Proof</Typography>
                   <Box sx={{ mt: 1, textAlign: 'center' }}>
                     <img 
                       src={selectedReturn.proof_image} 
@@ -196,52 +568,321 @@ const SellerReturns = () => {
                 </Box>
               )}
 
+              {selectedReturn.proof_video && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="overline" color="text.secondary" fontWeight={700}>Video Proof</Typography>
+                  <Box sx={{ mt: 1, textAlign: 'center' }}>
+                    <video 
+                      src={selectedReturn.proof_video} 
+                      controls 
+                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} 
+                    />
+                  </Box>
+                </Box>
+              )}
+
+              {/* Customer Manual Courier Details (Self Shipping) */}
+              {selectedReturn.return_tracking_number && (
+                <Box sx={{ mb: 3, p: 2, border: '1px solid #0FB9B1', borderRadius: '8px', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc' }}>
+                  <Typography variant="subtitle2" fontWeight={800} color="primary" sx={{ mb: 1.5 }}>
+                    Customer Courier Shipment Details
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary" display="block">Courier Name</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedReturn.return_courier_name}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary" display="block">Tracking Number</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedReturn.return_tracking_number}</Typography>
+                    </Grid>
+                    {selectedReturn.customer_notes && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary" display="block">Customer Notes</Typography>
+                        <Typography variant="body2">{selectedReturn.customer_notes}</Typography>
+                      </Grid>
+                    )}
+                    <Grid item xs={12}>
+                      <Button 
+                        variant="outlined" 
+                        size="small" 
+                        component="a" 
+                        href={selectedReturn.return_receipt_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        sx={{ 
+                          textTransform: 'none',
+                          borderColor: '#0FB9B1',
+                          color: '#0FB9B1',
+                          '&:hover': {
+                            borderColor: '#0B8457',
+                            color: '#0B8457',
+                            backgroundColor: 'rgba(15, 185, 177, 0.04)'
+                          }
+                        }}
+                      >
+                        View Uploaded Receipt Document
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Return Shipment Details (Platform Logistics) */}
+              {selectedReturn.returnShipment && selectedReturn.returnShipment.shippingMode !== 'self' && (
+                <Box sx={{ mb: 3, p: 2, border: '1px solid #0FB9B1', borderRadius: '8px', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc' }}>
+                  <Typography variant="subtitle2" fontWeight={800} color="primary" sx={{ mb: 1.5 }}>
+                    Return Shipment Details
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={4}>
+                      <Typography variant="caption" color="text.secondary" display="block">Courier Name</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedReturn.returnShipment.courierName}</Typography>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Typography variant="caption" color="text.secondary" display="block">Reverse AWB</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedReturn.returnShipment.reverseAwbCode}</Typography>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Typography variant="caption" color="text.secondary" display="block">Return Status</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedReturn.status.toUpperCase().replace(/_/g, ' ')}</Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {errorMsg && (
+                <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>
+              )}
+
               <Divider sx={{ my: 3 }} />
 
-              <Typography variant="overline" color="primary" fontWeight={800}>Respond to Request</Typography>
-              <TextField
-                select
-                fullWidth
-                label="Update Request Status"
-                value={statusUpdate.status}
-                onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
-                margin="normal"
-                variant="filled"
-              >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="picked_up">Item Picked Up</MenuItem>
-                <MenuItem value="replacement_sent">Replacement Dispatched</MenuItem>
-              </TextField>
+              {/* Action Forms based on Status */}
+              {['refund_approved', 'refund_pending'].includes(selectedReturn.status) ? (
+                <Box>
+                  <Typography variant="overline" color="primary" fontWeight={800}>Process Refund (Razorpay Prepared)</Typography>
+                  <TextField
+                    fullWidth
+                    label="Refund Amount (INR) *"
+                    type="number"
+                    value={refundAmount}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                    margin="normal"
+                    variant="filled"
+                    required
+                  />
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    onClick={handleRefundSubmit} 
+                    sx={{ 
+                      mt: 2, 
+                      fontWeight: 700,
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
+                    }}
+                  >
+                    Complete & Issue Refund
+                  </Button>
+                </Box>
+              ) : ['inspection_pending', 'received_by_seller', 'returned_to_seller'].includes(selectedReturn.status) ? (
+                <Box>
+                  <Typography variant="overline" color="primary" fontWeight={800}>Submit Product Inspection Result</Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Inspection Outcome"
+                    value={inspectionResult}
+                    onChange={(e) => setInspectionResult(e.target.value)}
+                    margin="normal"
+                    variant="filled"
+                  >
+                    <MenuItem value="Approve Refund">Approve Refund</MenuItem>
+                    <MenuItem value="Reject Refund">Reject Refund</MenuItem>
+                    <MenuItem value="Partial Refund">Partial Refund</MenuItem>
+                    <MenuItem value="Replacement Dispatch">Replacement Dispatch</MenuItem>
+                  </TextField>
+                  <TextField
+                    fullWidth
+                    label="Inspection Notes"
+                    multiline
+                    rows={3}
+                    value={inspectionNotes}
+                    onChange={(e) => setInspectionNotes(e.target.value)}
+                    margin="normal"
+                    placeholder="Describe the physical condition of the returned item..."
+                  />
+                  <Box sx={{ mt: 2, mb: 1 }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+                      Inspection Evidence (Photos & Video)
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          fullWidth
+                          disabled={uploadingEvidence}
+                          sx={{ 
+                            textTransform: 'none',
+                            borderColor: '#0FB9B1',
+                            color: '#0FB9B1',
+                            '&:hover': {
+                              borderColor: '#0B8457',
+                              color: '#0B8457',
+                              backgroundColor: 'rgba(15, 185, 177, 0.04)'
+                            }
+                          }}
+                        >
+                          Upload Condition Photo
+                          <input
+                            type="file"
+                            hidden
+                            accept="image/*"
+                            onChange={handleUploadImage}
+                          />
+                        </Button>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          fullWidth
+                          disabled={uploadingEvidence || !!inspectionVideo}
+                          sx={{ 
+                            textTransform: 'none',
+                            borderColor: '#0FB9B1',
+                            color: '#0FB9B1',
+                            '&:hover': {
+                              borderColor: '#0B8457',
+                              color: '#0B8457',
+                              backgroundColor: 'rgba(15, 185, 177, 0.04)'
+                            }
+                          }}
+                        >
+                          Upload Condition Video
+                          <input
+                            type="file"
+                            hidden
+                            accept="video/*"
+                            onChange={handleUploadVideo}
+                          />
+                        </Button>
+                      </Grid>
+                    </Grid>
 
-              <TextField
-                fullWidth
-                label="Your Response to Customer"
-                multiline
-                rows={4}
-                value={statusUpdate.response}
-                onChange={(e) => setStatusUpdate({ ...statusUpdate, response: e.target.value })}
-                margin="normal"
-                placeholder="Provide details about the pickup or replacement process..."
-              />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Note: Refunds are typically processed by the platform administrator.
-              </Typography>
+                    {inspectionImages.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Uploaded Photos:
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                          {inspectionImages.map((img, idx) => (
+                            <Box key={idx} sx={{ position: 'relative' }}>
+                              <img
+                                src={img}
+                                alt={`evidence-${idx}`}
+                                style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }}
+                              />
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {inspectionVideo && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Uploaded Video:
+                        </Typography>
+                        <Typography variant="body2" color="success.main" sx={{ mt: 0.5 }}>
+                          ✓ Video Uploaded: {inspectionVideo.split('/').pop()}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    onClick={handleInspectionSubmit} 
+                    disabled={uploadingEvidence}
+                    sx={{ 
+                      mt: 2, 
+                      fontWeight: 700,
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
+                    }}
+                  >
+                    Submit Inspection Result
+                  </Button>
+                </Box>
+              ) : (
+                <Box>
+                  <Typography variant="overline" color="primary" fontWeight={800}>Respond to Request</Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Update Request Status"
+                    value={statusUpdate.status}
+                    onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
+                    margin="normal"
+                    variant="filled"
+                  >
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="approved">Approve Return</MenuItem>
+                    <MenuItem value="rejected">Reject Return</MenuItem>
+                    {selectedReturn.status === 'customer_shipped' && (
+                      <MenuItem value="received_by_seller">Received By Seller</MenuItem>
+                    )}
+                    {selectedReturn.status === 'reverse_pickup_scheduled' && (
+                      <MenuItem value="picked_up">Picked Up</MenuItem>
+                    )}
+                    {selectedReturn.status === 'picked_up' && (
+                      <MenuItem value="return_in_transit">Return In Transit</MenuItem>
+                    )}
+                    {selectedReturn.status === 'return_in_transit' && (
+                      <MenuItem value="returned_to_seller">Returned To Seller</MenuItem>
+                    )}
+                  </TextField>
+
+                  <TextField
+                    fullWidth
+                    label="Your Response to Customer"
+                    multiline
+                    rows={3}
+                    value={statusUpdate.response}
+                    onChange={(e) => setStatusUpdate({ ...statusUpdate, response: e.target.value })}
+                    margin="normal"
+                    placeholder="Provide details about approval, rejection, or pickup..."
+                  />
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    onClick={handleUpdateStatus} 
+                    sx={{ 
+                      mt: 2, 
+                      fontWeight: 700, 
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
+                    }}
+                  >
+                    Update Status
+                  </Button>
+                </Box>
+              )}
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setOpenDetail(false)} sx={{ fontWeight: 700 }}>Cancel</Button>
           <Button 
-            variant="contained" 
-            onClick={handleUpdateStatus} 
+            onClick={() => setOpenDetail(false)} 
             sx={{ 
-              fontWeight: 700, 
-              px: 4,
-              background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-              '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
+              fontWeight: 700,
+              color: '#0FB9B1',
+              '&:hover': { color: '#0B8457' }
             }}
           >
-            Update Status
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>

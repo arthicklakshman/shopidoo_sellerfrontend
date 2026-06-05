@@ -74,7 +74,11 @@ const authSlice = createSlice({
         state.user = null; state.isAuthenticated = false;
         localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerRefreshToken'); localStorage.removeItem('sellerUser');
       })
-      .addCase(fetchMe.fulfilled, (state, action) => { state.user = action.payload; state.isAuthenticated = true; })
+      .addCase(fetchMe.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        localStorage.setItem('sellerUser', JSON.stringify(action.payload));
+      })
       .addCase(fetchMe.rejected, (state) => {
         state.user = null; state.isAuthenticated = false;
         localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerRefreshToken');

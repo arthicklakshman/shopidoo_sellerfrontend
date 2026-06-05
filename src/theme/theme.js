@@ -31,6 +31,38 @@ const baseComponents = {
   MuiChip: {
     styleOverrides: { root: { borderRadius: 6 } },
   },
+  MuiSwitch: {
+    styleOverrides: {
+      switchBase: {
+        '&.Mui-checked': {
+          '&:hover': {
+            backgroundColor: 'rgba(11, 132, 87, 0.08)',
+          },
+          '& .MuiSwitch-thumb': {
+            background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+          },
+          '& + .MuiSwitch-track': {
+            backgroundColor: '#0FB9B1',
+            opacity: 0.6,
+          },
+        },
+      },
+      colorPrimary: {
+        '&.Mui-checked': {
+          '&:hover': {
+            backgroundColor: 'rgba(11, 132, 87, 0.08)',
+          },
+          '& .MuiSwitch-thumb': {
+            background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+          },
+          '& + .MuiSwitch-track': {
+            backgroundColor: '#0FB9B1',
+            opacity: 0.6,
+          },
+        },
+      },
+    },
+  },
 };
 
 export const lightTheme = createTheme({

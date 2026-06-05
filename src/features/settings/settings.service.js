@@ -34,6 +34,8 @@ export const updateStoreInfoAPI = async (form) => {
     description: form.description,
     categories: form.categories,
     storeLogo: form.logo,
+    shippingPreference: form.shippingPreference,
+    selfShippingRate: form.selfShippingRate,
   });
   return data;
 };

@@ -51,7 +51,8 @@ const Notifications = () => {
         data.type === 'support_reply' ||
         data.type === 'payout_status' ||
         data.type === 'new_order' ||
-        data.type === 'new_review'
+        data.type === 'new_review' ||
+        data.type === 'low_stock'
       ) {
         setNotifications((prev) => {
           const alreadyExists = prev.some((n) => n.id === data.id);
@@ -72,7 +73,7 @@ const Notifications = () => {
     try {
       setLoading(true);
       const res = await api.get('/notifications');
-      const sellerTypes = ['product_status', 'support_reply', 'payout_status', 'new_order', 'new_review'];
+      const sellerTypes = ['product_status', 'support_reply', 'payout_status', 'new_order', 'new_review', 'low_stock'];
       const filtered = (res.data.data || []).filter((n) =>
         sellerTypes.includes(n.type)
       );
@@ -142,6 +143,9 @@ const Notifications = () => {
       navigate('/orders');
     } else if (item.type === 'new_review') {
       navigate('/sellerreviews');
+    } else if (item.type === 'low_stock') {
+      const productName = item.message.match(/"([^"]+)"/)?.[1] || '';
+      navigate(`/inventory?search=${encodeURIComponent(productName)}`);
     }
   };
 
@@ -328,6 +332,7 @@ const Notifications = () => {
               {selectedNotification.type === 'support_reply' && renderStatusUpdate('Support Response', '#ff9800')}
               {selectedNotification.type === 'new_order' && renderStatusUpdate('New Order Placed', '#0fb9b1')}
               {selectedNotification.type === 'new_review' && renderStatusUpdate('New Product Review', '#0b8457')}
+              {selectedNotification.type === 'low_stock' && renderStatusUpdate('Low Stock Alert', '#d97706')}
             </DialogContent>
           </>
         )}

@@ -15,9 +15,12 @@ export const validateEmail = (email) => {
 
 export const validateMobile = (phone) => {
   if (!phone || phone.trim() === '') return 'Mobile number is required';
-  const phoneRegex = /^\d{10}$/;
-  // Strips everything except digits before checking
-  if (!phoneRegex.test(phone.replace(/\D/g, ''))) return 'Mobile number must be exactly 10 digits';
+  // Strips everything except digits
+  const cleaned = phone.replace(/\D/g, '');
+  const phoneRegex = /^[6-9]\d{9}$/;
+  if (!phoneRegex.test(cleaned)) {
+    return 'Mobile number must be 10 digits starting with 9, 8, 7, or 6';
+  }
   return null;
 };
 

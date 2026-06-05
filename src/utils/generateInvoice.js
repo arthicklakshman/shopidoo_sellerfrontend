@@ -113,7 +113,7 @@ export const generateInvoice = (orderItem, isSeller = false) => {
   const tableData = [
     [
       '1',
-      `${product?.name || 'Product'}\nHSN: 85183020`,
+      `${product?.name || 'Product'}\nHSN: ${product?.hsn_code || '85183020'}`,
       `${unitPriceVal.toFixed(2)}`,
       `0.00`,
       qty.toString(),

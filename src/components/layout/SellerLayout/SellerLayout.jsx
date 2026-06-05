@@ -49,7 +49,7 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
-import { logoutSeller } from '../../../features/auth/authSlice';
+import { logoutSeller, fetchMe } from '../../../features/auth/authSlice';
 import Toast from '../../common/Toast/Toast';
 
 const DRAWER_WIDTH = 240;
@@ -80,6 +80,7 @@ const SellerLayout = () => {
 
   const { user } = useSelector((s) => s.auth);
   const { themeMode } = useSelector((s) => s.ui);
+  const isProductFormPage = location.pathname === '/products/new' || /^\/products\/[^/]+\/edit$/.test(location.pathname);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -87,11 +88,9 @@ const SellerLayout = () => {
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
-  // useEffect(() => {
-  //   fetchNotifications();
-  // }, []);
-
-  //socket
+  useEffect(() => {
+    dispatch(fetchMe());
+  }, [dispatch]);
 
   useEffect(() => {
   fetchNotifications();
@@ -109,7 +108,8 @@ const SellerLayout = () => {
       data.type === 'support_reply' ||
       data.type === 'payout_status' ||
       data.type === 'new_order' ||
-      data.type === 'new_review'
+      data.type === 'new_review' ||
+      data.type === 'low_stock'
     ) {
       setNotifications((prev) => {
         const exists = prev.some((n) => n.id === data.id);
@@ -172,7 +172,8 @@ useEffect(() => {
         item.type === 'support_reply' ||
         item.type === 'payout_status' ||
         item.type === 'new_order' ||
-        item.type === 'new_review'
+        item.type === 'new_review' ||
+        item.type === 'low_stock'
     );
 
     setNotifications(onlyProductNotifications);
@@ -400,13 +401,15 @@ useEffect(() => {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          overflow: isProductFormPage ? 'visible' : 'hidden',
         }}
       >
         <AppBar
-          position="static"
+          position={isProductFormPage ? 'sticky' : 'static'}
           elevation={0}
           sx={{
+            top: 0,
+            zIndex: theme.zIndex.drawer + 1,
             bgcolor: 'background.paper',
             color: 'text.primary',
             borderBottom: `1px solid ${theme.palette.divider}`,
@@ -752,7 +755,7 @@ useEffect(() => {
           component="main"
           sx={{
             flex: 1,
-            overflow: 'auto',
+            overflow: isProductFormPage ? 'visible' : 'auto',
             p: { xs: 2, md: 3 },
           }}
         >

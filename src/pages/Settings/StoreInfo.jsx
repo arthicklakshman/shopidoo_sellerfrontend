@@ -12,7 +12,9 @@ import {
     Select,
     OutlinedInput,
     Checkbox,
-    ListItemText
+    ListItemText,
+    Radio,
+    RadioGroup
 } from '@mui/material';
 import StoreIcon from '@mui/icons-material/Store';
 
@@ -69,7 +71,9 @@ export default function StoreInfo() {
         description: "",
         phone: "",
         categories: [],
-        logo: null
+        logo: null,
+        shippingPreference: "platform",
+        selfShippingRate: 0
     });
 
     const [form, setForm] = useState({ ...savedData });
@@ -103,7 +107,9 @@ export default function StoreInfo() {
                         email: dbData.email || "",
                         description: dbData.description || "",
                         phone: dbData.phone || "",
-                        categories: Array.isArray(dbData.categories) ? dbData.categories : []
+                        categories: Array.isArray(dbData.categories) ? dbData.categories : [],
+                        shippingPreference: dbData.shippingPreference || "platform",
+                        selfShippingRate: dbData.selfShippingRate || 0
                     };
                     setSavedData({ ...formattedData, logo: dbData.logo });
                     setForm(formattedData);
@@ -155,7 +161,6 @@ export default function StoreInfo() {
         let temp = {};
         if (!form.storeName) temp.storeName = "Store name is required";
         if (!form.email) temp.email = "Email is required";
-        if (!form.description) temp.description = "Description is required";
         if (!form.phone) temp.phone = "Phone number is required";
         if (!form.categories || form.categories.length === 0) temp.categories = "At least one category is required";
         setErrors(temp);
@@ -308,7 +313,7 @@ export default function StoreInfo() {
                                     <img src={logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                 ) : (
                                     <StoreIcon sx={{ color: 'text.secondary' }} />
-                                )}
+                                ) }
                             </Box>
                             {isEditing && (
                                 <>
@@ -317,6 +322,50 @@ export default function StoreInfo() {
                                 </>
                             )}
                         </Box>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <StyledInputLabel>Shipping Preference</StyledInputLabel>
+                        <Card sx={{ borderRadius: '12px', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
+                            <CardContent sx={{ p: 3 }}>
+                                <RadioGroup
+                                    name="shippingPreference"
+                                    value={form.shippingPreference || "platform"}
+                                    onChange={handleChange}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
+                                        <Radio
+                                            value="platform"
+                                            disabled={!isEditing}
+                                            sx={{ mt: -0.5, color: '#d1d5db', '&.Mui-checked': { color: '#ca8a04' } }}
+                                        />
+                                        <Box>
+                                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+                                                Platform Logistics (Recommended)
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>
+                                                Let us handle shipping with pre-negotiated rates and better tracking
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                        <Radio
+                                            value="self"
+                                            disabled={!isEditing}
+                                            sx={{ mt: -0.5, color: '#d1d5db', '&.Mui-checked': { color: '#ca8a04' } }}
+                                        />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+                                                Self Shipping
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '13px', color: 'text.secondary', mb: 1 }}>
+                                                Use your own courier partners and manage shipping yourself
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </RadioGroup>
+                            </CardContent>
+                        </Card>
                     </Grid>
                 </Grid>
 

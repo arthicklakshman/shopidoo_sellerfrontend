@@ -6,4 +6,6 @@ export const ORDER_STATUS = {
   delivered: { label: 'Delivered', color: 'success' },
   cancelled: { label: 'Cancelled', color: 'error' },
   refunded: { label: 'Refunded', color: 'default' },
+  packed: { label: 'Packed', color: 'warning' },
+  ready_to_ship: { label: 'Ready For Pickup', color: 'primary' },
 };

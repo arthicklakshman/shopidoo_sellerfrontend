@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:5001', changeOrigin: true },
       '/uploads': { target: 'http://localhost:5001', changeOrigin: true },
+      '/mock': { target: 'http://localhost:5001', changeOrigin: true },
     },
   },
   resolve: { alias: { '@': '/src' } },

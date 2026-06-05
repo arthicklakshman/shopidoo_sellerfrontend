@@ -20,8 +20,6 @@ const notificationData = [
   { id: 'lowStock', title: 'Low Stock Alerts', description: 'Receive alerts when products are running low', defaultChecked: true },
   { id: 'productReviews', title: 'Product Reviews', description: 'Get notified about new product reviews', defaultChecked: true },
   { id: 'paymentUpdates', title: 'Payment Updates', description: 'Updates about payments and settlements', defaultChecked: true },
-  { id: 'marketingEmails', title: 'Marketing Emails', description: 'Tips and best practices for sellers', defaultChecked: true },
-  { id: 'weeklySummary', title: 'Weekly Summary', description: 'Weekly report of your sales and performance', defaultChecked: true },
 ];
 
 export default function Notifications() {

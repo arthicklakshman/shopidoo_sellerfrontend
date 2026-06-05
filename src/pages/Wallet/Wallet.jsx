@@ -182,14 +182,14 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           disabled={loading}
           style={{
             width: "100%", height: 48,
-            background: loading ? theme.palette.action.disabledBackground : "#0b8457",
-            color: "#fff", border: "none", borderRadius: 12,
+            background: loading ? theme.palette.action.disabledBackground : "linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)",
+            color: "#000", border: "none", borderRadius: 12,
             fontSize: "0.9rem", fontWeight: 700,
             cursor: loading ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            transition: "background 0.2s, box-shadow 0.2s",
+            transition: "opacity 0.2s, box-shadow 0.2s",
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 4px 14px rgba(11,132,87,0.35)"; }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,185,177,0.35)"; }}
           onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
         >
           {loading ? (
@@ -299,8 +299,8 @@ export default function Wallet() {
         .wl-skeleton { background: linear-gradient(90deg,${theme.palette.action.hover} 25%,${theme.palette.divider} 50%,${theme.palette.action.hover} 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-        .wl-withdraw-btn { margin-top: 14px; width: 100%; height: 40px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.18s, transform 0.1s, box-shadow 0.18s; }
-        .wl-withdraw-btn:hover:not(:disabled) { background: #15803d; box-shadow: 0 4px 14px rgba(22,163,74,0.3); }
+        .wl-withdraw-btn { margin-top: 14px; width: 100%; height: 40px; background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%); color: #000; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: opacity 0.18s, transform 0.1s, box-shadow 0.18s; }
+        .wl-withdraw-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 4px 14px rgba(15,185,177,0.3); }
         .wl-withdraw-btn:active:not(:disabled) { transform: scale(0.98); }
         .wl-withdraw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 

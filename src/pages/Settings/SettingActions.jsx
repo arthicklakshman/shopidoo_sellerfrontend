@@ -10,7 +10,7 @@ export const EditButton = ({ onClick }) => (
         onClick={onClick}
         startIcon={<EditIcon />}
         sx={{
-            color: '#4CAF50',
+            color: '#0B8457',
             textTransform: 'none',
             fontWeight: 500,
             fontSize: '15px'
@@ -48,13 +48,16 @@ export const SaveCancelButtons = ({ onCancel, onSave, saveText = "Save Changes" 
             onClick={onSave}
             sx={{
                 textTransform: 'none',
-                backgroundColor: '#4CAF50',
-                color: 'white',
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                color: '#000',
                 borderRadius: '8px',
                 px: 3,
-                fontWeight: 500,
+                fontWeight: 600,
+                boxShadow: 'none',
                 '&:hover': {
-                    backgroundColor: '#43a047' // Slightly darker green on hover
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    opacity: 0.9,
+                    boxShadow: 'none'
                 }
             }}
         >

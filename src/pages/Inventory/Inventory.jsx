@@ -47,6 +47,11 @@ const Inventory = () => {
 
   useEffect(() => {
     fetchInventory();
+    const params = new URLSearchParams(window.location.search);
+    const searchParam = params.get('search');
+    if (searchParam) {
+      setSearch(searchParam);
+    }
   }, []);
 
   const fetchInventory = async () => {
@@ -72,7 +77,8 @@ const Inventory = () => {
   };
 
   const filteredProducts = data.products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
   const handleStockChange = (key, value) => {

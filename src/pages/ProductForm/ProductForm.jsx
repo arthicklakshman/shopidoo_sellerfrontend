@@ -24,12 +24,17 @@ const emptyForm = {
   compare_price: '',
   stock_quantity: '',
   sku: '',
+  hsn_code: '',
   category_id: '',
   subcategory_id:'',
   delivery_type: 'free',
   delivery_charge: '',
   free_delivery_min_order: '',
   express_delivery_charge: '',
+  weight: '',
+  length: '',
+  breadth: '',
+  height: '',
 };
 
 const MAX_PRODUCT_IMAGES = 6;
@@ -263,7 +268,34 @@ const ProductForm = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const [shippingPreference, setShippingPreference] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sellerUser') || '{}')?.shippingPreference || 'platform';
+    } catch {
+      return 'platform';
+    }
+  });
+
   const [form, setForm] = useState(emptyForm);
+
+  useEffect(() => {
+    import('../../services/api').then(({ default: api }) => {
+      try {
+        const sellerId = JSON.parse(localStorage.getItem('sellerUser') || '{}')?.id;
+        if (sellerId) {
+          api.get(`/seller/${sellerId}`).then(({ data }) => {
+            if (data.success && data.data) {
+              setShippingPreference(data.data.shippingPreference || 'platform');
+            }
+          }).catch(err => {
+            console.error('Failed to fetch seller profile for shipping preference', err);
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }, []);
   const [categories, setCategories] = useState([]);
   const [categoryAttributes, setCategoryAttributes] = useState([]);
   const [attributeValues, setAttributeValues] = useState({});
@@ -337,12 +369,17 @@ const ProductForm = () => {
             compare_price: p.compare_price || '',
             stock_quantity: p.stock_quantity ?? '',
             sku: p.sku || '',
+            hsn_code: p.hsn_code || '',
             category_id: p.category_id != null ? Number(p.category_id) : '',
             subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
             delivery_type: p.delivery_type || 'free',
             delivery_charge: p.delivery_charge || '',
             free_delivery_min_order: p.free_delivery_min_order || '',
             express_delivery_charge: p.express_delivery_charge || '',
+            weight: p.weight || '',
+            length: p.length || '',
+            breadth: p.breadth || '',
+            height: p.height || '',
           });
           setAttributeValues(
             (p.specifications || []).reduce((acc, spec) => {
@@ -734,6 +771,7 @@ const ProductForm = () => {
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
+
     if ((images.length + newFiles.length + totalColorFiles) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
     if (isFashionVariantCategory && colorGroups.length === 0) {
       setError('Add at least one color variant for fashion products.');
@@ -747,13 +785,15 @@ const ProductForm = () => {
       setError('Each color block needs a color name.');
       return;
     }
-    if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
-      setError('Please enter a delivery charge for fixed delivery.');
-      return;
-    }
-    if (form.delivery_type === 'conditional' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0 || !form.free_delivery_min_order || parseFloat(form.free_delivery_min_order) <= 0)) {
-      setError('Please enter delivery charge and free delivery threshold.');
-      return;
+    if (shippingPreference === 'self') {
+      if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
+        setError('Please enter a delivery charge for fixed delivery.');
+        return;
+      }
+      if (form.delivery_type === 'conditional' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0 || !form.free_delivery_min_order || parseFloat(form.free_delivery_min_order) <= 0)) {
+        setError('Please enter delivery charge and free delivery threshold.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -767,12 +807,17 @@ const ProductForm = () => {
         compare_price: form.compare_price ? parseFloat(form.compare_price) : null,
         stock_quantity: parseInt(form.stock_quantity),
         sku: form.sku.trim() || null,
+        hsn_code: form.hsn_code ? form.hsn_code.trim() : null,
         category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
-        delivery_type: form.delivery_type,
-        delivery_charge: form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0),
-        free_delivery_min_order: form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null,
-        express_delivery_charge: form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null,
+        weight: form.weight ? parseFloat(form.weight) : null,
+        length: form.length ? parseFloat(form.length) : null,
+        breadth: form.breadth ? parseFloat(form.breadth) : null,
+        height: form.height ? parseFloat(form.height) : null,
+        delivery_type: shippingPreference === 'platform' ? 'free' : form.delivery_type,
+        delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
+        free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
+        express_delivery_charge: shippingPreference === 'platform' ? null : (form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null),
         specifications: buildSpecifications(),
         variants: submittedVariants.length > 0 ? submittedVariants.map(v => ({
           ...v,
@@ -840,10 +885,10 @@ const ProductForm = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
 
-      <Box component="form" onSubmit={handleSubmit} sx={formFocusStyles}>
-        <Grid container spacing={3}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ ...formFocusStyles, overflow: 'visible' }}>
+        <Grid container spacing={3} alignItems="flex-start" sx={{ overflow: 'visible' }}>
           {/* Left — main fields */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={8} sx={{ minWidth: 0 }}>
             <Card sx={{ mb: 3 }}>
               <CardContent>
                 <Typography variant="h6" fontWeight={700} gutterBottom>Basic Information</Typography>
@@ -915,6 +960,16 @@ const ProductForm = () => {
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="HSN Number"
+                      value={form.hsn_code}
+                      onChange={handleChange('hsn_code')}
+                      fullWidth
+                      placeholder="e.g. 85183020"
+                      helperText="Optional HSN code for taxation"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
                     <FormControl fullWidth required>
                       <InputLabel id="cat-label">Category</InputLabel>
                       <Select
@@ -970,6 +1025,61 @@ const ProductForm = () => {
 
               </Select>
               </FormControl>
+                  </Grid>
+
+                  {/* Package Information */}
+                  <Grid item xs={12}>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" fontWeight={700}>Package Information</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Provide package weight and dimensions for logistics calculation.
+                      </Typography>
+                      <Divider />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Package Weight (kg)"
+                      type="number"
+                      value={form.weight}
+                      onChange={handleChange('weight')}
+                      fullWidth
+                      placeholder="0.00"
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Package Length (cm)"
+                      type="number"
+                      value={form.length}
+                      onChange={handleChange('length')}
+                      fullWidth
+                      placeholder="0.00"
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Package Breadth (cm)"
+                      type="number"
+                      value={form.breadth}
+                      onChange={handleChange('breadth')}
+                      fullWidth
+                      placeholder="0.00"
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Package Height (cm)"
+                      type="number"
+                      value={form.height}
+                      onChange={handleChange('height')}
+                      fullWidth
+                      placeholder="0.00"
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
                   </Grid>
                 </Grid>
               </CardContent>
@@ -1276,89 +1386,91 @@ const ProductForm = () => {
               </CardContent>
             </Card>
 
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={700} gutterBottom>Shipping & Delivery</Typography>
-                <Divider sx={{ mb: 2 }} />
+            {shippingPreference === 'self' && (
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Shipping & Delivery</Typography>
+                  <Divider sx={{ mb: 2 }} />
 
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={form.delivery_type === 'free'}
-                      onChange={(e) => setForm((prev) => ({
-                        ...prev,
-                        delivery_type: e.target.checked ? 'free' : 'fixed',
-                        delivery_charge: e.target.checked ? '' : prev.delivery_charge,
-                        free_delivery_min_order: e.target.checked ? '' : prev.free_delivery_min_order,
-                      }))}
-                    />
-                  }
-                  label="Free delivery"
-                  sx={{ mb: 1 }}
-                />
-
-                {form.delivery_type !== 'free' && (
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <FormControl fullWidth>
-                        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Delivery Rule</Typography>
-                        <RadioGroup
-                          row
-                          value={form.delivery_type}
-                          onChange={(e) => setForm((prev) => ({ ...prev, delivery_type: e.target.value }))}
-                        >
-                          <FormControlLabel value="fixed" control={<Radio size="small" />} label="Fixed charge" />
-                          <FormControlLabel value="conditional" control={<Radio size="small" />} label="Free above order value" />
-                        </RadioGroup>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label="Delivery Charge (Rs)"
-                        type="number"
-                        value={form.delivery_charge}
-                        onChange={handleChange('delivery_charge')}
-                        fullWidth
-                        inputProps={{ min: 0, step: 0.01 }}
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.delivery_type === 'free'}
+                        onChange={(e) => setForm((prev) => ({
+                          ...prev,
+                          delivery_type: e.target.checked ? 'free' : 'fixed',
+                          delivery_charge: e.target.checked ? '' : prev.delivery_charge,
+                          free_delivery_min_order: e.target.checked ? '' : prev.free_delivery_min_order,
+                        }))}
                       />
-                    </Grid>
-                    {form.delivery_type === 'conditional' && (
+                    }
+                    label="Free delivery"
+                    sx={{ mb: 1 }}
+                  />
+
+                  {form.delivery_type !== 'free' && (
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Delivery Rule</Typography>
+                          <RadioGroup
+                            row
+                            value={form.delivery_type}
+                            onChange={(e) => setForm((prev) => ({ ...prev, delivery_type: e.target.value }))}
+                          >
+                            <FormControlLabel value="fixed" control={<Radio size="small" />} label="Fixed charge" />
+                            <FormControlLabel value="conditional" control={<Radio size="small" />} label="Free above order value" />
+                          </RadioGroup>
+                        </FormControl>
+                      </Grid>
                       <Grid item xs={12} sm={6}>
                         <TextField
-                          label="Free Delivery Above (Rs)"
+                          label="Delivery Charge (Rs)"
                           type="number"
-                          value={form.free_delivery_min_order}
-                          onChange={handleChange('free_delivery_min_order')}
+                          value={form.delivery_charge}
+                          onChange={handleChange('delivery_charge')}
                           fullWidth
                           inputProps={{ min: 0, step: 0.01 }}
                         />
                       </Grid>
-                    )}
-                  </Grid>
-                )}
+                      {form.delivery_type === 'conditional' && (
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            label="Free Delivery Above (Rs)"
+                            type="number"
+                            value={form.free_delivery_min_order}
+                            onChange={handleChange('free_delivery_min_order')}
+                            fullWidth
+                            inputProps={{ min: 0, step: 0.01 }}
+                          />
+                        </Grid>
+                      )}
+                    </Grid>
+                  )}
 
-                <TextField
-                  label="Express Delivery Charge (Rs)"
-                  type="number"
-                  value={form.express_delivery_charge}
-                  onChange={handleChange('express_delivery_charge')}
-                  fullWidth
-                  sx={{ mt: 2 }}
-                  helperText="Optional faster delivery fee."
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
+                  <TextField
+                    label="Express Delivery Charge (Rs)"
+                    type="number"
+                    value={form.express_delivery_charge}
+                    onChange={handleChange('express_delivery_charge')}
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    helperText="Optional faster delivery fee."
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
 
-                <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2" fontWeight={700} gutterBottom>Shipping Summary Preview</Typography>
-                  <Typography variant="body2" color="text.secondary">Product Rs {Number(form.price || 0).toLocaleString('en-IN')}</Typography>
-                  <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
-                    Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `Rs ${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
-                  </Typography>
-                  <Typography variant="subtitle2" fontWeight={700}>Total Rs {deliverySummary.total.toLocaleString('en-IN')}</Typography>
-                  <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
-                </Box>
-              </CardContent>
-            </Card>
+                  <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                    <Typography variant="body2" fontWeight={700} gutterBottom>Shipping Summary Preview</Typography>
+                    <Typography variant="body2" color="text.secondary">Product Rs {Number(form.price || 0).toLocaleString('en-IN')}</Typography>
+                    <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
+                      Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `Rs ${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
+                    </Typography>
+                    <Typography variant="subtitle2" fontWeight={700}>Total Rs {deliverySummary.total.toLocaleString('en-IN')}</Typography>
+                    <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Images */}
             <Card sx={{ mb: 3 }}>
@@ -1495,8 +1607,18 @@ const ProductForm = () => {
           </Grid>
 
           {/* Right — submit */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ position: 'sticky', top: 80 }}>
+          <Grid
+            item
+            xs={12}
+            md={4}
+            sx={{
+              position: { xs: 'static', md: 'sticky' },
+              top: 90,
+              alignSelf: 'flex-start',
+              height: 'fit-content',
+            }}
+          >
+            <Card sx={{ height: 'fit-content' }}>
               <CardContent>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   {isEdit ? 'Save Changes' : 'Publish Product'}
