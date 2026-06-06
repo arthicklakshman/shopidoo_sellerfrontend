@@ -42,10 +42,11 @@ function fmt(n) {
 function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
   const theme = useTheme();
   const [amount,    setAmount]    = useState("");
-  const [bankAcc,   setBankAcc]   = useState("");
-  const [storeName, setStoreName] = useState("");
+  const [bankAcc,   setBankAcc]   = useState(wallet?.accountNumber || "");
+  const [storeName, setStoreName] = useState(wallet?.storeName || "");
   const [error,     setError]     = useState("");
 
+   
   const available = Math.max(0, Number(wallet?.available_balance || 0));
 
   const handleConfirm = () => {
