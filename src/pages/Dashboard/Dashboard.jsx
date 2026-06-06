@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Grid, Typography, Box, Card, CardContent, Skeleton, Button, useTheme, Avatar } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Legend } from 'recharts';
+import { Grid, Typography, Box, Card, CardContent, Skeleton, Button, useTheme } from '@mui/material';
+import { CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, Legend, XAxis, YAxis } from 'recharts';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -59,8 +59,8 @@ const CustomTooltip = ({ active, payload, label }) => {
     <Box sx={{ bgcolor: 'white', border: '1px solid #E5E7EB', borderRadius: 2, p: 1.5 }}>
       <Typography fontWeight={700}>{label}</Typography>
       <Typography fontSize={13}>
-  Revenue: ₹{Number(data?.revenue || 0).toLocaleString('en-IN')}
-</Typography>
+        Revenue: ₹{Number(data?.revenue || 0).toLocaleString('en-IN')}
+      </Typography>
       <Typography fontSize={13}>Orders: {data.orders}</Typography>
     </Box>
   );
@@ -76,13 +76,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     sellerService.getDashboard()
-       .then(({ data }) => {
-  console.log("SELLER DASHBOARD RESPONSE:", data);
-  console.log("DATA.DATA =", data.data);
-  console.log("MONTHLY ORDERS =", data.data?.monthlyOrders);
-
-  setData(data.data);
-})
+      .then(({ data }) => setData(data.data))
       .catch((err) => console.error('Dashboard error:', err))
       .finally(() => setLoading(false));
   }, []);
@@ -98,7 +92,6 @@ const Dashboard = () => {
     (data?.monthlyRevenue || []).forEach(({ month, revenue }) => {
       revenueMap[month] = revenue;
     });
-    console.log("monthlyOrders =", data?.monthlyOrders);
 
     (data?.monthlyOrders || []).forEach(({ month, orders }) => {
       ordersMap[month] = orders;
@@ -140,7 +133,6 @@ const Dashboard = () => {
       </Grid>
     </Box>
   );
-
 
   return (
     <Box>
@@ -257,12 +249,12 @@ const Dashboard = () => {
               <Typography variant="h6" fontWeight={700} gutterBottom>Quick Stats</Typography>
               <Grid container spacing={2}>
                 {[
-                  { label: "Today's Orders", value: stats?.todaysOrders || 0 }, // ✅ Added Today's Orders
+                  { label: "Today's Orders", value: stats?.todaysOrders || 0 },
                   { label: 'Avg Order Value', value: stats?.totalOrders > 0 ? formatCurrency(totalRevenue / stats.totalOrders) : '₹0' },
                   { label: 'Total Orders', value: stats?.totalOrders || 0 },
                   { label: 'Pending Orders', value: stats?.pendingOrders || 0 },
                 ].map(({ label, value }) => (
-                  <Grid item xs={6} md={3} key={label}> {/* ✅ Changed md={2.4} to md={3} for a perfect 4-column layout */}
+                  <Grid item xs={6} md={3} key={label}>
                     <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, textAlign: 'center' }}>
                       <Typography variant="h6" fontWeight={800}>{value}</Typography>
                       <Typography variant="body2" color="text.secondary">{label}</Typography>

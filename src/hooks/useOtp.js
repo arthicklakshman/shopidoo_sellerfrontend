@@ -1,23 +1,25 @@
-
 import { useState } from 'react';
 import onboardingService from '../features/onboarding/onboarding.service';
 
 export const useOtp = () => {
-  const [otpModal, setOtpModal] = useState({ isOpen: false, type: '', targetValue: '' });
+  // 🌟 Added 'actionType' to track which MSG91 template to use (defaults to 'register')
+  const [otpModal, setOtpModal] = useState({ isOpen: false, type: '', targetValue: '', actionType: 'register' });
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isMobileVerified, setIsMobileVerified] = useState(false);
 
-  const sendOtp = async (type, targetValue) => {
+  // 🌟 Accept actionType from the UI component
+  const sendOtp = async (type, targetValue, actionType = 'register') => {
     setOtpError('');
     try {
       if (type === 'email') {
-        await onboardingService.sendEmailOtp(targetValue);
+        await onboardingService.sendEmailOtp(targetValue, actionType);
       } else {
-        await onboardingService.sendMobileOtp(targetValue);
+        await onboardingService.sendMobileOtp(targetValue, actionType);
       }
-      setOtpModal({ isOpen: true, type, targetValue });
+      // Store the actionType so the resend function knows what to do
+      setOtpModal({ isOpen: true, type, targetValue, actionType });
     } catch (error) {
       throw error;
     }
@@ -30,7 +32,9 @@ export const useOtp = () => {
       await onboardingService.verifyEmailOtp(otpModal.targetValue, otpValue);
       if (otpModal.type === 'email') setIsEmailVerified(true);
       if (otpModal.type === 'mobile') setIsMobileVerified(true);
-      setOtpModal({ isOpen: false, type: '', targetValue: '' });
+      
+      // Reset state on success
+      setOtpModal({ isOpen: false, type: '', targetValue: '', actionType: 'register' });
     } catch (error) {
       setOtpError(error.response?.data?.message || 'Invalid or expired OTP.');
       throw error;
@@ -42,10 +46,11 @@ export const useOtp = () => {
   const resendOtp = async () => {
     setOtpError('');
     try {
+      // 🌟 Pass the saved actionType back to the service
       if (otpModal.type === 'email') {
-        await onboardingService.sendEmailOtp(otpModal.targetValue);
+        await onboardingService.sendEmailOtp(otpModal.targetValue, otpModal.actionType);
       } else {
-        await onboardingService.sendMobileOtp(otpModal.targetValue);
+        await onboardingService.sendMobileOtp(otpModal.targetValue, otpModal.actionType);
       }
     } catch (error) {
       setOtpError(error.response?.data?.message || 'Failed to resend OTP.');
@@ -53,7 +58,7 @@ export const useOtp = () => {
   };
 
   const closeOtpModal = () => {
-    setOtpModal({ isOpen: false, type: '', targetValue: '' });
+    setOtpModal({ isOpen: false, type: '', targetValue: '', actionType: 'register' });
     setOtpError('');
   };
 

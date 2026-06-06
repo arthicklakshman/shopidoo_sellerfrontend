@@ -13,7 +13,7 @@ import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 
 // Shared Components & Hooks
 import { useOtp } from '../../hooks/useOtp'; 
-import OtpModal from '../../features/onboarding/components/OtpModal';
+import OtpModal from '../../components/shared/OtpModal/OtpModal';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
 import { validateEmail, validateMobile, validatePassword } from '../../utils/validation';
 import { authService } from '../../services/auth.service'; 
@@ -32,7 +32,9 @@ const customInputStyles = {
   '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { border: '1px solid #0FB9B1' },
   '& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline': { border: '1px solid #ef4444' },
-  '& .MuiOutlinedInput-input': { padding: '12px 14px', fontSize: '14px', color: '#111827' }
+  '& .MuiOutlinedInput-input': { padding: '12px 14px', fontSize: '14px', color: '#111827' },
+  '& .MuiOutlinedInput-input::-ms-reveal': { display: 'none' },
+  '& .MuiOutlinedInput-input::-ms-clear': { display: 'none' }
 };
 
 // Reusing your VerifyButton logic with the specific colors you asked for!
@@ -63,8 +65,8 @@ const VerifyButton = ({ onClick, isVerified }) => (
 // --- MAIN COMPONENT ---
 export default function ForgotPassword() {
   const [formData, setFormData] = useState({
-    emailId: '',
-    mobileNumber: '',
+    email: '',
+    phone: '',
     newPassword: '',
     confirmPassword: ''
   });
@@ -89,25 +91,30 @@ export default function ForgotPassword() {
     if (apiError) setApiError('');
     
     // If they change the email/mobile, reset that specific verification!
-    if (name === 'emailId' && isEmailVerified) resetVerification('email');
-    if (name === 'mobileNumber' && isMobileVerified) resetVerification('mobile');
+    if (name === 'email' && isEmailVerified) resetVerification('email');
+    if (name === 'phone' && isMobileVerified) resetVerification('mobile');
   };
-
-  const handleSendOtpClick = async (type) => {
+const handleSendOtpClick = async (type) => {
     if (type === 'email') {
-      const err = validateEmail(formData.emailId);
-      if (err) return setErrors(prev => ({ ...prev, emailId: err }));
-      try { await sendOtp('email', formData.emailId); } 
-      catch (error) { setErrors(prev => ({ ...prev, emailId: error.message })); }
+      const err = validateEmail(formData.email);
+      if (err) return setErrors(prev => ({ ...prev, email: err }));
+      try { 
+        // 🚨 ADD 'forgot_password' HERE
+        await sendOtp('email', formData.email, 'forgot_password'); 
+      } 
+      catch (error) { setErrors(prev => ({ ...prev, email: error.message })); }
     } else if (type === 'mobile') {
-      const err = validateMobile(formData.mobileNumber);
-      if (err) return setErrors(prev => ({ ...prev, mobileNumber: err }));
-      try { await sendOtp('mobile', formData.mobileNumber); } 
-      catch (error) { setErrors(prev => ({ ...prev, mobileNumber: error.message })); }
+      const err = validateMobile(formData.phone);
+      if (err) return setErrors(prev => ({ ...prev, phone: err }));
+      try { 
+        // 🚨 ADD 'forgot_password' HERE
+        await sendOtp('mobile', formData.phone, 'forgot_password'); 
+      } 
+      catch (error) { setErrors(prev => ({ ...prev, phone: error.message })); }
     }
   };
 
-  const handleSaveToDatabase = async () => {
+ const handleSaveToDatabase = async () => {
     // 1. Validate Passwords
     const passErr = validatePassword(formData.newPassword);
     if (passErr) return setErrors(prev => ({ ...prev, newPassword: passErr }));
@@ -123,17 +130,22 @@ export default function ForgotPassword() {
     try {
       setIsSubmitting(true);
       
-      // 3. Send to backend service
+      // 🌟 Identify the correct portal context ('user' or 'seller')
+      // You can read this from a prop, your URL path, or a constant string.
+      const currentPortalRole = 'user'; // Change to dynamic or 'seller' depending on the screen
+
+      // 3. Send to backend service with the required role parameter included
       await authService.resetPassword({
-        emailId: formData.emailId,
-        mobileNumber: formData.mobileNumber,
-        newPassword: formData.newPassword
+        email: formData.email,
+        phone: formData.phone,
+        newPassword: formData.newPassword,
+        role: currentPortalRole // ⚡ Fixed: Now your backend will pass validation!
       });
       
       setSuccessMessage("Password successfully updated! You can now login.");
       
       // Optional: Clear form
-      setFormData({ emailId: '', mobileNumber: '', newPassword: '', confirmPassword: '' });
+      setFormData({ email: '', phone: '', newPassword: '', confirmPassword: '' });
       resetVerification('email');
       resetVerification('mobile');
       
@@ -174,9 +186,9 @@ export default function ForgotPassword() {
               <Box>
                 <StyledInputLabel>Registered Email</StyledInputLabel>
                 <TextField 
-                  fullWidth name="emailId" value={formData.emailId} onChange={handleInputChange} 
+                  fullWidth name="email" value={formData.email} onChange={handleInputChange} 
                   placeholder="Enter your registered email" variant="outlined" size="small" 
-                  error={!!errors.emailId} helperText={errors.emailId} 
+                  error={!!errors.email} helperText={errors.email} 
                   sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
@@ -187,11 +199,11 @@ export default function ForgotPassword() {
               </Box>
 
               <Box>
-                <StyledInputLabel>Registered Mobile Number</StyledInputLabel>
+                <StyledInputLabel>Registered Phone</StyledInputLabel>
                 <TextField 
-                  fullWidth name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} 
-                  placeholder="10-digit mobile number" variant="outlined" size="small" 
-                  error={!!errors.mobileNumber} helperText={errors.mobileNumber} 
+                  fullWidth name="phone" value={formData.phone} onChange={handleInputChange} 
+                  placeholder="Enter your registered phone number" variant="outlined" size="small" 
+                  error={!!errors.phone} helperText={errors.phone} 
                   sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
@@ -251,7 +263,7 @@ export default function ForgotPassword() {
                       background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' 
                     }}
                   >
-                    {isSubmitting ? 'SAVING...' : 'SAVE TO DATABASE'}
+                    {isSubmitting ? 'SAVING...' : 'SAVE NEW PASSWORD'}
                   </GradientButton>
                 </Box>
               )}

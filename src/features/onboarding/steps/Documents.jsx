@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Card, CardContent, Grid, Button, FormHelperText
+  Box, Typography, Card, CardContent, Grid, Button, FormHelperText, Switch
 } from '@mui/material';
 
 // Icons
@@ -106,7 +106,7 @@ export default function Documents({ onBack, onNext }) {
     };
   });
 
-  const [hasGst, setHasGst] = useState(false);
+  const [showOptional, setShowOptional] = useState(false);
   
   // 🌟 State for Image Preview Modal
   const [previewState, setPreviewState] = useState({
@@ -115,13 +115,7 @@ export default function Documents({ onBack, onNext }) {
     fileName: ""
   });
 
-  useEffect(() => {
-    const step2Data = localStorage.getItem('onboarding_step_2');
-    if (step2Data) {
-      const parsed = JSON.parse(step2Data);
-      setHasGst(parsed.hasGst);
-    }
-  }, []);
+  // Removed hasGst logic
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false); 
@@ -181,9 +175,7 @@ export default function Documents({ onBack, onNext }) {
   const handleContinue = async () => {
     const newErrors = {};
     
-    if (!documents.panCard || !documents.panCard.data) newErrors.panCard = "PAN Card is required (re-upload if refreshed)";
-    if (!documents.aadhaarFront || !documents.aadhaarFront.data) newErrors.aadhaarFront = "Aadhaar Card (Front) is required (re-upload if refreshed)";
-    if (!documents.aadhaarBack || !documents.aadhaarBack.data) newErrors.aadhaarBack = "Aadhaar Card (Back) is required (re-upload if refreshed)";
+    if (!documents.gstProof || !documents.gstProof.data) newErrors.gstProof = "GST Proof is required (re-upload if refreshed)";
     if (!documents.signature || !documents.signature.data) newErrors.signature = "Signature is required (re-upload if refreshed)";
 
     if (Object.keys(newErrors).length > 0) {
@@ -205,7 +197,7 @@ export default function Documents({ onBack, onNext }) {
       if (documents.signature?.data) payload.signatureImage = documents.signature.data;
       if (documents.businessProof?.data) payload.businessProofImage = documents.businessProof.data;
       if (documents.bankProof?.data) payload.bankProofImage = documents.bankProof.data;
-      if (hasGst && documents.gstProof?.data) payload.gstProofImage = documents.gstProof.data;
+      if (documents.gstProof?.data) payload.gstProofImage = documents.gstProof.data;
 
       if (Object.keys(payload).length > 0) {
         await onboardingService.updateDocuments(sellerId, payload);
@@ -279,20 +271,36 @@ export default function Documents({ onBack, onNext }) {
                 Required Documents
               </Typography>
               
-              <UploadZoneCard title="PAN Card" subtitle="Upload clear image of your PAN card" required fileData={documents.panCard} onChange={(file) => handleFileChange('panCard', file)} error={errors.panCard} onPreview={handlePreview} />
-              <UploadZoneCard title="Aadhaar Card (Front)" subtitle="Upload front side of your Aadhaar card" required fileData={documents.aadhaarFront} onChange={(file) => handleFileChange('aadhaarFront', file)} error={errors.aadhaarFront} onPreview={handlePreview} />
-              <UploadZoneCard title="Aadhaar Card (Back)" subtitle="Upload back side of your Aadhaar card" required fileData={documents.aadhaarBack} onChange={(file) => handleFileChange('aadhaarBack', file)} error={errors.aadhaarBack} onPreview={handlePreview} />
+              <UploadZoneCard title="GST Proof Image" subtitle="Upload your GST Registration Certificate" required fileData={documents.gstProof} onChange={(file) => handleFileChange('gstProof', file)} error={errors.gstProof} onPreview={handlePreview} />
               <UploadZoneCard title="Signature" subtitle="Upload your signature on white paper" required fileData={documents.signature} onChange={(file) => handleFileChange('signature', file)} error={errors.signature} onPreview={handlePreview} />
 
-              <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '16px', mt: 3, mb: 2, position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1, py: 1 }}>
-                Optional Documents
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3, mb: 2, position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1, py: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '16px' }}>
+                  Optional Documents
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#4b5563' }}>Add additional information</Typography>
+                  <Switch 
+                    checked={showOptional} 
+                    onChange={(e) => setShowOptional(e.target.checked)} 
+                    size="small" 
+                    sx={{ 
+                      '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffffff' }, 
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#059669', opacity: 1 } 
+                    }} 
+                  />
+                </Box>
+              </Box>
 
-              {hasGst && (
-                <UploadZoneCard title="GST Proof Image" subtitle="Upload your GST Registration Certificate" required={false} fileData={documents.gstProof} onChange={(file) => handleFileChange('gstProof', file)} onPreview={handlePreview} />
+              {showOptional && (
+                <>
+                  <UploadZoneCard title="PAN Card" subtitle="Upload clear image of your PAN card" required={false} fileData={documents.panCard} onChange={(file) => handleFileChange('panCard', file)} error={errors.panCard} onPreview={handlePreview} />
+                  <UploadZoneCard title="Aadhaar Card (Front)" subtitle="Upload front side of your Aadhaar card" required={false} fileData={documents.aadhaarFront} onChange={(file) => handleFileChange('aadhaarFront', file)} error={errors.aadhaarFront} onPreview={handlePreview} />
+                  <UploadZoneCard title="Aadhaar Card (Back)" subtitle="Upload back side of your Aadhaar card" required={false} fileData={documents.aadhaarBack} onChange={(file) => handleFileChange('aadhaarBack', file)} error={errors.aadhaarBack} onPreview={handlePreview} />
+                  <UploadZoneCard title="Business Proof" subtitle="Shop license, rent agreement, etc." required={false} fileData={documents.businessProof} onChange={(file) => handleFileChange('businessProof', file)} onPreview={handlePreview} />
+                  <UploadZoneCard title="Bank Proof" subtitle="Additional bank statement or passbook" required={false} fileData={documents.bankProof} onChange={(file) => handleFileChange('bankProof', file)} onPreview={handlePreview} />
+                </>
               )}
-              <UploadZoneCard title="Business Proof" subtitle="Shop license, rent agreement, etc." required={false} fileData={documents.businessProof} onChange={(file) => handleFileChange('businessProof', file)} onPreview={handlePreview} />
-              <UploadZoneCard title="Bank Proof" subtitle="Additional bank statement or passbook" required={false} fileData={documents.bankProof} onChange={(file) => handleFileChange('bankProof', file)} onPreview={handlePreview} />
             </Box>
             {/* 🌟 STATIC SCROLL WRAPPER END */}
 

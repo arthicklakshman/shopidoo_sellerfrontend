@@ -8,20 +8,43 @@ const onboardingService = {
   /**
    * OTP VERIFICATION (Email)
    */
-  sendEmailOtp: async (email) => {
-    return await api.post(`${API_BASE_URL}/send-email-otp`, { email });
+sendEmailOtp: async (email, type) => {
+    return await api.post(`${API_BASE_URL}/send-email-otp`, { email, type });
   },
   
-  /**
-   * OTP VERIFICATION (Email)
-   */
- sendMobileOtp: async (mobile) => {
-  return await api.post(`${API_BASE_URL}/send-email-otp`, { mobile });
-},
-
-  verifyEmailOtp: async (email, otp) => {
-    return await api.post(`${API_BASE_URL}/verify-email-otp`, { email, otp });
+  sendMobileOtp: async (mobile, type) => {
+    return await api.post(`${API_BASE_URL}/send-email-otp`, { mobile, type });
   },
+
+  /**
+   * OTP VERIFICATION (Handles both Email and Mobile dynamically)
+   */
+  verifyEmailOtp: async (identifier, otp) => {
+    // Check if the identifier is an email address to send the correct payload key
+    const isEmail = identifier.includes('@');
+    const payload = {
+      otp,
+      [isEmail ? 'email' : 'mobile']: identifier
+    };
+
+    return await api.post(`${API_BASE_URL}/verify-email-otp`, payload);
+  },
+
+
+//   sendEmailOtp: async (email) => {
+//     return await api.post(`${API_BASE_URL}/send-email-otp`, { email });
+//   },
+  
+//   /**
+//    * OTP VERIFICATION (Email)
+//    */
+//  sendMobileOtp: async (mobile) => {
+//   return await api.post(`${API_BASE_URL}/send-email-otp`, { mobile });
+// },
+
+//   verifyEmailOtp: async (email, otp) => {
+//     return await api.post(`${API_BASE_URL}/verify-email-otp`, { email, otp });
+//   },
 
   /**
    * STEP 1: Basic Information
@@ -32,9 +55,8 @@ const onboardingService = {
       `${API_BASE_URL}/register`,
       {
         name: data.fullName,
-        email: data.emailId,
-        phone: data.mobileNumber,
-        mobileNumber: data.mobileNumber,
+        email: data.email,
+        phone: data.phone,
         businessType: data.businessType,
         password: data.password,
         role: 'seller'

@@ -29,6 +29,7 @@ import {
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { returnService } from '../../services/return.service';
 import { formatDate } from '../../utils/formatDate';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 const STATUS_COLORS = {
   pending: 'warning',
@@ -366,6 +367,7 @@ const SellerReturns = () => {
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Return Amount</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -377,7 +379,7 @@ const SellerReturns = () => {
           <TableBody>
             {returns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
                   <Typography color="text.secondary" variant="body1">No return requests found.</Typography>
                 </TableCell>
               </TableRow>
@@ -400,6 +402,14 @@ const SellerReturns = () => {
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>{req.user?.name}</Typography>
                 </TableCell>
+
+                <TableCell>
+                  {/* ✅ Removed custom color so it uses the default text color */}
+                  <Typography variant="body2" fontWeight={700}>
+                    {formatCurrency(req.order?.total_amount || req.orderItem?.total_price || req.product?.price || 0)}
+                  </Typography>
+                </TableCell>
+
                 <TableCell>
                   <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: 'primary.main' }}>
                     {req.return_type || 'refund'}

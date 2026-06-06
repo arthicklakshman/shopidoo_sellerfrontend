@@ -25,7 +25,7 @@ import { setCredentials } from '../../auth/authSlice';
 import StepWrapper from '../components/StepWrapper'; 
 import NavigationButtons from '../components/NavigationButtons'; 
 import GradientButton from '../../../components/shared/GradientButton/GradientButton';
-import OtpModal from '../components/OtpModal';
+import OtpModal from '../../../components/shared/OtpModal/OtpModal';
 import onboardingOne from '../../../assets/onboarding_one.jpg';
 
 const StyledInputLabel = ({ children, required }) => (
@@ -45,7 +45,6 @@ const customInputStyles = {
   '& .MuiOutlinedInput-input': { padding: '12px 14px', fontSize: '14px', color: '#111827' }
 };
 
-// 🌟 UPDATED: Removed the confusing 'disabled' logic. Now it will show a helpful error if clicked while empty!
 const VerifyButton = ({ onClick, isVerified }) => (
   <GradientButton
     type="button" // 👈 Prevents accidental form submissions
@@ -78,8 +77,8 @@ export default function BasicInformation({ onNext, sellerId }) {
       const parsed = savedData ? JSON.parse(savedData) : null;
       return {
         fullName: parsed?.fullName || '',
-        mobileNumber: parsed?.mobileNumber || '',
-        emailId: parsed?.emailId || '',
+        phone: parsed?.phone || '',
+        email: parsed?.email || '',
         password: '',
         confirmPassword: '',
         businessType: parsed?.businessType || ''
@@ -87,7 +86,7 @@ export default function BasicInformation({ onNext, sellerId }) {
     } catch (error) {
       console.error("Failed to parse onboarding_step_1", error);
       return {
-        fullName: '', mobileNumber: '', emailId: '', password: '', confirmPassword: '', businessType: ''
+        fullName: '', phone: '', email: '', password: '', confirmPassword: '', businessType: ''
       };
     }
   });
@@ -114,44 +113,120 @@ export default function BasicInformation({ onNext, sellerId }) {
     if (apiError) setApiError('');
     
     // Reset verification if they alter the field after verifying
-    if (name === 'mobileNumber' && isMobileVerified) setIsMobileVerified(false);
-    if (name === 'emailId' && isEmailVerified) setIsEmailVerified(false);
+    if (name === 'phone' && isMobileVerified) setIsMobileVerified(false);
+    if (name === 'email' && isEmailVerified) setIsEmailVerified(false);
   };
 
  // 🌟 REAL BACKEND CALL: Send OTP
-  const handleSendOtp = async (type) => {
+//   const handleSendOtp = async (type) => {
+//     setOtpError('');
+//     if (type === 'mobile') {
+//       const err = validateMobile(formData.phone);
+//       if (err) return setErrors((prev) => ({ ...prev, phone: err }));
+      
+//       try {
+//         // 🌟 Call the backend for Mobile!
+//         await onboardingService.sendMobileOtp(formData.phone);
+//         setOtpModal({ isOpen: true, type: 'mobile', targetValue: formData.phone });
+//       } catch (error) {
+//         setErrors((prev) => ({ ...prev, phone: 'Failed to send SMS.' }));
+//       }
+      
+//     } else if (type === 'email') {
+//       const err = validateEmail(formData.email);
+//       if (err) return setErrors((prev) => ({ ...prev, email: err }));
+      
+//       try {
+//         // 🌟 Call the real Node.js backend!
+//         await onboardingService.sendEmailOtp(formData.email);
+        
+//         // Only open the modal if the email successfully sent
+//         setOtpModal({ isOpen: true, type: 'email', targetValue: formData.email });
+//       } catch (error) {
+//         setErrors((prev) => ({ 
+//           ...prev, 
+//           email: error.response?.data?.message || 'Failed to send OTP. Please try again.' 
+//         }));
+//       }
+//     }
+//   };
+// // 🌟 REAL BACKEND CALL: Verify OTP
+//   const handleVerifyOtp = async (otpValue) => {
+//     setOtpLoading(true);
+//     setOtpError('');
+
+//     try {
+//       if (otpModal.type === 'email' || otpModal.type === 'mobile') {
+//         // 🌟 Call the real Node.js backend for both Email and Mobile!
+//         await onboardingService.verifyEmailOtp(otpModal.targetValue, otpValue);
+        
+//         if (otpModal.type === 'email') setIsEmailVerified(true);
+//         if (otpModal.type === 'mobile') setIsMobileVerified(true);
+        
+//         setOtpModal({ isOpen: false, type: '', targetValue: '' });
+//       }
+//     } catch (error) {
+//       // If the backend says the code is wrong or expired, show the red error in the modal
+//       setOtpError(error.response?.data?.message || "Invalid or expired OTP.");
+//     } finally {
+//       setOtpLoading(false);
+//     }
+//   };
+// const handleResendOtp = async () => {
+//     setOtpError(''); // Clear any previous errors
+
+//     if (otpModal.type === 'email') {
+//       try {
+//         // Call the exact same service function we used to send it the first time
+//         await onboardingService.sendEmailOtp(otpModal.targetValue);
+//         console.log("OTP successfully resent to:", otpModal.targetValue);
+//       } catch (error) {
+//         setOtpError(error.response?.data?.message || 'Failed to resend OTP. Please try again.');
+//       }
+//     } else if (otpModal.type === 'mobile') {
+//       // We will hook up the Brevo SMS logic here later!
+//       console.log(`Resending OTP to mobile:`, otpModal.targetValue);
+//     }
+//   };
+
+
+const handleSendOtp = async (type) => {
     setOtpError('');
     if (type === 'mobile') {
-      const err = validateMobile(formData.mobileNumber);
-      if (err) return setErrors((prev) => ({ ...prev, mobileNumber: err }));
+      const err = validateMobile(formData.phone);
+      if (err) return setErrors((prev) => ({ ...prev, phone: err }));
       
       try {
-        // 🌟 Call the backend for Mobile!
-        await onboardingService.sendMobileOtp(formData.mobileNumber);
-        setOtpModal({ isOpen: true, type: 'mobile', targetValue: formData.mobileNumber });
-      } catch (error) {
-        setErrors((prev) => ({ ...prev, mobileNumber: 'Failed to send SMS.' }));
-      }
-      
-    } else if (type === 'email') {
-      const err = validateEmail(formData.emailId);
-      if (err) return setErrors((prev) => ({ ...prev, emailId: err }));
-      
-      try {
-        // 🌟 Call the real Node.js backend!
-        await onboardingService.sendEmailOtp(formData.emailId);
-        
-        // Only open the modal if the email successfully sent
-        setOtpModal({ isOpen: true, type: 'email', targetValue: formData.emailId });
+        // 🌟 Passing the 'register' type to ensure the correct MSG91 DLT Template triggers
+        await onboardingService.sendMobileOtp(formData.phone, 'register');
+        setOtpModal({ isOpen: true, type: 'mobile', targetValue: formData.phone });
       } catch (error) {
         setErrors((prev) => ({ 
           ...prev, 
-          emailId: error.response?.data?.message || 'Failed to send OTP. Please try again.' 
+          phone: error.response?.data?.message || 'Failed to send SMS.' 
+        }));
+      }
+      
+    } else if (type === 'email') {
+      const err = validateEmail(formData.email);
+      if (err) return setErrors((prev) => ({ ...prev, email: err }));
+      
+      try {
+        // 🌟 Passing the 'register' type here as well (even though email currently ignores it, it's good practice)
+        await onboardingService.sendEmailOtp(formData.email, 'register');
+        
+        // Only open the modal if the email successfully sent
+        setOtpModal({ isOpen: true, type: 'email', targetValue: formData.email });
+      } catch (error) {
+        setErrors((prev) => ({ 
+          ...prev, 
+          email: error.response?.data?.message || 'Failed to send OTP. Please try again.' 
         }));
       }
     }
   };
-// 🌟 REAL BACKEND CALL: Verify OTP
+
+  // 🌟 REAL BACKEND CALL: Verify OTP
   const handleVerifyOtp = async (otpValue) => {
     setOtpLoading(true);
     setOtpError('');
@@ -173,31 +248,84 @@ export default function BasicInformation({ onNext, sellerId }) {
       setOtpLoading(false);
     }
   };
-const handleResendOtp = async () => {
+
+  const handleResendOtp = async () => {
     setOtpError(''); // Clear any previous errors
 
-    if (otpModal.type === 'email') {
-      try {
-        // Call the exact same service function we used to send it the first time
-        await onboardingService.sendEmailOtp(otpModal.targetValue);
-        console.log("OTP successfully resent to:", otpModal.targetValue);
-      } catch (error) {
-        setOtpError(error.response?.data?.message || 'Failed to resend OTP. Please try again.');
+    try {
+      if (otpModal.type === 'email') {
+        // 🌟 Resend via Email, ensuring the 'register' type is passed again
+        await onboardingService.sendEmailOtp(otpModal.targetValue, 'register');
+        console.log("OTP successfully resent to email:", otpModal.targetValue);
+        
+      } else if (otpModal.type === 'mobile') {
+        // 🌟 Hooked up the Mobile SMS Resend Logic using MSG91!
+        await onboardingService.sendMobileOtp(otpModal.targetValue, 'register');
+        console.log("OTP successfully resent to mobile:", otpModal.targetValue);
       }
-    } else if (otpModal.type === 'mobile') {
-      // We will hook up the Brevo SMS logic here later!
-      console.log(`Resending OTP to mobile:`, otpModal.targetValue);
+    } catch (error) {
+      setOtpError(error.response?.data?.message || 'Failed to resend OTP. Please try again.');
     }
   };
+
+  // const handleContinue = async () => {
+  //   const newErrors = {
+  //     fullName: validateRequired(formData.fullName, 'Full Name'),
+  //     phone: validateMobile(formData.phone),
+  //     email: validateEmail(formData.email),
+  //     password: validatePassword(formData.password),
+  //     businessType: validateRequired(formData.businessType, 'Business Type')
+  //   };
+
+  //   if (!sellerId || formData.password) {
+  //       if (!formData.confirmPassword) {
+  //           newErrors.confirmPassword = 'Please confirm your password';
+  //       } else if (formData.password !== formData.confirmPassword) {
+  //           newErrors.confirmPassword = 'Passwords do not match';
+  //       }
+  //   } else {
+  //       delete newErrors.password;
+  //   }
+
+  //   const actualErrors = Object.entries(newErrors).reduce((acc, [key, value]) => {
+  //     if (value !== null && value !== undefined) acc[key] = value;
+  //     return acc;
+  //   }, {});
+
+  //   if (Object.keys(actualErrors).length > 0) {
+  //     setErrors(actualErrors);
+  //     return; 
+  //   }
+
 
   const handleContinue = async () => {
     const newErrors = {
       fullName: validateRequired(formData.fullName, 'Full Name'),
-      mobileNumber: validateMobile(formData.mobileNumber),
-      emailId: validateEmail(formData.emailId),
+      phone: validateMobile(formData.phone),
+      email: validateEmail(formData.email),
       password: validatePassword(formData.password),
       businessType: validateRequired(formData.businessType, 'Business Type')
     };
+
+    // 🚨 NEW BLOCK: Enforce OTP Verification before allowing registration
+    if (!sellerId) { 
+      // Only force verification on initial registration, not on profile updates
+      if (!isMobileVerified && !newErrors.phone) {
+        newErrors.phone = 'You must verify your phone number to continue.';
+      }
+      if (!isEmailVerified && !newErrors.email) {
+        newErrors.email = 'You must verify your email address to continue.';
+      }
+    } else {
+      // If updating, only force verification if they altered the original values
+      // (Since handleInputChange resets isMobileVerified to false when typing)
+      if (!isMobileVerified && formData.phone !== JSON.parse(localStorage.getItem('onboarding_step_1'))?.phone) {
+        newErrors.phone = 'You must verify your new phone number.';
+      }
+      if (!isEmailVerified && formData.email !== JSON.parse(localStorage.getItem('onboarding_step_1'))?.email) {
+        newErrors.email = 'You must verify your new email address.';
+      }
+    }
 
     if (!sellerId || formData.password) {
         if (!formData.confirmPassword) {
@@ -216,7 +344,7 @@ const handleResendOtp = async () => {
 
     if (Object.keys(actualErrors).length > 0) {
       setErrors(actualErrors);
-      return; 
+      return; // Stops the function if anything is unverified or invalid
     }
 
     try {
@@ -231,8 +359,8 @@ const handleResendOtp = async () => {
       if (sellerId && hasToken) {
         response = await onboardingService.updateBasicInfo(sellerId, {
           fullName: formData.fullName,
-          mobileNumber: formData.mobileNumber,
-          emailId: formData.emailId,
+          phone: formData.phone,
+          email: formData.email,
           businessType: formData.businessType,
           ...(formData.password && { password: formData.password })
         });
@@ -240,8 +368,8 @@ const handleResendOtp = async () => {
         try {
           response = await onboardingService.registerBasicInfo({
             fullName: formData.fullName,
-            mobileNumber: formData.mobileNumber,
-            emailId: formData.emailId,
+            phone: formData.phone,
+            email: formData.email,
             password: formData.password,
             businessType: formData.businessType
           });
@@ -250,7 +378,7 @@ const handleResendOtp = async () => {
           if (regErr.response?.status === 409) {
             try {
               const loginResp = await api.post('/auth/login', { 
-                email: formData.emailId, 
+                email: formData.email, 
                 password: formData.password,
                 role: 'seller'
               });
@@ -342,8 +470,8 @@ const handleResendOtp = async () => {
               </Box>
 
               <Box>
-                <StyledInputLabel required>Mobile Number</StyledInputLabel>
-                <TextField fullWidth name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} placeholder="10-digit mobile number" variant="outlined" size="small" error={!!errors.mobileNumber} helperText={errors.mobileNumber} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
+                <StyledInputLabel required>Phone</StyledInputLabel>
+                <TextField fullWidth name="phone" value={formData.phone} onChange={handleInputChange} placeholder="10-digit Phone" variant="outlined" size="small" error={!!errors.phone} helperText={errors.phone} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
                       {/* 🌟 NOW ALWAYS CLICKABLE! */}
@@ -357,8 +485,8 @@ const handleResendOtp = async () => {
               </Box>
 
               <Box>
-                <StyledInputLabel required>Email ID</StyledInputLabel>
-                <TextField fullWidth name="emailId" value={formData.emailId} onChange={handleInputChange} placeholder="your.email@example.com" variant="outlined" size="small" error={!!errors.emailId} helperText={errors.emailId} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
+                <StyledInputLabel required>Email</StyledInputLabel>
+                <TextField fullWidth name="email" value={formData.email} onChange={handleInputChange} placeholder="your.email@example.com" variant="outlined" size="small" error={!!errors.email} helperText={errors.email} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
                       {/* 🌟 NOW ALWAYS CLICKABLE! */}
@@ -501,7 +629,7 @@ const handleResendOtp = async () => {
 //   const [formData, setFormData] = useState(() => {
 //     const savedData = localStorage.getItem('onboarding_step_1');
 //     return savedData ? JSON.parse(savedData) : {
-//       fullName: '', mobileNumber: '', emailId: '', password: '', confirmPassword: '', businessType: ''
+//       fullName: '', phone: '', email: '', password: '', confirmPassword: '', businessType: ''
 //     };
 //   });
 
@@ -525,8 +653,8 @@ const handleResendOtp = async () => {
 //   const handleContinue = async () => {
 //     const newErrors = {
 //       fullName: validateRequired(formData.fullName, 'Full Name'),
-//       mobileNumber: validateMobile(formData.mobileNumber),
-//       emailId: validateEmail(formData.emailId),
+//       phone: validateMobile(formData.phone),
+//       email: validateEmail(formData.email),
 //       password: validatePassword(formData.password),
 //       businessType: validateRequired(formData.businessType, 'Business Type')
 //     };
@@ -561,8 +689,8 @@ const handleResendOtp = async () => {
 //       // 🌟 NEW: Use service instead of direct axios.put
 //       await onboardingService.updateBasicInfo(sellerId, {
 //         fullName: formData.fullName,
-//         mobileNumber: formData.mobileNumber,
-//         emailId: formData.emailId,
+//         phone: formData.phone,
+//         email: formData.email,
 //         businessType: formData.businessType,
 //         ...(formData.password && { password: formData.password })
 //       });
@@ -570,8 +698,8 @@ const handleResendOtp = async () => {
 //       // 🌟 NEW: Use service instead of direct axios.post
 //       const response = await onboardingService.registerBasicInfo({
 //         fullName: formData.fullName,
-//         mobileNumber: formData.mobileNumber,
-//         emailId: formData.emailId,
+//         phone: formData.phone,
+//         email: formData.email,
 //         password: formData.password,
 //         businessType: formData.businessType
 //       });
@@ -642,16 +770,16 @@ const handleResendOtp = async () => {
 //                 <TextField fullWidth name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name" variant="outlined" size="small" error={!!errors.fullName} helperText={errors.fullName} sx={customInputStyles} />
 //               </Box>
 
-//               {/* Mobile Number */}
+//               {/* Phone */}
 //               <Box>
-//                 <StyledInputLabel required>Mobile Number</StyledInputLabel>
-//                 <TextField fullWidth name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} placeholder="10-digit mobile number" variant="outlined" size="small" error={!!errors.mobileNumber} helperText={errors.mobileNumber} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} InputProps={{ endAdornment: ( <InputAdornment position="end"><VerifyButton /></InputAdornment> ), }} />
+//                 <StyledInputLabel required>Phone</StyledInputLabel>
+//                 <TextField fullWidth name="phone" value={formData.phone} onChange={handleInputChange} placeholder="10-digit Phone" variant="outlined" size="small" error={!!errors.phone} helperText={errors.phone} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} InputProps={{ endAdornment: ( <InputAdornment position="end"><VerifyButton /></InputAdornment> ), }} />
 //               </Box>
 
-//               {/* Email ID */}
+//               {/* Email */}
 //               <Box>
-//                 <StyledInputLabel required>Email ID</StyledInputLabel>
-//                 <TextField fullWidth name="emailId" value={formData.emailId} onChange={handleInputChange} placeholder="your.email@example.com" variant="outlined" size="small" error={!!errors.emailId} helperText={errors.emailId} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} InputProps={{ endAdornment: ( <InputAdornment position="end"><VerifyButton /></InputAdornment> ), }} />
+//                 <StyledInputLabel required>Email</StyledInputLabel>
+//                 <TextField fullWidth name="email" value={formData.email} onChange={handleInputChange} placeholder="your.email@example.com" variant="outlined" size="small" error={!!errors.email} helperText={errors.email} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} InputProps={{ endAdornment: ( <InputAdornment position="end"><VerifyButton /></InputAdornment> ), }} />
 //               </Box>
 
 //               {/* Password (Optional in Edit Mode) */}

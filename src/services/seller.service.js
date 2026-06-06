@@ -45,10 +45,12 @@ export const sellerService = {
   toggleProductVisibility: (id) =>
     api.patch(`/products/${id}/toggle-visibility`),
   
-  uploadImage: (formData) =>
-    api.post('/uploads/image', formData, {
+  uploadImage: (formData, type = '') => {
+    const url = type ? `/uploads/image?type=${type}` : '/uploads/image';
+    return api.post(url, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+    });
+  },
 
     getBanners: () => api.get('/banners'),
 

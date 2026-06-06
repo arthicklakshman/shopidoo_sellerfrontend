@@ -18,6 +18,7 @@ import { sellerService } from '../../services/seller.service';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
+import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 
 // ─── Commission hint hook ─────────────────────────────────────────────────────
 function useCommissionHint(price) {
@@ -226,20 +227,25 @@ const CustomSpecsEditor = ({ customSpecs, onChange, onAdd, onRemove }) => (
 const VariantImageUpload = ({ url, onUpload, onRemove }) => {
   const [loading, setLoading] = useState(false);
   const inputId = useMemo(() => `variant-image-upload-${Math.random().toString(36).substr(2, 9)}`, []);
+  const dispatch = useDispatch();
 
   const handleChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setLoading(true);
-    const formData = new FormData();
-    formData.append('image', file);
+
     try {
-      const { data } = await sellerService.uploadImage(formData);
+      const validFile = await validateImage(file, 'product');
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('image', validFile);
+
+      const { data } = await sellerService.uploadImage(formData, 'product');
       onUpload(data.data.url);
     } catch (err) {
-      console.error('Upload failed:', err);
+      dispatch(showToast({ message: getErrorMessage(err), severity: 'error' }));
     } finally {
       setLoading(false);
+      e.target.value = ''; 
     }
   };
 
@@ -332,6 +338,7 @@ const ProductForm = () => {
       }
     });
   }, []);
+
   const [categories, setCategories] = useState([]);
   const [categoryAttributes, setCategoryAttributes] = useState([]);
   const [attributeValues, setAttributeValues] = useState({});
@@ -345,19 +352,33 @@ const ProductForm = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [error, setError] = useState('');
+  const [imageErrs, setImageErrs] = useState([]);
+
+  // Dynamic helper strings for UI rendering
+  const formatBytes = (bytes) => {
+    if (bytes >= 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1).replace('.0', '')} MB`;
+    }
+    return `${Math.round(bytes / 1024)} KB`;
+  };
+
+  const productRules = IMAGE_RULES.product;
+  const productSizeReq = `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`;
+  const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px (1:1 Ratio)`;
 
   // ── Hooks must all be at top level, before any early returns ──
   const { commission } = useCommissionHint(form.price);
 
   const mrpWarning = useMemo(() => {
-  const selling = parseFloat(form.price) || 0;
-  const mrp = parseFloat(form.compare_price) || 0;
-  const comm = commission ?? 0;
-  if (mrp > 0 && mrp <= selling + comm) {
-    return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + Commission ₹${comm})`;
-  }
-  return null;
-}, [form.price, form.compare_price, commission])
+    const selling = parseFloat(form.price) || 0;
+    const mrp = parseFloat(form.compare_price) || 0;
+    const comm = commission ?? 0;
+    if (mrp > 0 && mrp <= selling + comm) {
+      return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + Commission ₹${comm})`;
+    }
+    return null;
+  }, [form.price, form.compare_price, commission]);
+
   const variantAttributes = useMemo(() => categoryAttributes.filter(a => a.is_variant), [categoryAttributes]);
   const colorAttribute = useMemo(() => variantAttributes.find(a => isColorAttributeName(a.name)), [variantAttributes]);
   const sizeAttribute = useMemo(() => variantAttributes.find(a => isSizeLikeAttributeName(a.name)), [variantAttributes]);
@@ -678,31 +699,55 @@ const ProductForm = () => {
     );
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
-    const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
+    if (!files.length) return;
+
+    setImageErrs([]); // Reset errors
+    const totalColorFiles = Object.values(colorFiles).reduce((sum, filesForColor) => sum + filesForColor.length, 0);
     const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = MAX_PRODUCT_IMAGES - totalExistingImages;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+
     if (availableSlots <= 0) {
-      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images only.`, severity: 'error' }));
+      setImageErrs([`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`]);
       e.target.value = '';
       return;
     }
-    const filesToAdd = files.slice(0, availableSlots);
+
+    const filesToProcess = files.slice(0, availableSlots);
+    const validFiles = [];
+    const newErrors = [];
+
     if (files.length > availableSlots) {
-      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed per product.`, severity: 'warning' }));
+      newErrors.push(`Only ${availableSlots} slots remaining. Excess files ignored.`);
     }
-    setNewFiles(prev => [...prev, ...filesToAdd]);
+
+    for (const file of filesToProcess) {
+      try {
+        const validFile = await validateImage(file, 'product');
+        validFiles.push(validFile);
+      } catch (errorMessage) {
+        newErrors.push(`${file.name}: ${errorMessage}`);
+      }
+    }
+
+    if (newErrors.length > 0) setImageErrs(newErrors);
+
+    if (validFiles.length > 0) {
+      setNewFiles((prev) => [...prev, ...validFiles]);
+    }
+    
     e.target.value = '';
   };
 
   const removeNewFile = (index) => setNewFiles(prev => prev.filter((_, i) => i !== index));
 
-  const handleColorFileChange = (color) => (e) => {
+  const handleColorFileChange = (color) => async (e) => {
     const files = Array.from(e.target.files || []);
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
     const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = MAX_PRODUCT_IMAGES - totalExistingImages;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+
     if (!String(color || '').trim()) {
       dispatch(showToast({ message: 'Enter a color name before uploading color images.', severity: 'warning' }));
       e.target.value = '';
@@ -713,11 +758,30 @@ const ProductForm = () => {
       e.target.value = '';
       return;
     }
-    const filesToAdd = files.slice(0, availableSlots);
+
+    const filesToProcess = files.slice(0, availableSlots);
+    const validFiles = [];
+
     if (files.length > availableSlots) {
-      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed per product.`, severity: 'warning' }));
+      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed. Excess files were ignored.`, severity: 'warning' }));
     }
-    setColorFiles(prev => ({ ...prev, [color]: [...(prev[color] || []), ...filesToAdd] }));
+
+    for (const file of filesToProcess) {
+      try {
+        const validFile = await validateImage(file, 'product');
+        validFiles.push(validFile);
+      } catch (errorMessage) {
+        dispatch(showToast({ message: `${file.name}: ${errorMessage}`, severity: 'error' }));
+      }
+    }
+
+    if (validFiles.length > 0) {
+      setColorFiles((prev) => ({
+        ...prev,
+        [color]: [...(prev[color] || []), ...validFiles]
+      }));
+    }
+    
     e.target.value = '';
   };
 
@@ -741,7 +805,6 @@ const ProductForm = () => {
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
 
     if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform Commission.'); return; }
-    if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
@@ -867,690 +930,752 @@ const ProductForm = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ ...formFocusStyles, overflow: 'visible' }}>
-        <Grid container spacing={3} alignItems="flex-start" sx={{ overflow: 'visible' }}>
-          {/* Left — main fields */}
-          <Grid item xs={12} md={8} sx={{ minWidth: 0 }}>
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={700} gutterBottom>Basic Information</Typography>
-                <Divider sx={{ mb: 2 }} />
+      <Box component="form" onSubmit={handleSubmit} sx={formFocusStyles}>
+        <Grid container spacing={3}>
+          {/* Left — main fields inside a custom static scroll wrapper */}
+          <Grid item xs={12} md={8}>
+            <Box
+              sx={{
+                height: { md: 'calc(100vh - 130px)' },
+                overflowY: { md: 'auto' },
+                pr: { md: 1.5 },
+                pb: 2,
+                '&::-webkit-scrollbar': { width: '6px' },
+                '&::-webkit-scrollbar-track': { background: 'transparent' },
+                '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: '4px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
+              }}
+            >
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Basic Information</Typography>
+                  <Divider sx={{ mb: 2 }} />
 
-                <TextField
-                  label="Product Name"
-                  value={form.name}
-                  onChange={handleChange('name')}
-                  fullWidth required
-                  placeholder="e.g. Running Shoes - Blue"
-                  sx={{ mb: 2 }}
-                />
+                  <TextField
+                    label="Product Name"
+                    value={form.name}
+                    onChange={handleChange('name')}
+                    fullWidth required
+                    placeholder="e.g. Running Shoes - Blue"
+                    sx={{ mb: 2 }}
+                  />
 
-                <TextField
-                  label="Description"
-                  value={form.description}
-                  onChange={handleChange('description')}
-                  fullWidth multiline rows={4}
-                  placeholder="Describe your product..."
-                  sx={{ mb: 2 }}
-                />
+                  <TextField
+                    label="Description"
+                    value={form.description}
+                    onChange={handleChange('description')}
+                    fullWidth multiline rows={4}
+                    placeholder="Describe your product..."
+                    sx={{ mb: 2 }}
+                  />
 
-                <Grid container spacing={2}>
-                  {/* ── Selling Price + commission hint ── */}
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Selling Price (₹)"
-                      type="number"
-                      value={form.price}
-                      onChange={handleChange('price')}
-                      fullWidth required
-                      placeholder="0.00"
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                    <CommissionBadge price={form.price} />
-                  </Grid>
-
-                <Grid item xs={12} sm={6}>
-  <TextField
-    label="MRP / Compare Price (₹)"
-    type="number"
-    value={form.compare_price}
-    onChange={handleChange('compare_price')}
-    fullWidth
-    placeholder="0.00"
-    helperText={mrpWarning || "Original price (shown as strikethrough)"}
-    FormHelperTextProps={{ sx: { color: mrpWarning ? '#e65100' : 'text.secondary' } }}
-    inputProps={{ min: 0, step: 0.01 }}
-    error={!!mrpWarning}
-  />
-</Grid>
-
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Stock Quantity"
-                      type="number"
-                      value={form.stock_quantity}
-                      onChange={handleChange('stock_quantity')}
-                      fullWidth
-                      required={isFashionVariantCategory ? colorGroups.length === 0 : variants.length === 0}
-                      disabled={isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0}
-                      placeholder="0"
-                      helperText={(isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) ? 'Automatically calculated from variants' : ''}
-                      inputProps={{ min: 0 }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="SKU"
-                      value={form.sku}
-                      onChange={handleChange('sku')}
-                      fullWidth
-                      placeholder="e.g. SHOE-BLU-42"
-                      helperText="Optional — leave blank to skip"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Product Condition</InputLabel>
-                      <Select
-                        value={form.condition}
-                        label="Product Condition"
-                        onChange={handleChange('condition')}
-                      >
-                        <MenuItem value="new">New</MenuItem>
-                        <MenuItem value="used">Used</MenuItem>
-                        <MenuItem value="refurbished">Refurbished</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-              {/* ── Category and Conditionally Nested Input ── */}
-<Grid item xs={12} sm={6}>
-  <FormControl fullWidth required>
-    <InputLabel id="cat-label">Category</InputLabel>
-    <Select
-      labelId="cat-label"
-      label="Category"
-      value={form.category_id}
-      onChange={(e) => {
-        const val = e.target.value;
-        setForm(p => ({ 
-          ...p, 
-          category_id: val === 'others' ? 'others' : Number(val), 
-          subcategory_id: '', 
-          custom_category: val === 'others' ? p.custom_category : '' 
-        }));
-      }}
-    >
-      {categories.length === 0 ? (
-        <MenuItem disabled value="">No categories available</MenuItem>
-      ) : (
-        categories.filter(c => !c.parent_id).map(c => (
-          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-        ))
-      )}
-      {/* Added explicit "Others" trigger item */}
-      <MenuItem value="others">Others / Not in list</MenuItem>
-    </Select>
-  </FormControl>
-
-  {/* Displays input natively inline ONLY when "Others" is selected */}
-  {form.category_id === 'others' && (
-    <TextField
-      label="Enter custom category name"
-      value={form.custom_category || ''}
-      onChange={(e) => setForm(p => ({ ...p, custom_category: e.target.value }))}
-      fullWidth
-      required
-      placeholder="e.g. Handmade Crafts, Organic Food..."
-      sx={{ mt: 1.5 }}
-      size="small"
-    />
-  )}
-</Grid>
-
-{/* ── Subcategory Swapped into Left Position ── */}
-<Grid item xs={12} sm={6}>
-  <FormControl fullWidth disabled={form.category_id === 'others'}>
-    <InputLabel>Subcategory</InputLabel>
-    <Select
-      value={form.subcategory_id}
-      label="Subcategory"
-      onChange={(e) => setForm({ ...form, subcategory_id: e.target.value })}
-    >
-      <MenuItem value="">Select Subcategory</MenuItem>
-      {categories
-        .filter(c => c.parent_id == form.category_id)
-        .map(sub => (
-          <MenuItem key={sub.id} value={sub.id}>{sub.name}</MenuItem>
-        ))
-      }
-    </Select>
-  </FormControl>
-</Grid>
-
-                  {/* ── HSN Code Field ── */}
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="HSN Code"
-                      value={form.hsn_code || ''}
-                      onChange={handleChange('hsn_code')}
-                      fullWidth
-                      required
-                      placeholder="e.g. 6403, 8471, 1001"
-                      helperText="Harmonized System Nomenclature code"
-                      inputProps={{ maxLength: 8 }}
-                    />
-                  </Grid>
-
-                  {/* ── GST Rate Dropdown ── */}
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>GST Rate (%)</InputLabel>
-                      <Select
-                        value={form.gst_rate || ''}
-                        label="GST Rate (%)"
-                        onChange={handleChange('gst_rate')}
-                      >
-                        <MenuItem value="">Select GST Rate</MenuItem>
-                        <MenuItem value="0">0% — Exempt</MenuItem>
-                        <MenuItem value="3">3%</MenuItem>
-                        <MenuItem value="5">5%</MenuItem>
-                        <MenuItem value="12">12%</MenuItem>
-                        <MenuItem value="18">18%</MenuItem>
-                        <MenuItem value="28">28%</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {/* Package Information */}
-                  <Grid item xs={12}>
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={700}>Package Information</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Provide package weight and dimensions for logistics calculation.
-                      </Typography>
-                      <Divider />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Package Weight (kg)"
-                      type="number"
-                      value={form.weight}
-                      onChange={handleChange('weight')}
-                      fullWidth
-                      placeholder="0.00"
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Package Length (cm)"
-                      type="number"
-                      value={form.length}
-                      onChange={handleChange('length')}
-                      fullWidth
-                      placeholder="0.00"
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Package Breadth (cm)"
-                      type="number"
-                      value={form.breadth}
-                      onChange={handleChange('breadth')}
-                      fullWidth
-                      placeholder="0.00"
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Package Height (cm)"
-                      type="number"
-                      value={form.height}
-                      onChange={handleChange('height')}
-                      fullWidth
-                      placeholder="0.00"
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* Specifications */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={700} gutterBottom>Specifications</Typography>
-                <Divider sx={{ mb: 2 }} />
-                {categoryAttributes.length > 0 ? (
                   <Grid container spacing={2}>
-                    {categoryAttributes
-                      .filter(attribute => !(isFashionVariantCategory && attribute.is_variant))
-                      .map(attribute => (
-                        <Grid item xs={12} sm={attribute.input_type === 'radio' ? 12 : 6} key={attribute.id}>
+                    {/* ── Selling Price + commission hint ── */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Selling Price (₹)"
+                        type="number"
+                        value={form.price}
+                        onChange={handleChange('price')}
+                        fullWidth required
+                        placeholder="0.00"
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                      <CommissionBadge price={form.price} />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="MRP / Compare Price (₹)"
+                        type="number"
+                        value={form.compare_price}
+                        onChange={handleChange('compare_price')}
+                        fullWidth
+                        placeholder="0.00"
+                        helperText={mrpWarning || "Original price (shown as strikethrough)"}
+                        FormHelperTextProps={{ sx: { color: mrpWarning ? '#e65100' : 'text.secondary' } }}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        error={!!mrpWarning}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Stock Quantity"
+                        type="number"
+                        value={form.stock_quantity}
+                        onChange={handleChange('stock_quantity')}
+                        fullWidth
+                        required={isFashionVariantCategory ? colorGroups.length === 0 : variants.length === 0}
+                        disabled={isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0}
+                        placeholder="0"
+                        helperText={(isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) ? 'Automatically calculated from variants' : ''}
+                        inputProps={{ min: 0 }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="SKU"
+                        value={form.sku}
+                        onChange={handleChange('sku')}
+                        fullWidth
+                        placeholder="e.g. SHOE-BLU-42"
+                        helperText="Optional — leave blank to skip"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Product Condition</InputLabel>
+                        <Select
+                          value={form.condition}
+                          label="Product Condition"
+                          onChange={handleChange('condition')}
+                        >
+                          <MenuItem value="new">New</MenuItem>
+                          <MenuItem value="used">Used</MenuItem>
+                          <MenuItem value="refurbished">Refurbished</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* ── Category Selection ── */}
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel id="cat-label">Category</InputLabel>
+                        <Select
+                          labelId="cat-label"
+                          label="Category"
+                          value={form.category_id}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForm(prev => ({
+                              ...prev,
+                              category_id: val,
+                              subcategory_id: '',
+                              custom_category: val === 'other' ? prev.custom_category : '',
+                            }));
+                            setAttributeValues({});
+                            setVariantAttributeValues({});
+                            setVariants([]);
+                            setColorGroups([]);
+                          }}
+                        >
+                          <MenuItem value="">Select Category</MenuItem>
+                          {categories.filter(c => c.depth === 0).map(c => (
+                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                          ))}
+                          <MenuItem value="other">Other (Specify Custom Category)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {form.category_id === 'other' && (
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Specify Category Name"
+                          value={form.custom_category}
+                          onChange={handleChange('custom_category')}
+                          fullWidth required
+                          placeholder="e.g. Handmade Crafts"
+                        />
+                      </Grid>
+                    )}
+
+                    {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel id="subcat-label">Subcategory</InputLabel>
+                          <Select
+                            labelId="subcat-label"
+                            label="Subcategory"
+                            value={form.subcategory_id}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setForm(prev => ({ ...prev, subcategory_id: val }));
+                              setAttributeValues({});
+                              setVariantAttributeValues({});
+                              setVariants([]);
+                              setColorGroups([]);
+                            }}
+                          >
+                            <MenuItem value="">None</MenuItem>
+                            {categories.filter(c => c.parent_id === Number(form.category_id)).map(c => (
+                              <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
+
+                    {/* GST Fields */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="HSN Code"
+                        value={form.hsn_code}
+                        onChange={handleChange('hsn_code')}
+                        fullWidth required
+                        placeholder="e.g. 6404"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel>GST Rate (%)</InputLabel>
+                        <Select
+                          value={form.gst_rate}
+                          label="GST Rate (%)"
+                          onChange={handleChange('gst_rate')}
+                        >
+                          <MenuItem value="">Select GST Rate</MenuItem>
+                          <MenuItem value={0}>0%</MenuItem>
+                          <MenuItem value={5}>5%</MenuItem>
+                          <MenuItem value={12}>12%</MenuItem>
+                          <MenuItem value={18}>18%</MenuItem>
+                          <MenuItem value={28}>28%</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Weight and Dimensions */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Weight (kg)"
+                        type="number"
+                        value={form.weight}
+                        onChange={handleChange('weight')}
+                        fullWidth
+                        placeholder="e.g. 0.5"
+                        inputProps={{ min: 0, step: 0.001 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Dimensions (L x B x H in cm)
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <TextField size="small" placeholder="L" type="number" value={form.length} onChange={handleChange('length')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="B" type="number" value={form.breadth} onChange={handleChange('breadth')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="H" type="number" value={form.height} onChange={handleChange('height')} inputProps={{ min: 0 }} />
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Dynamic Attributes & Specifications */}
+              {categoryAttributes.length > 0 && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>Specifications & Attributes</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Grid container spacing={2.5}>
+                      {categoryAttributes.filter(a => !(isFashionVariantCategory && a.is_variant)).map(attribute => (
+                        <Grid item xs={12} sm={6} key={attribute.id}>
                           {renderAttributeField(attribute)}
                         </Grid>
                       ))}
-                  </Grid>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Select a category to load suggested specifications.
-                  </Typography>
-                )}
+                    </Grid>
 
-                {/* Fashion color+size variants */}
-                {isFashionVariantCategory && (
-                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 1, mb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight={700}>Color Variants</Typography>
-                        <Typography variant="body2" color="text.secondary">Manage fashion stock by color gallery and size rows.</Typography>
-                      </Box>
-                      <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addColorGroup} sx={secondaryButtonStyle}>
-                        Add Color Variant
-                      </Button>
-                    </Box>
+                    {/* Fashion specific variant builder (Color / Size blocks) */}
+                    {isFashionVariantCategory && (
+                      <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="subtitle2" fontWeight={700}>Fashion Variants (Color & Size)</Typography>
+                          <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addColorGroup} sx={secondaryButtonStyle}>
+                            Add Color Group
+                          </Button>
+                        </Box>
 
-                    <Stack spacing={2}>
-                      {colorGroups.map((group, groupIndex) => {
-                        const existingColorImages = images.filter(img => img.color === group.color);
-                        const previewImage = existingColorImages[0]?.image_url;
-                        const colorOptions = colorAttribute.options || [];
-                        const sizeOptions = sizeAttribute.options || [];
-                        const sizeLabel = sizeAttribute?.name || 'Size';
+                        <Stack spacing={3}>
+                          {colorGroups.map((group, groupIndex) => {
+                            const sizeLabel = sizeAttribute?.name || 'Size';
+                            const colorOptions = colorAttribute?.options || [];
+                            const sizeOptions = sizeAttribute?.options || [];
+                            const existingColorImages = images.filter(img => img.color === group.color);
 
-                        return (
-                          <Box key={group.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flex: 1 }}>
-                                <Avatar
-                                  src={previewImage}
-                                  variant="rounded"
-                                  sx={{ width: 56, height: 56, border: '1px solid', borderColor: 'divider' }}
-                                >
-                                  {group.color ? group.color.charAt(0).toUpperCase() : <CloudUploadIcon />}
-                                </Avatar>
-                                {colorOptions.length > 0 ? (
-                                  <FormControl fullWidth>
-                                    <InputLabel>Color Name</InputLabel>
-                                    <Select
-                                      label="Color Name"
-                                      value={group.color}
-                                      onChange={(e) => updateColorGroup(groupIndex, 'color', e.target.value)}
+                            return (
+                              <Box key={group.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                                    <Avatar
+                                      sx={{
+                                        width: 32, height: 32, fontSize: 14, fontWeight: 700,
+                                        bgcolor: group.color || 'grey.300',
+                                        color: group.color ? 'contrastText' : 'inherit'
+                                      }}
                                     >
-                                      <MenuItem value="">Select color</MenuItem>
-                                      {colorOptions.map(option => (
-                                        <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                ) : (
-                                  <TextField
-                                    label="Color Name"
-                                    value={group.color}
-                                    onChange={(e) => updateColorGroup(groupIndex, 'color', e.target.value)}
-                                    fullWidth
-                                    placeholder="Black"
-                                  />
-                                )}
-                              </Box>
-                              <IconButton color="error" onClick={() => removeColorGroup(groupIndex)}>
-                                <DeleteIcon />
-                              </IconButton>
-                            </Box>
-
-                            <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                              Upload {group.color || 'Color'} Images
-                            </Typography>
-
-                            {(existingColorImages.length > 0 || colorFiles[group.color]?.length > 0) && (
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                {existingColorImages.map(img => (
-                                  <Box key={img.id} sx={{ position: 'relative' }}>
-                                    <Box component="img" src={img.image_url} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
-                                    <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
-                                      <DeleteIcon sx={{ fontSize: 14 }} />
-                                    </IconButton>
+                                      {group.color ? group.color.charAt(0).toUpperCase() : <CloudUploadIcon />}
+                                    </Avatar>
+                                    {colorOptions.length > 0 ? (
+                                      <FormControl fullWidth>
+                                        <InputLabel>Color Name</InputLabel>
+                                        <Select
+                                          label="Color Name"
+                                          value={group.color}
+                                          onChange={(e) => updateColorGroup(groupIndex, 'color', e.target.value)}
+                                        >
+                                          <MenuItem value="">Select color</MenuItem>
+                                          {colorOptions.map(option => (
+                                            <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    ) : (
+                                      <TextField
+                                        label="Color Name"
+                                        value={group.color}
+                                        onChange={(e) => updateColorGroup(groupIndex, 'color', e.target.value)}
+                                        fullWidth
+                                        placeholder="Black"
+                                      />
+                                    )}
                                   </Box>
-                                ))}
-                                {(colorFiles[group.color] || []).map((f, i) => (
-                                  <Chip key={`${f.name}-${i}`} label={f.name} size="small" onDelete={() => removeColorFile(group.color, i)} />
-                                ))}
-                              </Box>
-                            )}
-
-                            <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={secondaryButtonStyle}>
-                              Upload Images
-                              <input type="file" hidden multiple accept="image/*" onChange={handleColorFileChange(group.color)} />
-                            </Button>
-
-                            <Box sx={{ mt: 2 }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="body2" fontWeight={700}>{sizeLabel}s</Typography>
-                                <Button size="small" startIcon={<AddIcon />} onClick={() => addSizeToColorGroup(groupIndex)} sx={secondaryButtonStyle}>
-                                  Add {sizeLabel}
-                                </Button>
-                              </Box>
-
-                              {group.sizes.length > 0 ? (
-                                <TableContainer sx={{ overflowX: 'auto' }}>
-                                  <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell sx={{ minWidth: 120 }}>{sizeLabel}</TableCell>
-                                        <TableCell sx={{ minWidth: 110 }}>Stock</TableCell>
-                                        <TableCell sx={{ minWidth: 120 }}>Price (₹)</TableCell>
-                                        <TableCell sx={{ minWidth: 130 }}>Compare (₹)</TableCell>
-                                        <TableCell sx={{ minWidth: 140 }}>SKU</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {group.sizes.map((sizeRow, sizeIndex) => (
-                                        <TableRow key={sizeIndex}>
-                                          <TableCell>
-                                            {sizeOptions.length > 0 ? (
-                                              <FormControl fullWidth size="small">
-                                                <Select
-                                                  value={sizeRow.size}
-                                                  onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
-                                                  displayEmpty
-                                                >
-                                                  <MenuItem value="">{sizeLabel}</MenuItem>
-                                                  {sizeOptions.map(option => (
-                                                    <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
-                                                  ))}
-                                                </Select>
-                                              </FormControl>
-                                            ) : (
-                                              <TextField size="small" placeholder={sizeLabel} value={sizeRow.size} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)} />
-                                            )}
-                                          </TableCell>
-                                          <TableCell>
-                                            <TextField size="small" type="number" value={sizeRow.stock_quantity} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
-                                          </TableCell>
-                                          <TableCell>
-                                            <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
-                                          </TableCell>
-                                          <TableCell>
-                                            <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
-                                          </TableCell>
-                                          <TableCell>
-                                            <TextField size="small" placeholder="SKU" value={sizeRow.sku || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'sku', e.target.value)} />
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            <IconButton color="error" size="small" onClick={() => removeColorGroupSize(groupIndex, sizeIndex)}>
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </TableContainer>
-                              ) : (
-                                <Typography variant="body2" color="text.secondary">No sizes added for this color yet.</Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        );
-                      })}
-
-                      {colorGroups.length === 0 && (
-                        <Typography variant="body2" color="text.secondary">
-                          Add a color variant to create color-specific galleries and size stock.
-                        </Typography>
-                      )}
-                    </Stack>
-                  </Box>
-                )}
-
-                {/* Generic variants */}
-                {!isFashionVariantCategory && categoryAttributes.some(a => a.is_variant) && (
-                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={700}>Product Variants</Typography>
-                      <Button variant="outlined" size="small" onClick={generateVariants} sx={secondaryButtonStyle}>Generate Combinations</Button>
-                    </Box>
-
-                    {variants.length > 0 ? (
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Variant</TableCell>
-                              <TableCell>SKU</TableCell>
-                              <TableCell>Price (₹)</TableCell>
-                              <TableCell>Compare (₹)</TableCell>
-                              <TableCell>Stock</TableCell>
-                              <TableCell>Image</TableCell>
-                              <TableCell align="right">Actions</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {variants.map((variant, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{Object.entries(variant.variant_attributes).map(([k, v]) => `${v}`).join(' / ')}</TableCell>
-                                <TableCell>
-                                  <TextField size="small" placeholder="SKU" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField size="small" type="number" placeholder="Stock" value={variant.stock_quantity} onChange={(e) => updateVariant(idx, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
-                                </TableCell>
-                                <TableCell>
-                                  <VariantImageUpload url={variant.image_url} onUpload={(url) => updateVariant(idx, 'image_url', url)} onRemove={() => updateVariant(idx, 'image_url', '')} />
-                                </TableCell>
-                                <TableCell align="right">
-                                  <IconButton color="error" size="small" onClick={() => setVariants(prev => prev.filter((_, i) => i !== idx))}>
-                                    <DeleteIcon fontSize="small" />
+                                  <IconButton color="error" onClick={() => removeColorGroup(groupIndex)}>
+                                    <DeleteIcon />
                                   </IconButton>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">No variants generated yet.</Typography>
+                                </Box>
+
+                                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                                  Upload {group.color || 'Color'} Images
+                                </Typography>
+
+                                {(existingColorImages.length > 0 || colorFiles[group.color]?.length > 0) && (
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                                    {existingColorImages.map(img => (
+                                      <Box key={img.id} sx={{ position: 'relative' }}>
+                                        <Box component="img" src={img.image_url} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                                        <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
+                                          <DeleteIcon sx={{ fontSize: 14 }} />
+                                        </IconButton>
+                                      </Box>
+                                    ))}
+                                    {(colorFiles[group.color] || []).map((f, i) => (
+                                      <Chip key={`${f.name}-${i}`} label={f.name} size="small" onDelete={() => removeColorFile(group.color, i)} />
+                                    ))}
+                                  </Box>
+                                )}
+
+                                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={secondaryButtonStyle}>
+                                  Upload Images
+                                  <input type="file" hidden multiple accept="image/*" onChange={handleColorFileChange(group.color)} />
+                                </Button>
+
+                                <Box sx={{ mt: 2 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="body2" fontWeight={700}>{sizeLabel}s</Typography>
+                                    <Button size="small" startIcon={<AddIcon />} onClick={() => addSizeToColorGroup(groupIndex)} sx={secondaryButtonStyle}>
+                                      Add {sizeLabel}
+                                    </Button>
+                                  </Box>
+
+                                  {group.sizes.length > 0 ? (
+                                    <TableContainer sx={{ overflowX: 'auto' }}>
+                                      <Table size="small">
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell sx={{ minWidth: 120 }}>{sizeLabel}</TableCell>
+                                            <TableCell sx={{ minWidth: 110 }}>Stock</TableCell>
+                                            <TableCell sx={{ minWidth: 120 }}>Price (₹)</TableCell>
+                                            <TableCell sx={{ minWidth: 130 }}>Compare (₹)</TableCell>
+                                            <TableCell sx={{ minWidth: 140 }}>SKU</TableCell>
+                                            <TableCell align="right">Actions</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {group.sizes.map((sizeRow, sizeIndex) => (
+                                            <TableRow key={sizeIndex}>
+                                              <TableCell>
+                                                {sizeOptions.length > 0 ? (
+                                                  <FormControl fullWidth size="small">
+                                                    <Select
+                                                      value={sizeRow.size}
+                                                      onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
+                                                      displayEmpty
+                                                    >
+                                                      <MenuItem value="">{sizeLabel}</MenuItem>
+                                                      {sizeOptions.map(option => (
+                                                        <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
+                                                      ))}
+                                                    </Select>
+                                                  </FormControl>
+                                                ) : (
+                                                  <TextField size="small" placeholder={sizeLabel} value={sizeRow.size} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)} />
+                                                )}
+                                              </TableCell>
+                                              <TableCell>
+                                                <TextField size="small" type="number" value={sizeRow.stock_quantity} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
+                                              </TableCell>
+                                              <TableCell>
+                                                <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                              </TableCell>
+                                              <TableCell>
+                                                <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                              </TableCell>
+                                              <TableCell>
+                                                <TextField size="small" placeholder="SKU" value={sizeRow.sku || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'sku', e.target.value)} />
+                                              </TableCell>
+                                              <TableCell align="right">
+                                                <IconButton color="error" size="small" onClick={() => removeColorGroupSize(groupIndex, sizeIndex)}>
+                                                  <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </TableContainer>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">No sizes added for this color yet.</Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                            );
+                          })}
+
+                          {colorGroups.length === 0 && (
+                            <Typography variant="body2" color="text.secondary">
+                              Add a color variant to create color-specific galleries and size stock.
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Box>
                     )}
-                  </Box>
-                )}
 
-                <Divider sx={{ my: 2 }} />
-                <CustomSpecsEditor
-                  customSpecs={customSpecs}
-                  onChange={handleCustomSpecChange}
-                  onAdd={() => setCustomSpecs(prev => [...prev, emptyCustomSpec()])}
-                  onRemove={(index) => setCustomSpecs(prev => prev.filter((_, i) => i !== index))}
-                />
-              </CardContent>
-            </Card>
+                    {/* Generic variants */}
+                    {!isFashionVariantCategory && categoryAttributes.some(a => a.is_variant) && (
+                      <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="subtitle2" fontWeight={700}>Product Variants</Typography>
+                          <Button variant="outlined" size="small" onClick={generateVariants} sx={secondaryButtonStyle}>Generate Combinations</Button>
+                        </Box>
 
-            {shippingPreference === 'self' && (
-              <Card sx={{ mb: 3 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Shipping & Delivery</Typography>
-                  <Divider sx={{ mb: 2 }} />
+                        {variants.length > 0 ? (
+                          <TableContainer>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Variant</TableCell>
+                                  <TableCell>SKU</TableCell>
+                                  <TableCell>Price (₹)</TableCell>
+                                  <TableCell>Compare (₹)</TableCell>
+                                  <TableCell>Stock</TableCell>
+                                  <TableCell>Image</TableCell>
+                                  <TableCell align="right">Actions</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {variants.map((variant, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell>{Object.entries(variant.variant_attributes).map(([k, v]) => `${v}`).join(' / ')}</TableCell>
+                                    <TableCell>
+                                      <TextField size="small" placeholder="SKU" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} />
+                                    </TableCell>
+                                    <TableCell>
+                                      <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
+                                    </TableCell>
+                                    <TableCell>
+                                      <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
+                                    </TableCell>
+                                    <TableCell>
+                                      <TextField size="small" type="number" placeholder="Stock" value={variant.stock_quantity} onChange={(e) => updateVariant(idx, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
+                                    </TableCell>
+                                    <TableCell>
+                                      <VariantImageUpload url={variant.image_url} onUpload={(url) => updateVariant(idx, 'image_url', url)} onRemove={() => updateVariant(idx, 'image_url', '')} />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <IconButton color="error" size="small" onClick={() => setVariants(prev => prev.filter((_, i) => i !== idx))}>
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">No variants generated yet.</Typography>
+                        )}
+                      </Box>
+                    )}
 
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={form.delivery_type === 'free'}
-                        onChange={(e) => setForm((prev) => ({
-                          ...prev,
-                          delivery_type: e.target.checked ? 'free' : 'fixed',
-                          delivery_charge: e.target.checked ? '' : prev.delivery_charge,
-                          free_delivery_min_order: e.target.checked ? '' : prev.free_delivery_min_order,
-                        }))}
-                      />
-                    }
-                    label="Free delivery"
-                    sx={{ mb: 1 }}
-                  />
+                    <Divider sx={{ my: 2 }} />
+                    <CustomSpecsEditor
+                      customSpecs={customSpecs}
+                      onChange={handleCustomSpecChange}
+                      onAdd={() => setCustomSpecs((prev) => [...prev, emptyCustomSpec()])}
+                      onRemove={(index) => setCustomSpecs((prev) => prev.filter((_, i) => i !== index))}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
-                  {form.delivery_type !== 'free' && (
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <FormControl fullWidth>
-                          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Delivery Rule</Typography>
-                          <RadioGroup
-                            row
-                            value={form.delivery_type}
-                            onChange={(e) => setForm((prev) => ({ ...prev, delivery_type: e.target.value }))}
-                          >
-                            <FormControlLabel value="fixed" control={<Radio size="small" />} label="Fixed charge" />
-                            <FormControlLabel value="conditional" control={<Radio size="small" />} label="Free above order value" />
-                          </RadioGroup>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          label="Delivery Charge (₹)"
-                          type="number"
-                          value={form.delivery_charge}
-                          onChange={handleChange('delivery_charge')}
-                          fullWidth
-                          inputProps={{ min: 0, step: 0.01 }}
+              {/* Shipping & Delivery card (only for self-shipping) */}
+              {shippingPreference === 'self' && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>Shipping & Delivery</Typography>
+                    <Divider sx={{ mb: 2 }} />
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={form.delivery_type === 'free'}
+                          onChange={(e) => setForm((prev) => ({
+                            ...prev,
+                            delivery_type: e.target.checked ? 'free' : 'fixed',
+                            delivery_charge: e.target.checked ? '' : prev.delivery_charge,
+                            free_delivery_min_order: e.target.checked ? '' : prev.free_delivery_min_order,
+                          }))}
                         />
-                      </Grid>
-                      {form.delivery_type === 'conditional' && (
+                      }
+                      label="Free delivery"
+                      sx={{ mb: 1 }}
+                    />
+
+                    {form.delivery_type !== 'free' && (
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <FormControl fullWidth>
+                            <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Delivery Rule</Typography>
+                            <RadioGroup
+                              row
+                              value={form.delivery_type}
+                              onChange={(e) => setForm((prev) => ({ ...prev, delivery_type: e.target.value }))}
+                            >
+                              <FormControlLabel value="fixed" control={<Radio size="small" />} label="Fixed charge" />
+                              <FormControlLabel value="conditional" control={<Radio size="small" />} label="Free above order value" />
+                            </RadioGroup>
+                          </FormControl>
+                        </Grid>
                         <Grid item xs={12} sm={6}>
                           <TextField
-                            label="Free Delivery Above (Rs)"
+                            label="Delivery Charge (₹)"
                             type="number"
-                            value={form.free_delivery_min_order}
-                            onChange={handleChange('free_delivery_min_order')}
+                            value={form.delivery_charge}
+                            onChange={handleChange('delivery_charge')}
                             fullWidth
                             inputProps={{ min: 0, step: 0.01 }}
                           />
                         </Grid>
-                      )}
-                    </Grid>
-                  )}
-
-                  <TextField
-                    label="Express Delivery Charge (₹)"
-                    type="number"
-                    value={form.express_delivery_charge}
-                    onChange={handleChange('express_delivery_charge')}
-                    fullWidth
-                    sx={{ mt: 2 }}
-                    helperText="Optional faster delivery fee."
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-
-                  {/* Shipping Summary Preview */}
-                  <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Typography variant="body2" fontWeight={700} gutterBottom>Shipping Summary Preview</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Product ₹{Number(form.price || 0).toLocaleString('en-IN')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Commission ₹{commission ?? 0}
-                    </Typography>
-                    <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
-                      Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `₹${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
-                    </Typography>
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      Total ₹{(deliverySummary.total + (commission ?? 0)).toLocaleString('en-IN')}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Product Images */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={700} gutterBottom>Product Images (General)</Typography>
-                <Divider sx={{ mb: 2 }} />
-
-                {images.filter(img => !img.color).length > 0 && (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                    {images.filter(img => !img.color).map(img => (
-                      <Box key={img.id} sx={{ position: 'relative' }}>
-                        <Box component="img" src={img.image_url} sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 1, border: '2px solid', borderColor: img.is_primary ? '#0FB9B1' : 'divider' }} />
-                        <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
-                          <DeleteIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                        {img.is_primary && (
-                          <Chip label="Main" size="small" sx={{ position: 'absolute', bottom: 4, left: 4, height: 18, fontSize: 10, bgcolor: '#0FB9B1', color: '#000' }} />
+                        {form.delivery_type === 'conditional' && (
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Free Delivery Above (₹)"
+                              type="number"
+                              value={form.free_delivery_min_order}
+                              onChange={handleChange('free_delivery_min_order')}
+                              fullWidth
+                              inputProps={{ min: 0, step: 0.01 }}
+                            />
+                          </Grid>
                         )}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
+                      </Grid>
+                    )}
 
-                {newFiles.length > 0 && (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                    {newFiles.map((f, i) => (
-                      <Chip key={i} label={f.name} size="small" onDelete={() => removeNewFile(i)} />
-                    ))}
-                  </Box>
-                )}
+                    <TextField
+                      label="Express Delivery Charge (₹)"
+                      type="number"
+                      value={form.express_delivery_charge}
+                      onChange={handleChange('express_delivery_charge')}
+                      fullWidth
+                      sx={{ mt: 2 }}
+                      helperText="Optional faster delivery fee."
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
 
-                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={secondaryButtonStyle}>
-                  {newFiles.length > 0 ? 'Add More Images' : 'Upload Images'}
-                  <input type="file" hidden multiple accept="image/*" onChange={handleFileChange} />
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  General images not associated with a specific color.
-                </Typography>
-              </CardContent>
-            </Card>
+                    {/* Shipping Summary Preview */}
+                    <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight={700} gutterBottom>Shipping Summary Preview</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Product ₹{Number(form.price || 0).toLocaleString('en-IN')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Commission ₹{commission ?? 0}
+                      </Typography>
+                      <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
+                        Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `₹${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
+                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        Total ₹{(deliverySummary.total + (commission ?? 0)).toLocaleString('en-IN')}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Color-specific galleries */}
-            {!isFashionVariantCategory && uniqueColors.map(color => (
-              <Card key={color} sx={{ mb: 3, border: '1px solid', borderColor: '#0FB9B1' }}>
+              {/* General images gallery */}
+              <Card sx={{ mb: 3 }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography variant="h6" fontWeight={700}>Gallery: {color}</Typography>
-                    <Chip label="Color-specific" size="small" variant="outlined" sx={{ color: '#0FB9B1', borderColor: '#0FB9B1' }} />
-                  </Box>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Product Images (General)</Typography>
                   <Divider sx={{ mb: 2 }} />
 
-                  {images.filter(img => img.color === color).length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                      {images.filter(img => img.color === color).map(img => (
-                        <Box key={img.id} sx={{ position: 'relative' }}>
-                          <Box component="img" src={img.image_url} sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
-                          <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
-                            <DeleteIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, minmax(72px, 1fr))',
+                        gap: 1,
+                        width: { xs: '100%', md: 248 },
+                      }}
+                    >
+                      {Array.from({ length: MAX_PRODUCT_IMAGES }).map((_, index) => {
+                        const generalDbImages = images.filter(img => !img.color);
+                        const preview = index < generalDbImages.length
+                          ? generalDbImages[index].image_url
+                          : index - generalDbImages.length < newFiles.length
+                            ? URL.createObjectURL(newFiles[index - generalDbImages.length])
+                            : null;
 
-                  {colorFiles[color]?.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                      {colorFiles[color].map((f, i) => (
-                        <Chip key={i} label={f.name} size="small" onDelete={() => removeColorFile(color, i)} />
-                      ))}
+                        return (
+                          <Box
+                            key={index}
+                            sx={{
+                              width: '100%',
+                              aspectRatio: '1 / 1',
+                              borderRadius: 2,
+                              border: 1,
+                              borderColor: 'divider',
+                              bgcolor: 'background.default',
+                              overflow: 'hidden',
+                              display: 'grid',
+                              placeItems: 'center',
+                              position: 'relative'
+                            }}
+                          >
+                            {preview ? (
+                              <>
+                                <Box
+                                  component="img"
+                                  src={preview}
+                                  alt={`Product preview ${index + 1}`}
+                                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => {
+                                    if (index < generalDbImages.length) {
+                                      handleDeleteImage(generalDbImages[index].id);
+                                    } else {
+                                      removeNewFile(index - generalDbImages.length);
+                                    }
+                                  }}
+                                  sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
+                                >
+                                  <DeleteIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </>
+                            ) : (
+                              <Typography sx={{ fontSize: 12, color: 'text.disabled', fontWeight: 600 }}>
+                                {index === 0 ? (form.name?.[0]?.toUpperCase() || 'P') : '+'}
+                              </Typography>
+                            )}
+                          </Box>
+                        );
+                      })}
                     </Box>
-                  )}
 
-                  <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={secondaryButtonStyle}>
-                    Upload {color} Images
-                    <input type="file" hidden multiple accept="image/*" onChange={handleColorFileChange(color)} />
-                  </Button>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    Images shown only when "{color}" is selected.
-                  </Typography>
+                    <Stack spacing={1.25} sx={{ flex: 1, width: '100%' }}>
+                      <Button variant="outlined" component="label" sx={{ alignSelf: 'flex-start', ...secondaryButtonStyle }}>
+                        Upload Up To 6 Images
+                        <input
+                          hidden
+                          multiple
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          type="file"
+                          onChange={handleFileChange}
+                        />
+                      </Button>
+
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
+                      </Typography>
+
+                      {imageErrs.map((err, i) => (
+                        <Typography key={i} variant="caption" color="error" sx={{ display: 'block', fontWeight: 600 }}>
+                          {err}
+                        </Typography>
+                      ))}
+
+                      <Typography variant="body2" color="text.secondary">
+                        The first image will be used as the main product image. You can keep selecting files until all 6 slots are filled.
+                      </Typography>
+                    </Stack>
+                  </Stack>
                 </CardContent>
               </Card>
-            ))}
+
+              {/* Color Specific Galleries */}
+              {!isFashionVariantCategory && uniqueColors.map((color) => (
+                <Card key={color} sx={{ mb: 3, border: '1px solid', borderColor: '#0FB9B1' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="h6" fontWeight={700}>Gallery: {color}</Typography>
+                      <Chip label="Color-specific" size="small" variant="outlined" sx={{ color: '#0FB9B1', borderColor: '#0FB9B1' }} />
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* Existing color images */}
+                    {images.filter(img => img.color === color).length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        {images.filter(img => img.color === color).map((img) => (
+                          <Box key={img.id} sx={{ position: 'relative' }}>
+                            <Box
+                              component="img"
+                              src={img.image_url}
+                              sx={{
+                                width: 90, height: 90, objectFit: 'cover', borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            />
+                            <IconButton
+                              size="small" color="error"
+                              onClick={() => handleDeleteImage(img.id)}
+                              sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
+                            >
+                              <DeleteIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+
+                    {/* Newly selected color files */}
+                    {colorFiles[color]?.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                        {colorFiles[color].map((f, i) => (
+                          <Chip
+                            key={i}
+                            label={f.name}
+                            size="small"
+                            onDelete={() => removeColorFile(color, i)}
+                          />
+                        ))}
+                      </Box>
+                    )}
+
+                    <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={secondaryButtonStyle}>
+                      Upload {color} Images
+                      <input
+                        type="file"
+                        hidden
+                        multiple
+                        accept="image/*"
+                        onChange={handleColorFileChange(color)}
+                      />
+                    </Button>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      Images shown only when "{color}" is selected. <br/>
+                      <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
           </Grid>
 
           {/* Right — submit */}
