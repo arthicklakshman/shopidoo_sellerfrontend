@@ -297,7 +297,7 @@ const CommissionBadge = ({ price }) => {
     >
       <InfoOutlinedIcon sx={{ fontSize: 13, color: '#0B8457' }} />
       <Typography fontSize={12} color="#0B8457" fontWeight={700}>
-        Platform commission for this price: ₹{commission}
+        Platform fees for this price: ₹{commission}
       </Typography>
     </Box>
   );
@@ -599,105 +599,162 @@ const ProductForm = () => {
   };
 
   const buildSpecifications = () => {
-    const structured = categoryAttributes.map((attribute, index) => ({
+  const structured = categoryAttributes.map((attribute, index) => {
+    const qtyKey = `__qty__${attribute.id}`;
+    const qtyValue = attributeValues[qtyKey];
+    const baseValue = attributeValues[String(attribute.id)] || '';
+    const finalValue = qtyValue && baseValue
+      ? `${baseValue} × ${qtyValue}`
+      : baseValue;
+
+    return {
       attribute_id: attribute.id,
       name: attribute.name,
-      value: attributeValues[String(attribute.id)] || '',
+      value: finalValue,
       input_type: attribute.input_type,
       unit: attribute.unit || null,
       is_custom: false,
       sort_order: attribute.sort_order ?? index,
-    }));
-    const custom = customSpecs
-      .map((spec, index) => ({
-        name: String(spec.name || '').trim(),
-        value: String(spec.value || '').trim(),
-        is_custom: true,
-        sort_order: categoryAttributes.length + index,
-      }))
-      .filter(spec => spec.name && spec.value);
-    return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
-  };
+    };
+  });
+
+  const custom = customSpecs
+    .map((spec, index) => ({
+      name: String(spec.name || '').trim(),
+      value: String(spec.value || '').trim(),
+      is_custom: true,
+      sort_order: categoryAttributes.length + index,
+    }))
+    .filter(spec => spec.name && spec.value);
+
+  return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
+};
 
   const renderAttributeField = (attribute) => {
-    const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
-    const options = attribute.options || [];
+  const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
+  const options = attribute.options || [];
+  const isQuantityLinked = ['size', 'shoe size', 'volume', 'weight']
+    .includes(attribute.name.toLowerCase());
 
-    if (attribute.is_variant) {
-      const value = variantAttributeValues[attribute.name] || [];
-      if (!options.length) {
-        return (
-          <TextField
-            label={`${label} (Variant)`}
-            value={Array.isArray(value) ? value.join(', ') : value}
-            onChange={(e) => {
-              const values = e.target.value.split(',').map(item => item.trim()).filter(Boolean);
-              setVariantAttributeValues(prev => ({ ...prev, [attribute.name]: values }));
-            }}
-            fullWidth
-            helperText="Enter multiple values separated by commas."
-            required={attribute.is_required}
-          />
-        );
-      }
+  if (attribute.is_variant) {
+    const value = variantAttributeValues[attribute.name] || [];
+    if (!options.length) {
       return (
-        <FormControl fullWidth>
-          <InputLabel>{label} (Variant)</InputLabel>
-          <Select
-            multiple value={value}
-            onChange={handleVariantAttributeChange(attribute.id, attribute.name)}
-            renderValue={selected => selected.join(', ')}
-            label={`${label} (Variant)`}
-          >
-            {options.map(option => (
-              <MenuItem key={option.id} value={option.value}>
-                <Checkbox checked={value.indexOf(option.value) > -1} />
-                <ListItemText primary={option.value} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <TextField
+          label={`${label} (Variant)`}
+          value={Array.isArray(value) ? value.join(', ') : value}
+          onChange={(e) => {
+            const values = e.target.value.split(',').map(item => item.trim()).filter(Boolean);
+            setVariantAttributeValues(prev => ({ ...prev, [attribute.name]: values }));
+          }}
+          fullWidth
+          helperText="Enter multiple values separated by commas."
+          required={attribute.is_required}
+        />
       );
     }
+    return (
+      <FormControl fullWidth>
+        <InputLabel>{label} (Variant)</InputLabel>
+        <Select
+          multiple value={value}
+          onChange={handleVariantAttributeChange(attribute.id, attribute.name)}
+          renderValue={selected => selected.join(', ')}
+          label={`${label} (Variant)`}
+        >
+          {options.map(option => (
+            <MenuItem key={option.id} value={option.value}>
+              <Checkbox checked={value.indexOf(option.value) > -1} />
+              <ListItemText primary={option.value} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    );
+  }
 
-    const value = attributeValues[String(attribute.id)] || '';
+  const value = attributeValues[String(attribute.id)] || '';
+  // quantity key per attribute
+  const qtyKey = `__qty__${attribute.id}`;
+  const qtyValue = attributeValues[qtyKey] || '';
 
-    if (attribute.input_type === 'select') {
-      return (
+  if (attribute.input_type === 'select') {
+    return (
+      <Box>
         <FormControl fullWidth required={attribute.is_required}>
           <InputLabel>{label}</InputLabel>
           <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)}>
             <MenuItem value="">Select {attribute.name}</MenuItem>
-            {options.map(option => <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>)}
+            {options.map(option => (
+              <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
+            ))}
           </Select>
         </FormControl>
-      );
-    }
+        {isQuantityLinked && value && (
+          <TextField
+            label={`Quantity for ${value}`}
+            type="number"
+            value={qtyValue}
+            onChange={(e) =>
+              setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
+            }
+            fullWidth
+            placeholder="e.g. 2"
+            inputProps={{ min: 1 }}
+            sx={{ mt: 1 }}
+            helperText={`How many units of ${value}?`}
+          />
+        )}
+      </Box>
+    );
+  }
 
-    if (attribute.input_type === 'radio') {
-      return (
+  if (attribute.input_type === 'radio') {
+    return (
+      <Box>
         <FormControl required={attribute.is_required}>
           <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>{label}</Typography>
           <RadioGroup row value={value} onChange={handleAttributeChange(attribute.id)}>
             {options.map(option => (
-              <FormControlLabel key={option.id} value={option.value} control={<Radio size="small" />} label={option.value} />
+              <FormControlLabel
+                key={option.id}
+                value={option.value}
+                control={<Radio size="small" />}
+                label={option.value}
+              />
             ))}
           </RadioGroup>
         </FormControl>
-      );
-    }
-
-    return (
-      <TextField
-        label={label}
-        type={attribute.input_type === 'number' ? 'number' : 'text'}
-        value={value}
-        onChange={handleAttributeChange(attribute.id)}
-        fullWidth
-        required={attribute.is_required}
-      />
+        {isQuantityLinked && value && (
+          <TextField
+            label={`Quantity for ${value}`}
+            type="number"
+            value={qtyValue}
+            onChange={(e) =>
+              setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
+            }
+            fullWidth
+            placeholder="e.g. 2"
+            inputProps={{ min: 1 }}
+            sx={{ mt: 1 }}
+            helperText={`How many units of ${value}?`}
+          />
+        )}
+      </Box>
     );
-  };
+  }
+
+  return (
+    <TextField
+      label={label}
+      type={attribute.input_type === 'number' ? 'number' : 'text'}
+      value={value}
+      onChange={handleAttributeChange(attribute.id)}
+      fullWidth
+      required={attribute.is_required}
+    />
+  );
+};
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
