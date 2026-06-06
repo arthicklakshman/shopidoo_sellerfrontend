@@ -1,10 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom'; 
-
-// 🌟 1. Import the image directly from your assets folder
-// (Note: You may need to add or remove a '../' depending on exactly how deep this file is nested!)
-import shopidooLogo from '../../assets/logo_v2.png'; 
+import shopidooLogo from '../../assets/Shopidoo_logo.png'; 
 
 export default function OnboardingHeader({ step = 1 }) {
   return (
