@@ -705,6 +705,18 @@ const SellerReturns = () => {
                     onChange={(e) => setInspectionResult(e.target.value)}
                     margin="normal"
                     variant="filled"
+                    SelectProps={{
+                      MenuProps: {
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left'
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left'
+                        }
+                      }
+                    }}
                   >
                     <MenuItem value="Approve Refund">Approve Refund</MenuItem>
                     <MenuItem value="Reject Refund">Reject Refund</MenuItem>
@@ -836,6 +848,18 @@ const SellerReturns = () => {
                     onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
                     margin="normal"
                     variant="filled"
+                    SelectProps={{
+                      MenuProps: {
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left'
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left'
+                        }
+                      }
+                    }}
                   >
                     <MenuItem value="pending">Pending</MenuItem>
                     <MenuItem value="approved">Approve Return</MenuItem>

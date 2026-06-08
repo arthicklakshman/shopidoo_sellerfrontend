@@ -993,14 +993,8 @@ const ProductForm = () => {
           <Grid item xs={12} md={8}>
             <Box
               sx={{
-                height: { md: 'calc(100vh - 130px)' },
-                overflowY: { md: 'auto' },
                 pr: { md: 1.5 },
                 pb: 2,
-                '&::-webkit-scrollbar': { width: '6px' },
-                '&::-webkit-scrollbar-track': { background: 'transparent' },
-                '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: '4px' },
-                '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
               }}
             >
               <Card sx={{ mb: 3 }}>
@@ -1742,7 +1736,7 @@ const ProductForm = () => {
             md={4}
             sx={{
               position: { xs: 'static', md: 'sticky' },
-              top: 90,
+              top: '80px',
               alignSelf: 'flex-start',
               height: 'fit-content',
             }}

@@ -460,6 +460,7 @@ const Products = () => {
                 color: '#000',
                 boxShadow: 'none',
                 whiteSpace: 'nowrap',
+                marginLeft: { xs: 0, md: 'auto !important' },
                 '&:hover': {
                   background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                   color: '#000',

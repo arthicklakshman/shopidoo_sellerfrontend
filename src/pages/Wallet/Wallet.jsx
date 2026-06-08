@@ -225,8 +225,28 @@ export default function Wallet() {
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
     try {
-      const res = await api.get("/wallet");
-      setWallet(res.data.data);
+      const res = await api.get(`${BASE}/wallet`);
+      
+      let storeName = "";
+      let accountNumber = "";
+      try {
+        const sellerUser = JSON.parse(localStorage.getItem("sellerUser") || "{}");
+        const sellerId = sellerUser?.id;
+        if (sellerId) {
+          const sellerRes = await api.get(`/seller/${sellerId}`);
+          storeName = sellerRes.data?.data?.storeName || sellerRes.data?.data?.name || "";
+          accountNumber = sellerRes.data?.data?.accountNumber || "";
+        }
+      } catch (e) {
+        console.error("Failed to load seller details:", e);
+      }
+
+      setWallet({
+        ...res.data.data,
+        settlement_in_progress: res.data.data?.settlement_in_progress ?? res.data.data?.settlement_balance,
+        storeName,
+        accountNumber,
+      });
     } catch {
       showToast("Failed to load wallet data", "error");
     } finally {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme, alpha } from '@mui/material';
-import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress } from '@mui/material';
+import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress, Menu } from '@mui/material';
 import { sellerService } from '../../services/seller.service';
 import { shipmentService } from '../../services/shipment.service';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -99,6 +99,27 @@ const SELECT_GREEN_SX = {
   bgcolor: 'transparent',
 };
 
+const BUTTON_GREEN_SX = {
+  borderColor: '#0FB9B1',
+  color: '#0FB9B1',
+  fontWeight: 700,
+  borderRadius: '8px',
+  height: 40,
+  textTransform: 'none',
+  bgcolor: 'transparent',
+  border: '1px solid #0FB9B1',
+  '&:hover': {
+    borderColor: '#0B8457',
+    color: '#0B8457',
+    bgcolor: 'rgba(15, 185, 177, 0.04)',
+  },
+  '&.Mui-disabled': {
+    borderColor: '#e0e0e0',
+    color: '#9e9e9e',
+    opacity: 0.7
+  }
+};
+
 const DELIVERY_COLORS = (theme) => ({
   delivered:          { bg: alpha(theme.palette.success.main, 0.1),   color: theme.palette.success.dark },
   cancelled:          { bg: alpha(theme.palette.error.main, 0.1),     color: theme.palette.error.dark },
@@ -146,6 +167,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   const [showManualShipForm, setShowManualShipForm] = useState(false);
   const [manualCourier, setManualCourier] = useState('');
   const [manualTracking, setManualTracking] = useState('');
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const dispatch = useDispatch();
 
   const getShipmentActiveStep = (status) => {
@@ -166,6 +188,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
     setShowManualShipForm(false);
     setManualCourier('');
     setManualTracking('');
+    setStatusMenuAnchor(null);
   }, [order, open]);
 
   if (!order) return null;
@@ -633,24 +656,52 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
           <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, height: 40, ...OUTLINED_GREEN_SX }} onClick={() => generateInvoice(order.rawItem, true)}>
             Download Invoice
           </Button>
-          <FormControl size="small" sx={{ flex: 1 }}>
-            <Select 
-              value="" 
-              displayEmpty 
-              disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0} 
-              onChange={(e) => handleStatusChange(e.target.value)} 
-              IconComponent={KeyboardArrowDownIcon} 
-              sx={{ ...SELECT_GREEN_SX, height: 40 }} 
-              renderValue={() => 'Update Status'}
-            >
-              {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
-                const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
-                return (
-                  <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>{label}</MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
+          <Button 
+            variant="outlined"
+            endIcon={<KeyboardArrowDownIcon sx={{ color: statusMenuAnchor ? '#0B8457' : '#0FB9B1' }} />}
+            disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0} 
+            onClick={(e) => setStatusMenuAnchor(e.currentTarget)} 
+            sx={{ ...BUTTON_GREEN_SX, flex: 1 }}
+          >
+            Update Status
+          </Button>
+          <Menu
+            anchorEl={statusMenuAnchor}
+            open={Boolean(statusMenuAnchor)}
+            onClose={() => setStatusMenuAnchor(null)}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+            slotProps={{
+              paper: {
+                style: {
+                  width: statusMenuAnchor ? statusMenuAnchor.clientWidth : undefined,
+                  marginTop: '4px',
+                }
+              }
+            }}
+          >
+            {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
+              const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
+              return (
+                <MenuItem 
+                  key={status} 
+                  onClick={() => {
+                    handleStatusChange(status);
+                    setStatusMenuAnchor(null);
+                  }} 
+                  sx={{ textTransform: 'capitalize' }}
+                >
+                  {label}
+                </MenuItem>
+              );
+            })}
+          </Menu>
         </Box>
       </DialogContent>
     </Dialog>
