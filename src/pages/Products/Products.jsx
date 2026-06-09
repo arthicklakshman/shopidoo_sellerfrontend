@@ -38,6 +38,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import EmptyState from '../../components/common/EmptyState/EmptyState';
 import api from '../../services/api';
+import { fetchSettingsOnce } from '../../utils/settingsCache';
 
 const PRODUCT_STATUSES = ['pending', 'approved', 'blocked'];
 
@@ -76,37 +77,39 @@ const getStockLabel = (quantity) => {
 };
 
 // ─── Commission hook ──────────────────────────────────────────────────────────
+
+
 function useCommissionMap(products) {
   const [commissionMap, setCommissionMap] = useState({});
 
   useEffect(() => {
     if (!products.length) return;
-    api.get('/settings').then(res => {
-      const raw = res.data?.dataValues || res.data?.data || res.data;
-      let slabs = raw?.commissionSlabs;
-      if (typeof slabs === 'string') {
-        try { slabs = JSON.parse(slabs); } catch { slabs = []; }
-      }
-      if (!Array.isArray(slabs)) return;
+    fetchSettingsOnce()
+      .then(raw => {
+        let slabs = raw?.commissionSlabs;
+        if (typeof slabs === 'string') {
+          try { slabs = JSON.parse(slabs); } catch { slabs = []; }
+        }
+        if (!Array.isArray(slabs)) return;
 
-      const map = {};
-      products.forEach(product => {
-        const p = Number(product.price);
-        const matched = slabs
-          .sort((a, b) => b.minPrice - a.minPrice)
-          .find(s =>
-            p >= Number(s.minPrice) &&
-            (s.maxPrice === null || s.maxPrice === '' || p <= Number(s.maxPrice))
-          );
-        map[product.id] = matched ? Number(matched.commission) : 0;
-      });
-      setCommissionMap(map);
-    }).catch(() => {});
+        const map = {};
+        products.forEach(product => {
+          const p = Number(product.price);
+          const matched = slabs
+            .sort((a, b) => b.minPrice - a.minPrice)
+            .find(s =>
+              p >= Number(s.minPrice) &&
+              (s.maxPrice === null || s.maxPrice === '' || p <= Number(s.maxPrice))
+            );
+          map[product.id] = matched ? Number(matched.commission) : 0;
+        });
+        setCommissionMap(map);
+      })
+      .catch(() => {});
   }, [products]);
 
   return commissionMap;
 }
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Products = () => {
   const navigate = useNavigate();

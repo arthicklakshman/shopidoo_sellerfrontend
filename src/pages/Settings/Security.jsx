@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -7,17 +8,12 @@ import {
   TextField,
   InputLabel,
   Divider,
-  Switch
 } from '@mui/material';
 
-// ✅ Custom Helper Imports
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
 
-// ----------------------------------------------------------------------
-// Styled Components
-// ----------------------------------------------------------------------
 const StyledInputLabel = ({ children }) => (
   <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 600 }}>
     {children}
@@ -45,21 +41,14 @@ const getCustomInputStyles = (isEditing) => ({
   }
 });
 
-// ----------------------------------------------------------------------
-// Main Component
-// ----------------------------------------------------------------------
 export default function Security() {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-
-  const [savedData, setSavedData] = useState({
-    twoFactor: false
-  });
 
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-    twoFactor: savedData.twoFactor
   });
 
   const [errors, setErrors] = useState({});
@@ -69,17 +58,8 @@ export default function Security() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleToggle = (e) => {
-    setForm({ ...form, twoFactor: e.target.checked });
-  };
-
   const handleCancel = () => {
-    setForm({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-      twoFactor: savedData.twoFactor
-    });
+    setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
     setErrors({});
     setIsEditing(false);
   };
@@ -100,19 +80,12 @@ export default function Security() {
         payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
-      payload.twoFactor = form.twoFactor;
 
       const response = await updateSecurityAPI(payload);
       if (response.success) {
-        setSavedData({ twoFactor: form.twoFactor });
-        setForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-          twoFactor: form.twoFactor
-        });
+        setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
         setIsEditing(false);
-        alert("✅ Security updated successfully");
+        alert("✅ Password updated successfully");
       }
     } catch (err) {
       console.error(err);
@@ -121,15 +94,17 @@ export default function Security() {
   };
 
   return (
-    <Card sx={{ 
-      borderRadius: '12px', 
-      border: 1, 
-      borderColor: 'divider', 
+    <Card sx={{
+      borderRadius: '12px',
+      border: 1,
+      borderColor: 'divider',
       boxShadow: 'none',
       maxWidth: '1000px',
       bgcolor: 'background.paper'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+
+        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
             Password & Security
@@ -137,6 +112,7 @@ export default function Security() {
           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
         </Box>
 
+        {/* Password Fields */}
         <Box>
           <StyledInputLabel>Current Password</StyledInputLabel>
           <TextField
@@ -153,12 +129,13 @@ export default function Security() {
             error={!!errors.currentPassword}
             helperText={errors.currentPassword}
           />
+
           <StyledInputLabel>New Password</StyledInputLabel>
           <TextField
             fullWidth
             name="newPassword"
             type="password"
-            value={isEditing && !form.newPassword ? "" : (isEditing ? form.newPassword : "")}
+            value={isEditing ? form.newPassword : ""}
             onChange={handleChange}
             disabled={!isEditing}
             variant="outlined"
@@ -167,12 +144,13 @@ export default function Security() {
             error={!!errors.newPassword}
             helperText={errors.newPassword}
           />
+
           <StyledInputLabel>Confirm New Password</StyledInputLabel>
           <TextField
             fullWidth
             name="confirmPassword"
             type="password"
-            value={isEditing && !form.confirmPassword ? "" : (isEditing ? form.confirmPassword : "")}
+            value={isEditing ? form.confirmPassword : ""}
             onChange={handleChange}
             disabled={!isEditing}
             variant="outlined"
@@ -183,34 +161,44 @@ export default function Security() {
           />
         </Box>
 
+        {/* Save/Cancel Buttons */}
+        {isEditing && (
+          <SaveCancelButtons
+            onCancel={handleCancel}
+            onSave={handleSubmit}
+            saveText="Update Password"
+          />
+        )}
+
         <Divider sx={{ my: 4, borderColor: 'divider' }} />
 
-        <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 2 }}>
-            Two-Factor Authentication
-          </Typography>
-
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ pr: 2 }}>
-              <Typography sx={{ color: 'text.primary', fontSize: '14px', fontWeight: 500, mb: 0.5 }}>
-                Enable two-factor authentication for added security
-              </Typography>
-              <Typography sx={{ color: 'text.secondary', fontSize: '13px' }}>
-                You'll need to enter a code from your phone in addition to your password
-              </Typography>
-            </Box>
-
-            <Switch
-              checked={form.twoFactor}
-              onChange={handleToggle}
-              disabled={!isEditing}
-            />
+        {/* Delete Account */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+              Delete Account
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', fontSize: '13px' }}>
+              Permanently delete your account and all your data
+            </Typography>
           </Box>
+          <button
+            onClick={() => navigate('/delete-account')}
+            style={{
+              background: '#d32f2f',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px'
+            }}
+          >
+            Delete Account
+          </button>
         </Box>
 
-        {isEditing && (
-            <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} saveText="Update Password" />
-        )}
       </CardContent>
     </Card>
   );

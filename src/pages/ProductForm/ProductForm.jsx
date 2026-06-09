@@ -18,7 +18,7 @@ import { sellerService } from '../../services/seller.service';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
-
+import { fetchSettingsOnce } from '../../utils/settingsCache';
 // ─── Commission hint hook ─────────────────────────────────────────────────────
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
@@ -30,9 +30,8 @@ function useCommissionHint(price) {
       return;
     }
     setLoading(true);
-    api.get('/settings')
-      .then(res => {
-        const raw = res.data?.dataValues || res.data?.data || res.data;
+    fetchSettingsOnce()
+      .then(raw => {
         let slabs = raw?.commissionSlabs;
         if (typeof slabs === 'string') {
           try { slabs = JSON.parse(slabs); } catch { slabs = []; }
@@ -53,6 +52,8 @@ function useCommissionHint(price) {
 
   return { commission, loading };
 }
+
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const emptyForm = {
@@ -186,6 +187,21 @@ const isSizeLikeAttributeName = (name) => {
 };
 
 const emptyCustomSpec = () => ({ name: '', value: '', is_custom: true });
+
+const VOLUME_UNITS = ['ml', 'L'];
+const WEIGHT_UNITS = ['g', 'kg'];
+
+const isVolumeAttribute = (name) => {
+  const n = normalizeCategoryText(name);
+  return n === 'volume' || n.includes('volume') || n.includes('capacity');
+};
+
+const isWeightAttribute = (name) => {
+  const n = normalizeCategoryText(name);
+  return n === 'weight' || n.includes('weight');
+};
+
+
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 const CustomSpecsEditor = ({ customSpecs, onChange, onAdd, onRemove }) => (
@@ -378,7 +394,7 @@ const ProductForm = () => {
   free_delivery_min_order: p.free_delivery_min_order || '',
   express_delivery_charge: p.express_delivery_charge || '',
   hsn_code: p.hsn_code || '',        // ✅ added
-  gst_rate: p.gst_rate || '',        // ✅ added
+  gst_rate: p.gst_rate != null ? String(p.gst_rate) : '',        // ✅ added
   custom_category: p.custom_category || '',  // ✅ added
 });
           setAttributeValues(
@@ -544,10 +560,14 @@ const ProductForm = () => {
 
   const buildSpecifications = () => {
   const structured = categoryAttributes.map((attribute, index) => {
-    const qtyKey = `__qty__${attribute.id}`;
+    const isVolOrWt = isVolumeAttribute(attribute.name) || isWeightAttribute(attribute.name);
+    // Volume/weight store combined value like "500 ml" or "250 g" directly
+    // Size/shoe-size use the old "value × qty" pattern
+    const qtyKey   = `__qty__${attribute.id}`;
     const qtyValue = attributeValues[qtyKey];
     const baseValue = attributeValues[String(attribute.id)] || '';
-    const finalValue = qtyValue && baseValue
+    const isQtyLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
+    const finalValue = (!isVolOrWt && isQtyLinked && qtyValue && baseValue)
       ? `${baseValue} × ${qtyValue}`
       : baseValue;
 
@@ -574,12 +594,11 @@ const ProductForm = () => {
   return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
 };
 
-  const renderAttributeField = (attribute) => {
+const renderAttributeField = (attribute) => {
   const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
   const options = attribute.options || [];
-  const isQuantityLinked = ['size', 'shoe size', 'volume', 'weight']
-    .includes(attribute.name.toLowerCase());
 
+  // ── Variant attributes (multi-select / free text) ──────────────────────────
   if (attribute.is_variant) {
     const value = variantAttributeValues[attribute.name] || [];
     if (!options.length) {
@@ -617,10 +636,116 @@ const ProductForm = () => {
     );
   }
 
+  // ── Volume: quantity input + ml/L unit dropdown ───────────────────────────
+  if (isVolumeAttribute(attribute.name)) {
+    const qtyKey = `__qty__${attribute.id}`;
+    const unitKey = `__unit__${attribute.id}`;
+    const qtyValue = attributeValues[qtyKey] || '';
+    const unitValue = attributeValues[unitKey] || 'ml';
+
+    // Combine into the spec value on every change
+    const syncValue = (qty, unit) => {
+      const combined = qty ? `${qty} ${unit}` : '';
+      setAttributeValues(prev => ({
+        ...prev,
+        [String(attribute.id)]: combined,
+        [qtyKey]: qty,
+        [unitKey]: unit,
+      }));
+    };
+
+    return (
+      <Box>
+        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+          {attribute.name}{attribute.is_required ? ' *' : ''}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <TextField
+            placeholder="e.g. 500"
+            type="number"
+            value={qtyValue}
+            onChange={(e) => syncValue(e.target.value, unitValue)}
+            inputProps={{ min: 0, step: 0.1 }}
+            sx={{ flex: 1 }}
+            required={attribute.is_required}
+            size="medium"
+          />
+          <FormControl sx={{ minWidth: 90 }}>
+            <Select
+              value={unitValue}
+              onChange={(e) => syncValue(qtyValue, e.target.value)}
+              size="medium"
+            >
+              {VOLUME_UNITS.map(u => (
+                <MenuItem key={u} value={u}>{u}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          Enter quantity and select unit (ml or L)
+        </Typography>
+      </Box>
+    );
+  }
+
+  // ── Weight: quantity input + g/kg unit dropdown ───────────────────────────
+  if (isWeightAttribute(attribute.name)) {
+    const qtyKey = `__qty__${attribute.id}`;
+    const unitKey = `__unit__${attribute.id}`;
+    const qtyValue = attributeValues[qtyKey] || '';
+    const unitValue = attributeValues[unitKey] || 'g';
+
+    const syncValue = (qty, unit) => {
+      const combined = qty ? `${qty} ${unit}` : '';
+      setAttributeValues(prev => ({
+        ...prev,
+        [String(attribute.id)]: combined,
+        [qtyKey]: qty,
+        [unitKey]: unit,
+      }));
+    };
+
+    return (
+      <Box>
+        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+          {attribute.name}{attribute.is_required ? ' *' : ''}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <TextField
+            placeholder="e.g. 250"
+            type="number"
+            value={qtyValue}
+            onChange={(e) => syncValue(e.target.value, unitValue)}
+            inputProps={{ min: 0, step: 0.1 }}
+            sx={{ flex: 1 }}
+            required={attribute.is_required}
+            size="medium"
+          />
+          <FormControl sx={{ minWidth: 90 }}>
+            <Select
+              value={unitValue}
+              onChange={(e) => syncValue(qtyValue, e.target.value)}
+              size="medium"
+            >
+              {WEIGHT_UNITS.map(u => (
+                <MenuItem key={u} value={u}>{u}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          Enter quantity and select unit (g or kg)
+        </Typography>
+      </Box>
+    );
+  }
+
+  // ── Standard select ───────────────────────────────────────────────────────
   const value = attributeValues[String(attribute.id)] || '';
-  // quantity key per attribute
   const qtyKey = `__qty__${attribute.id}`;
   const qtyValue = attributeValues[qtyKey] || '';
+  const isQuantityLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
 
   if (attribute.input_type === 'select') {
     return (
@@ -669,21 +794,6 @@ const ProductForm = () => {
             ))}
           </RadioGroup>
         </FormControl>
-        {isQuantityLinked && value && (
-          <TextField
-            label={`Quantity for ${value}`}
-            type="number"
-            value={qtyValue}
-            onChange={(e) =>
-              setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
-            }
-            fullWidth
-            placeholder="e.g. 2"
-            inputProps={{ min: 1 }}
-            sx={{ mt: 1 }}
-            helperText={`How many units of ${value}?`}
-          />
-        )}
       </Box>
     );
   }
