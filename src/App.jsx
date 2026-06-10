@@ -16,6 +16,11 @@ const App = () => {
         <GlobalStyles styles={{ 
           'html': {
             zoom: '0.8',
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* IE and Edge */
+          },
+          'html::-webkit-scrollbar, body::-webkit-scrollbar': {
+            display: 'none', /* Chrome, Safari, Opera */
           },
           'html, body': { 
             overflowX: 'clip',
