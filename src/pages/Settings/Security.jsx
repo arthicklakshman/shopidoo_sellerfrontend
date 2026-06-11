@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -96,6 +97,7 @@ const VerifyButton = ({ onClick, isVerified, disabled }) => (
 // Main Component
 // ----------------------------------------------------------------------
 export default function Security() {
+  const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -117,7 +119,6 @@ export default function Security() {
   const [form, setForm] = useState({
     newPassword: "",
     confirmPassword: "",
-    twoFactor: savedData.twoFactor
   });
 
   const [errors, setErrors] = useState({});
@@ -129,10 +130,6 @@ export default function Security() {
     setForm({ ...form, [e.target.name]: e.target.value });
     // Clear errors as user types
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
-  };
-
-  const handleToggle = (e) => {
-    setForm({ ...form, twoFactor: e.target.checked });
   };
 
   const handleCancel = () => {
@@ -190,7 +187,7 @@ export default function Security() {
         });
 
         setIsEditing(false);
-        alert("✅ Security updated successfully");
+        alert("✅ Password updated successfully");
       }
 
     } catch (err) {
@@ -220,7 +217,8 @@ export default function Security() {
       fontFamily: 'sans-serif'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        
+
+        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
             Password & Security
@@ -381,11 +379,22 @@ export default function Security() {
               }}
             />
           </Box>
+          <button
+            onClick={() => navigate('/delete-account')}
+            style={{
+              background: '#d32f2f',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px'
+            }}
+          >
+            Delete Account
+          </button>
         </Box>
-
-        {isEditing && (
-            <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} saveText="Save Changes" />
-        )}
 
       </CardContent>
 
