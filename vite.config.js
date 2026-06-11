@@ -6,9 +6,9 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
-      '/api': { target: 'http://localhost:5001', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:5001', changeOrigin: true },
-      '/mock': { target: 'http://localhost:5001', changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:5001', changeOrigin: true },
+      '/uploads': { target: 'http://127.0.0.1:5001', changeOrigin: true },
+      '/mock': { target: 'http://127.0.0.1:5001', changeOrigin: true },
     },
   },
   resolve: { alias: { '@': '/src' } },
