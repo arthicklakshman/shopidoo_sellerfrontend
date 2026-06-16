@@ -971,6 +971,12 @@ const renderAttributeField = (attribute) => {
     const submittedVariants = isFashionVariantCategory ? flattenedFashionVariants : variants;
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
 
+    const totalImagesCount = images.length + newFiles.length + totalColorFiles;
+    if (totalImagesCount === 0) {
+      setError('Please upload at least one product image.');
+      return;
+    }
+
     if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform Commission.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
@@ -1222,6 +1228,21 @@ const renderAttributeField = (attribute) => {
                             setVariants([]);
                             setColorGroups([]);
                           }}
+                          MenuProps={{
+                            anchorOrigin: {
+                              vertical: 'bottom',
+                              horizontal: 'left'
+                            },
+                            transformOrigin: {
+                              vertical: 'top',
+                              horizontal: 'left'
+                            },
+                            PaperProps: {
+                              style: {
+                                maxHeight: 300
+                              }
+                            }
+                          }}
                         >
                           <MenuItem value="">Select Category</MenuItem>
                           {categories.filter(c => c.depth === 0).map(c => (
@@ -1259,6 +1280,21 @@ const renderAttributeField = (attribute) => {
                               setVariantAttributeValues({});
                               setVariants([]);
                               setColorGroups([]);
+                            }}
+                            MenuProps={{
+                              anchorOrigin: {
+                                vertical: 'bottom',
+                                horizontal: 'left'
+                              },
+                              transformOrigin: {
+                                vertical: 'top',
+                                horizontal: 'left'
+                              },
+                              PaperProps: {
+                                style: {
+                                  maxHeight: 300
+                                }
+                              }
                             }}
                           >
                             <MenuItem value="">None</MenuItem>

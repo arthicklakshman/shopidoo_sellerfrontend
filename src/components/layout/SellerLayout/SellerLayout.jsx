@@ -405,9 +405,11 @@ useEffect(() => {
         }}
       >
         <AppBar
-          position={isProductFormPage ? 'sticky' : 'static'}
+          position="fixed"
           elevation={0}
           sx={{
+            width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+            ml: { md: `${DRAWER_WIDTH}px` },
             top: 0,
             zIndex: theme.zIndex.drawer + 1,
             bgcolor: 'background.paper',
@@ -757,6 +759,7 @@ useEffect(() => {
             flex: 1,
             overflow: isProductFormPage ? 'visible' : 'auto',
             p: { xs: 2, md: 3 },
+            pt: { xs: '72px !important', md: '88px !important' },
           }}
         >
           <Outlet />
