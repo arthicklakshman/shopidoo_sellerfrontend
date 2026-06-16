@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -113,15 +113,28 @@ export default function Security() {
 
   // We mainly use savedData to remember the 2FA state if they cancel
   const [savedData, setSavedData] = useState({
-    twoFactor: false
+    twoFactor: user?.twoFactor || false
   });
 
   const [form, setForm] = useState({
     newPassword: "",
     confirmPassword: "",
+    twoFactor: user?.twoFactor || false
   });
 
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (user) {
+      setSavedData({
+        twoFactor: user.twoFactor || false
+      });
+      setForm(prev => ({
+        ...prev,
+        twoFactor: user.twoFactor || false
+      }));
+    }
+  }, [user]);
 
   // ---------------- HANDLERS ----------------
 
@@ -130,6 +143,13 @@ export default function Security() {
     setForm({ ...form, [e.target.name]: e.target.value });
     // Clear errors as user types
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
+  };
+
+  const handleToggle = () => {
+    setForm(prev => ({
+      ...prev,
+      twoFactor: !prev.twoFactor
+    }));
   };
 
   const handleCancel = () => {
@@ -187,7 +207,7 @@ export default function Security() {
         });
 
         setIsEditing(false);
-        alert("✅ Password updated successfully");
+        alert(isPasswordChange ? "✅ Password updated successfully" : "✅ Security settings updated successfully");
       }
 
     } catch (err) {
@@ -396,6 +416,9 @@ export default function Security() {
           </button>
         </Box>
 
+        {isEditing && (
+          <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} />
+        )}
       </CardContent>
 
       {/* 🌟 OTP MODAL */}

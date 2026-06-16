@@ -543,7 +543,7 @@ const Products = () => {
 
                       {/* Category */}
                       <TableCell sx={tableBodyCellSx}>
-                        <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{product.category?.name || '-'}</Typography>
+                        <Typography sx={{ fontSize: 13, color: 'text.primary' }}>{product.category?.name || product.custom_category || '-'}</Typography>
                         {product.subcategory?.name && (
                           <Typography sx={{ mt: 0.25, fontSize: 12, color: 'text.secondary' }}>
                             {product.subcategory.name}

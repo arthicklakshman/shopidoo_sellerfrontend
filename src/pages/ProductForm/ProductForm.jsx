@@ -439,7 +439,7 @@ const ProductForm = () => {
             stock_quantity: p.stock_quantity ?? '',
             sku: p.sku || '',
             condition: p.condition || 'new',
-            category_id: p.category_id != null ? Number(p.category_id) : '',
+            category_id: p.category_id != null ? Number(p.category_id) : (p.custom_category ? 'other' : ''),
             subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
             delivery_type: p.delivery_type || 'free',
             delivery_charge: p.delivery_charge || '',
@@ -484,7 +484,7 @@ const ProductForm = () => {
 
   useEffect(() => {
     const categoryId = form.subcategory_id || form.category_id;
-    if (!categoryId) { setCategoryAttributes([]); return; }
+    if (!categoryId || categoryId === 'other') { setCategoryAttributes([]); return; }
     sellerService.getCategoryAttributes(categoryId)
       .then(({ data }) => setCategoryAttributes(data.data || []))
       .catch(() => setCategoryAttributes([]));
@@ -1014,7 +1014,7 @@ const renderAttributeField = (attribute) => {
         stock_quantity: parseInt(form.stock_quantity),
         sku: form.sku.trim() || null,
         condition: form.condition,
-        category_id: parseInt(form.category_id),
+        category_id: form.category_id === 'other' ? 'other' : parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
         weight: form.weight ? parseFloat(form.weight) : null,
         length: form.length ? parseFloat(form.length) : null,

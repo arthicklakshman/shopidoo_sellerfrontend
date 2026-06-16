@@ -24,7 +24,7 @@ export default function OnboardingHeader({ step = 1 }) {
         {/* Logo */}
         <Box 
           component={RouterLink} 
-          to="/" 
+          to="/login" 
           sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
         >
           {/* 🌟 2. Use the imported variable name here instead of a hardcoded string */}

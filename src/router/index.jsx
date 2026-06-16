@@ -34,9 +34,18 @@ const DeleteAccount = lazy(() => import('../pages/deleteaccount/DeleteAccount'))
 
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth);
+  const { isAuthenticated, user } = useSelector((s) => s.auth || {});
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
+  
+  if (user) {
+    if (user.seller_status === 'pending' || user.seller_status === 'rejected') {
+      return <Navigate to="/onboarding/success" replace />;
+    }
+    if (user.seller_status !== 'approved') {
+      return <Navigate to="/login" replace />;
+    }
+  }
   
   return children;
 };
