@@ -6,8 +6,6 @@ import {
 // ✅ Custom Helper Imports
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { getPickupAddressAPI, updatePickupAddressAPI } from '../../features/settings/settings.service';
-import { useDispatch } from 'react-redux';
-import { showToast } from '../../features/ui/uiSlice';
 
 const StyledInputLabel = ({ children }) => (
   <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 600 }}>{children}</InputLabel>
@@ -24,7 +22,6 @@ const getCustomInputStyles = (isEditing) => ({
 });
 
 export default function PickupAddress() {
-  const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
 
   const [savedData, setSavedData] = useState({
@@ -90,11 +87,11 @@ export default function PickupAddress() {
       if (response.success) {
         setSavedData({ ...form });
         setIsEditing(false);
-        dispatch(showToast({ message: "Pickup address updated successfully", severity: "success" }));
+        alert("Pickup address updated successfully");
       }
     } catch (err) {
       console.error(err);
-      dispatch(showToast({ message: err.response?.data?.message || "Something went wrong.", severity: "error" }));
+      alert(err.response?.data?.message || "Something went wrong.");
     }
   };
 

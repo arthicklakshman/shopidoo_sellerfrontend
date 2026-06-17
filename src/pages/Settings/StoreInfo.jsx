@@ -52,14 +52,11 @@ const getCustomInputStyles = (isEditing) => ({
     }
 });
 
-import { useDispatch } from 'react-redux';
-import { showToast } from '../../features/ui/uiSlice';
-
 // ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
 export default function StoreInfo() {
-    const dispatch = useDispatch();
+
     const [isEditing, setIsEditing] = useState(false);
     const [logo, setLogo] = useState(null);
     const [logoError, setLogoError] = useState("");
@@ -185,11 +182,11 @@ export default function StoreInfo() {
             if (response.data) {
                 setSavedData({ ...form, logo });
                 setIsEditing(false);
-                dispatch(showToast({ message: "Store info saved successfully!", severity: "success" }));
+                alert("Saved successfully!");
             }
         } catch (err) {
             console.error("Save failed:", err);
-            dispatch(showToast({ message: err.response?.data?.message || "Something went wrong.", severity: "error" }));
+            alert(err.response?.data?.message || "Something went wrong.");
         }
     };
 
@@ -231,9 +228,11 @@ export default function StoreInfo() {
                             fullWidth
                             name="email"
                             value={form.email}
-                            disabled
-                            sx={getCustomInputStyles(false)}
-                      
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            sx={getCustomInputStyles(isEditing)}
+                            error={!!errors.email}
+                            helperText={errors.email}
                         />
                     </Grid>
 
@@ -259,9 +258,11 @@ export default function StoreInfo() {
                             fullWidth
                             name="phone"
                             value={form.phone}
-                            disabled
-                            sx={getCustomInputStyles(false)}
-                           
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            sx={getCustomInputStyles(isEditing)}
+                            error={!!errors.phone}
+                            helperText={errors.phone}
                         />
                     </Grid>
 

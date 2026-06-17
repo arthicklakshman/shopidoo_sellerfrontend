@@ -15,8 +15,6 @@ import {
 import { getBankDetailsAPI, updateBankDetailsAPI } from '../../features/settings/settings.service';
 import { findBankName } from '../../utils/bankHelpers';
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
-import { useDispatch } from 'react-redux';
-import { showToast } from '../../features/ui/uiSlice';
 
 // ----------------------------------------------------------------------
 // Styled Components
@@ -52,7 +50,6 @@ const getCustomInputStyles = (isEditing) => ({
 // ----------------------------------------------------------------------
 export default function BankDetails() {
   const theme = useTheme();
-  const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
 
   const [savedData, setSavedData] = useState({
@@ -114,11 +111,11 @@ export default function BankDetails() {
       if (response.success) {
         setSavedData({ ...form });
         setIsEditing(false);
-        dispatch(showToast({ message: "Bank details updated successfully", severity: "success" }));
+        alert("Bank details updated successfully");
       }
     } catch (err) {
       console.error(err);
-      dispatch(showToast({ message: err.response?.data?.message || "Something went wrong.", severity: "error" }));
+      alert(err.response?.data?.message || "Something went wrong.");
     }
   };
 
