@@ -37,7 +37,7 @@ const StepItem = ({ num, title, desc }) => (
     <Avatar sx={{
       width: 24,
       height: 24,
-      bgcolor: '#2563eb', // Blue
+      bgcolor: '#0B8457', // Brand Teal
       fontSize: '12px',
       fontWeight: 700,
       mt: 0.5
@@ -86,7 +86,7 @@ export default function RegistrationSuccess() {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#f8fafc', // Very light blue/gray background
+      backgroundColor: '#f8fafc',
       fontFamily: 'sans-serif',
       position: 'relative',
       overflow: 'hidden',
@@ -141,7 +141,7 @@ export default function RegistrationSuccess() {
             <Box sx={{
               width: 90,
               height: 90,
-              backgroundColor: '#d1fae5', // Light green outer circle
+              backgroundColor: '#e0f7f6', // Brand Mint inner circle
               borderRadius: '50%',
               display: 'flex',
               justifyContent: 'center',
@@ -149,13 +149,13 @@ export default function RegistrationSuccess() {
               mx: 'auto',
               mb: 3
             }}>
-              <CheckCircleIcon sx={{ fontSize: 55, color: '#10b981' }} />
+              <CheckCircleIcon sx={{ fontSize: 55, color: '#0B8457' }} /> {/* Brand Teal */}
             </Box>
 
             <Typography variant="h4" sx={{
               fontWeight: 800,
               mb: 1.5,
-              background: 'linear-gradient(to right, #3b82f6, #a855f7)',
+              background: 'linear-gradient(to right, #0B8457, #059669)', // Teal to Emerald Gradient
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               lineHeight: 1.3
@@ -172,32 +172,32 @@ export default function RegistrationSuccess() {
           <Grid container spacing={2} sx={{ mb: 5 }}>
             <Grid item xs={12} sm={4}>
               <Box sx={{
-                backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px',
+                backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: '12px',
                 p: 2.5, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'
               }}>
-                <Typography sx={{ color: '#1d4ed8', fontSize: '24px', fontWeight: 700, mb: 1 }}>48h</Typography>
+                <Typography sx={{ color: '#0B8457', fontSize: '24px', fontWeight: 700, mb: 1 }}>48h</Typography>
                 <Typography sx={{ color: '#64748b', fontSize: '12px' }}>Estimated Review Time</Typography>
               </Box>
             </Grid>
             <Grid item xs={12} sm={4}>
               <Box sx={{
-                backgroundColor: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px',
+                backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: '12px',
                 p: 2.5, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'
               }}>
-                <CheckOutlinedIcon sx={{ color: '#8b5cf6', fontSize: 28, mx: 'auto', mb: 1 }} />
+                <CheckOutlinedIcon sx={{ color: '#0B8457', fontSize: 28, mx: 'auto', mb: 1 }} />
                 <Typography sx={{ color: '#64748b', fontSize: '12px' }}>Documents Received</Typography>
               </Box>
             </Grid>
             <Grid item xs={12} sm={4}>
               <Box sx={{
-                backgroundColor: '#fdf2f8', border: '1px solid #fbcfe8', borderRadius: '12px',
+                backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: '12px',
                 p: 2.5, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center'
               }}>
                 <Box sx={{
-                  backgroundColor: '#e0e7ff', width: 32, height: 24, borderRadius: '4px', mx: 'auto', mb: 1.5,
+                  backgroundColor: '#e0f7f6', width: 32, height: 24, borderRadius: '4px', mx: 'auto', mb: 1.5,
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  <Typography sx={{ color: '#4f46e5', fontSize: '12px', fontWeight: 700 }}>@</Typography>
+                  <Typography sx={{ color: '#0B8457', fontSize: '12px', fontWeight: 700 }}>@</Typography>
                 </Box>
                 <Typography sx={{ color: '#64748b', fontSize: '12px' }}>Email Confirmation Sent</Typography>
               </Box>
@@ -260,15 +260,15 @@ export default function RegistrationSuccess() {
               Questions? Need help?
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
-              <Button size="small" startIcon={<PhoneInTalkOutlinedIcon fontSize="small" />} sx={{ color: '#e11d48', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-                Call Support
-              </Button>
-              <Button size="small" startIcon={<ChatBubbleOutlineIcon fontSize="small" />} sx={{ color: '#16a34a', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-                WhatsApp Us
-              </Button>
-              <Button size="small" startIcon={<MailOutlinedIcon fontSize="small" />} sx={{ color: '#8b5cf6', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-                Email Help
-              </Button>
+             <Button size="small" startIcon={<PhoneInTalkOutlinedIcon fontSize="small" />} sx={{ color: '#e11d48', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
+               Call Support
+           </Button>
+             <Button size="small" startIcon={<ChatBubbleOutlineIcon fontSize="small" />} sx={{ color: '#16a34a', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
+               WhatsApp Us
+             </Button>
+             <Button size="small" startIcon={<MailOutlinedIcon fontSize="small" />} sx={{ color: '#8b5cf6', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
+               Email Help
+               </Button>
             </Box>
           </Box>
 
@@ -277,3 +277,5 @@ export default function RegistrationSuccess() {
     </Box>
   );
 }
+
+

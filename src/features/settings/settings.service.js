@@ -78,19 +78,11 @@ export const updatePickupAddressAPI = async (form) => {
 };
 
 export const updateSecurityAPI = async (payload) => {
-  if (payload.newPassword) {
-    if (payload.currentPassword) {
-      await api.put('/auth/change-password', {
-        currentPassword: payload.currentPassword,
-        newPassword: payload.newPassword,
-      });
-    } else {
-      await api.post('/auth/reset-password', {
-        email: payload.email,
-        newPassword: payload.newPassword,
-        role: 'seller',
-      });
-    }
+  if (payload.currentPassword && payload.newPassword) {
+    await api.put('/auth/change-password', {
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+    });
   }
 
   const { data } = await api.put(`${sellerPath()}/store-setup`, {

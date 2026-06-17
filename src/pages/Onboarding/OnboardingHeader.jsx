@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom'; 
 import shopidooLogo from '../../assets/Shopidoo_logo.png'; 
+import SaveAndExit from '../../features/onboarding/components/SaveAndExit';
 
 export default function OnboardingHeader({ step = 1 }) {
   return (
@@ -36,6 +37,9 @@ export default function OnboardingHeader({ step = 1 }) {
           Seller Onboarding
         </Typography>
       </Box>
+
+      {/* Right side: Save & Exit button */}
+      <SaveAndExit step={step} />
     </Box>
   );
 }

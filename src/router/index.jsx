@@ -13,7 +13,6 @@ import Settings from '../pages/Settings/Setting';
 
 const Login = lazy(() => import('../pages/Auth/Login'));
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
-// const Register = lazy(() => import('../pages/Auth/Register'));
 const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
 const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
 const RegistrationSuccess = lazy(() => import('../pages/Onboarding/RegistrationSuccess'));
@@ -32,20 +31,10 @@ const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
 const DeleteAccount = lazy(() => import('../pages/deleteaccount/DeleteAccount'));
 
 
-
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth || {});
+  const { isAuthenticated, user } = useSelector((s) => s.auth);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
-  
-  if (user) {
-    if (user.seller_status === 'pending' || user.seller_status === 'rejected') {
-      return <Navigate to="/onboarding/success" replace />;
-    }
-    if (user.seller_status !== 'approved') {
-      return <Navigate to="/login" replace />;
-    }
-  }
   
   return children;
 };
@@ -77,7 +66,6 @@ const AppRouter = () => (
       <Routes>
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-        {/* <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} /> */}
         <Route 
           path="/register" 
           element={

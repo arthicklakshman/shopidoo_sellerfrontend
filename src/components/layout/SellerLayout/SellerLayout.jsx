@@ -328,21 +328,23 @@ useEffect(() => {
         })}
       </List>
 
+
       <Divider />
 
       <Box sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Avatar
+            src={user?.avatar}
             sx={{
               width: 36,
               height: 36,
               background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-              color: '#000',
+              color: '#fff',
               fontWeight: 700,
               fontSize: 14,
             }}
           >
-            {user?.name?.[0]}
+            {user?.name?.[0]?.toUpperCase()}
           </Avatar>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -405,11 +407,9 @@ useEffect(() => {
         }}
       >
         <AppBar
-          position="fixed"
+          position={isProductFormPage ? 'sticky' : 'static'}
           elevation={0}
           sx={{
-            width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-            ml: { md: `${DRAWER_WIDTH}px` },
             top: 0,
             zIndex: theme.zIndex.drawer + 1,
             bgcolor: 'background.paper',
@@ -639,16 +639,17 @@ useEffect(() => {
                 }}
               >
                 <Avatar
+                  src={user?.avatar}
                   sx={{
                     width: 36,
                     height: 36,
                     background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                    color: '#000',
+                    color: '#fff',
                     fontWeight: 700,
                     fontSize: 14,
                   }}
                 >
-                  {user?.name?.[0]}
+                  {user?.name?.[0]?.toUpperCase()}
                 </Avatar>
                 <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
                   <Typography
@@ -700,16 +701,17 @@ useEffect(() => {
               {/* Profile Dropdown Header matching user screenshot */}
               <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Avatar
+                  src={user?.avatar}
                   sx={{
                     width: 36,
                     height: 36,
                     background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                    color: '#000',
+                    color: '#fff',
                     fontWeight: 700,
                     fontSize: 14,
                   }}
                 >
-                  {user?.name?.[0]}
+                  {user?.name?.[0]?.toUpperCase()}
                 </Avatar>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography
@@ -759,7 +761,6 @@ useEffect(() => {
             flex: 1,
             overflow: isProductFormPage ? 'visible' : 'auto',
             p: { xs: 2, md: 3 },
-            pt: { xs: '72px !important', md: '88px !important' },
           }}
         >
           <Outlet />

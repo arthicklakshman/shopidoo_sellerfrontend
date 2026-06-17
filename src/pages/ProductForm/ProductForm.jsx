@@ -19,7 +19,7 @@ import { getErrorMessage } from '../../utils/getErrorMessage';
 import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
 import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
-import { fetchSettingsOnce } from '../../utils/settingsCache';
+
 // ─── Commission hint hook ─────────────────────────────────────────────────────
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
@@ -31,8 +31,9 @@ function useCommissionHint(price) {
       return;
     }
     setLoading(true);
-    fetchSettingsOnce()
-      .then(raw => {
+    api.get('/settings')
+      .then(res => {
+        const raw = res.data?.dataValues || res.data?.data || res.data;
         let slabs = raw?.commissionSlabs;
         if (typeof slabs === 'string') {
           try { slabs = JSON.parse(slabs); } catch { slabs = []; }
@@ -53,8 +54,6 @@ function useCommissionHint(price) {
 
   return { commission, loading };
 }
-
-
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const emptyForm = {
@@ -192,21 +191,6 @@ const isSizeLikeAttributeName = (name) => {
 };
 
 const emptyCustomSpec = () => ({ name: '', value: '', is_custom: true });
-
-const VOLUME_UNITS = ['ml', 'L'];
-const WEIGHT_UNITS = ['g', 'kg'];
-
-const isVolumeAttribute = (name) => {
-  const n = normalizeCategoryText(name);
-  return n === 'volume' || n.includes('volume') || n.includes('capacity');
-};
-
-const isWeightAttribute = (name) => {
-  const n = normalizeCategoryText(name);
-  return n === 'weight' || n.includes('weight');
-};
-
-
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 const CustomSpecsEditor = ({ customSpecs, onChange, onAdd, onRemove }) => (
@@ -439,7 +423,7 @@ const ProductForm = () => {
             stock_quantity: p.stock_quantity ?? '',
             sku: p.sku || '',
             condition: p.condition || 'new',
-            category_id: p.category_id != null ? Number(p.category_id) : (p.custom_category ? 'other' : ''),
+            category_id: p.category_id != null ? Number(p.category_id) : '',
             subcategory_id: p.subcategory_id != null ? Number(p.subcategory_id) : '',
             delivery_type: p.delivery_type || 'free',
             delivery_charge: p.delivery_charge || '',
@@ -450,7 +434,7 @@ const ProductForm = () => {
             breadth: p.breadth || '',
             height: p.height || '',
             hsn_code: p.hsn_code || '',
-            gst_rate: p.gst_rate != null ? String(p.gst_rate) : '',
+            gst_rate: p.gst_rate || '',
             custom_category: p.custom_category || '',
           });
           setAttributeValues(
@@ -484,7 +468,7 @@ const ProductForm = () => {
 
   useEffect(() => {
     const categoryId = form.subcategory_id || form.category_id;
-    if (!categoryId || categoryId === 'other') { setCategoryAttributes([]); return; }
+    if (!categoryId) { setCategoryAttributes([]); return; }
     sellerService.getCategoryAttributes(categoryId)
       .then(({ data }) => setCategoryAttributes(data.data || []))
       .catch(() => setCategoryAttributes([]));
@@ -616,14 +600,10 @@ const ProductForm = () => {
 
   const buildSpecifications = () => {
   const structured = categoryAttributes.map((attribute, index) => {
-    const isVolOrWt = isVolumeAttribute(attribute.name) || isWeightAttribute(attribute.name);
-    // Volume/weight store combined value like "500 ml" or "250 g" directly
-    // Size/shoe-size use the old "value × qty" pattern
-    const qtyKey   = `__qty__${attribute.id}`;
+    const qtyKey = `__qty__${attribute.id}`;
     const qtyValue = attributeValues[qtyKey];
     const baseValue = attributeValues[String(attribute.id)] || '';
-    const isQtyLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
-    const finalValue = (!isVolOrWt && isQtyLinked && qtyValue && baseValue)
+    const finalValue = qtyValue && baseValue
       ? `${baseValue} × ${qtyValue}`
       : baseValue;
 
@@ -650,11 +630,12 @@ const ProductForm = () => {
   return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
 };
 
-const renderAttributeField = (attribute) => {
+  const renderAttributeField = (attribute) => {
   const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
   const options = attribute.options || [];
+  const isQuantityLinked = ['size', 'shoe size', 'volume', 'weight']
+    .includes(attribute.name.toLowerCase());
 
-  // ── Variant attributes (multi-select / free text) ──────────────────────────
   if (attribute.is_variant) {
     const value = variantAttributeValues[attribute.name] || [];
     if (!options.length) {
@@ -692,116 +673,10 @@ const renderAttributeField = (attribute) => {
     );
   }
 
-  // ── Volume: quantity input + ml/L unit dropdown ───────────────────────────
-  if (isVolumeAttribute(attribute.name)) {
-    const qtyKey = `__qty__${attribute.id}`;
-    const unitKey = `__unit__${attribute.id}`;
-    const qtyValue = attributeValues[qtyKey] || '';
-    const unitValue = attributeValues[unitKey] || 'ml';
-
-    // Combine into the spec value on every change
-    const syncValue = (qty, unit) => {
-      const combined = qty ? `${qty} ${unit}` : '';
-      setAttributeValues(prev => ({
-        ...prev,
-        [String(attribute.id)]: combined,
-        [qtyKey]: qty,
-        [unitKey]: unit,
-      }));
-    };
-
-    return (
-      <Box>
-        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-          {attribute.name}{attribute.is_required ? ' *' : ''}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            placeholder="e.g. 500"
-            type="number"
-            value={qtyValue}
-            onChange={(e) => syncValue(e.target.value, unitValue)}
-            inputProps={{ min: 0, step: 0.1 }}
-            sx={{ flex: 1 }}
-            required={attribute.is_required}
-            size="medium"
-          />
-          <FormControl sx={{ minWidth: 90 }}>
-            <Select
-              value={unitValue}
-              onChange={(e) => syncValue(qtyValue, e.target.value)}
-              size="medium"
-            >
-              {VOLUME_UNITS.map(u => (
-                <MenuItem key={u} value={u}>{u}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Enter quantity and select unit (ml or L)
-        </Typography>
-      </Box>
-    );
-  }
-
-  // ── Weight: quantity input + g/kg unit dropdown ───────────────────────────
-  if (isWeightAttribute(attribute.name)) {
-    const qtyKey = `__qty__${attribute.id}`;
-    const unitKey = `__unit__${attribute.id}`;
-    const qtyValue = attributeValues[qtyKey] || '';
-    const unitValue = attributeValues[unitKey] || 'g';
-
-    const syncValue = (qty, unit) => {
-      const combined = qty ? `${qty} ${unit}` : '';
-      setAttributeValues(prev => ({
-        ...prev,
-        [String(attribute.id)]: combined,
-        [qtyKey]: qty,
-        [unitKey]: unit,
-      }));
-    };
-
-    return (
-      <Box>
-        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-          {attribute.name}{attribute.is_required ? ' *' : ''}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            placeholder="e.g. 250"
-            type="number"
-            value={qtyValue}
-            onChange={(e) => syncValue(e.target.value, unitValue)}
-            inputProps={{ min: 0, step: 0.1 }}
-            sx={{ flex: 1 }}
-            required={attribute.is_required}
-            size="medium"
-          />
-          <FormControl sx={{ minWidth: 90 }}>
-            <Select
-              value={unitValue}
-              onChange={(e) => syncValue(qtyValue, e.target.value)}
-              size="medium"
-            >
-              {WEIGHT_UNITS.map(u => (
-                <MenuItem key={u} value={u}>{u}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Enter quantity and select unit (g or kg)
-        </Typography>
-      </Box>
-    );
-  }
-
-  // ── Standard select ───────────────────────────────────────────────────────
   const value = attributeValues[String(attribute.id)] || '';
+  // quantity key per attribute
   const qtyKey = `__qty__${attribute.id}`;
   const qtyValue = attributeValues[qtyKey] || '';
-  const isQuantityLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
 
   if (attribute.input_type === 'select') {
     return (
@@ -850,6 +725,21 @@ const renderAttributeField = (attribute) => {
             ))}
           </RadioGroup>
         </FormControl>
+        {isQuantityLinked && value && (
+          <TextField
+            label={`Quantity for ${value}`}
+            type="number"
+            value={qtyValue}
+            onChange={(e) =>
+              setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
+            }
+            fullWidth
+            placeholder="e.g. 2"
+            inputProps={{ min: 1 }}
+            sx={{ mt: 1 }}
+            helperText={`How many units of ${value}?`}
+          />
+        )}
       </Box>
     );
   }
@@ -971,12 +861,6 @@ const renderAttributeField = (attribute) => {
     const submittedVariants = isFashionVariantCategory ? flattenedFashionVariants : variants;
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
 
-    const totalImagesCount = images.length + newFiles.length + totalColorFiles;
-    if (totalImagesCount === 0) {
-      setError('Please upload at least one product image.');
-      return;
-    }
-
     if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform Commission.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
@@ -1020,7 +904,7 @@ const renderAttributeField = (attribute) => {
         stock_quantity: parseInt(form.stock_quantity),
         sku: form.sku.trim() || null,
         condition: form.condition,
-        category_id: form.category_id === 'other' ? 'other' : parseInt(form.category_id),
+        category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
         weight: form.weight ? parseFloat(form.weight) : null,
         length: form.length ? parseFloat(form.length) : null,
@@ -1228,21 +1112,6 @@ const renderAttributeField = (attribute) => {
                             setVariants([]);
                             setColorGroups([]);
                           }}
-                          MenuProps={{
-                            anchorOrigin: {
-                              vertical: 'bottom',
-                              horizontal: 'left'
-                            },
-                            transformOrigin: {
-                              vertical: 'top',
-                              horizontal: 'left'
-                            },
-                            PaperProps: {
-                              style: {
-                                maxHeight: 300
-                              }
-                            }
-                          }}
                         >
                           <MenuItem value="">Select Category</MenuItem>
                           {categories.filter(c => c.depth === 0).map(c => (
@@ -1280,21 +1149,6 @@ const renderAttributeField = (attribute) => {
                               setVariantAttributeValues({});
                               setVariants([]);
                               setColorGroups([]);
-                            }}
-                            MenuProps={{
-                              anchorOrigin: {
-                                vertical: 'bottom',
-                                horizontal: 'left'
-                              },
-                              transformOrigin: {
-                                vertical: 'top',
-                                horizontal: 'left'
-                              },
-                              PaperProps: {
-                                style: {
-                                  maxHeight: 300
-                                }
-                              }
                             }}
                           >
                             <MenuItem value="">None</MenuItem>

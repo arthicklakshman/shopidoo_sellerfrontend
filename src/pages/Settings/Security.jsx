@@ -1,5 +1,214 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import React, { useState } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import {
+//   Box,
+//   Typography,
+//   Card,
+//   CardContent,
+//   TextField,
+//   InputLabel,
+//   Divider,
+// } from '@mui/material';
+
+// import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
+// import { validateSecurity } from '../../utils/validation';
+// import { updateSecurityAPI } from "../../features/settings/settings.service";
+
+// const StyledInputLabel = ({ children }) => (
+//   <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 600 }}>
+//     {children}
+//   </InputLabel>
+// );
+
+// const getCustomInputStyles = (isEditing) => ({
+//   backgroundColor: 'action.hover',
+//   borderRadius: '8px',
+//   mb: 3,
+//   '& .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'divider' },
+//   '&:hover .MuiOutlinedInput-notchedOutline': { border: isEditing ? '1px solid' : 'none', borderColor: 'primary.main' },
+//   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+//     border: isEditing ? '1px solid' : 'none',
+//     borderColor: 'primary.main'
+//   },
+//   '& .MuiOutlinedInput-input': {
+//     padding: '10px 14px',
+//     fontSize: '14px',
+//     color: 'text.primary',
+//     WebkitTextFillColor: (theme) => theme.palette.text.primary,
+//   },
+//   '& .Mui-disabled': {
+//     WebkitTextFillColor: (theme) => theme.palette.text.primary,
+//   }
+// });
+
+// export default function Security() {
+//   const navigate = useNavigate();
+//   const [isEditing, setIsEditing] = useState(false);
+
+//   const [form, setForm] = useState({
+//     currentPassword: "",
+//     newPassword: "",
+//     confirmPassword: "",
+//   });
+
+//   const [errors, setErrors] = useState({});
+
+//   const handleChange = (e) => {
+//     if (!isEditing) return;
+//     setForm({ ...form, [e.target.name]: e.target.value });
+//   };
+
+//   const handleCancel = () => {
+//     setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+//     setErrors({});
+//     setIsEditing(false);
+//   };
+
+//   const handleSubmit = async () => {
+//     const isPasswordChange = form.currentPassword || form.newPassword || form.confirmPassword;
+//     if (isPasswordChange) {
+//       const temp = validateSecurity(form);
+//       if (Object.keys(temp).length > 0) {
+//         setErrors(temp);
+//         return;
+//       }
+//     }
+
+//     try {
+//       const payload = {};
+//       if (isPasswordChange) {
+//         payload.currentPassword = form.currentPassword;
+//         payload.newPassword = form.newPassword;
+//       }
+
+//       const response = await updateSecurityAPI(payload);
+//       if (response.success) {
+//         setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+//         setIsEditing(false);
+//         alert("✅ Password updated successfully");
+//       }
+//     } catch (err) {
+//       console.error(err);
+//       alert(err.response?.data?.message || "Update failed");
+//     }
+//   };
+
+//   return (
+//     <Card sx={{
+//       borderRadius: '12px',
+//       border: 1,
+//       borderColor: 'divider',
+//       boxShadow: 'none',
+//       maxWidth: '1000px',
+//       bgcolor: 'background.paper'
+//     }}>
+//       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+
+//         {/* Header */}
+//         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+//           <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
+//             Password & Security
+//           </Typography>
+//           {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
+//         </Box>
+
+//         {/* Password Fields */}
+//         <Box>
+//           <StyledInputLabel>Current Password</StyledInputLabel>
+//           <TextField
+//             fullWidth
+//             name="currentPassword"
+//             type="password"
+//             value={isEditing ? form.currentPassword : "********"}
+//             onChange={handleChange}
+//             disabled={!isEditing}
+//             placeholder={isEditing ? "Type your current password to verify" : ""}
+//             variant="outlined"
+//             size="small"
+//             sx={getCustomInputStyles(isEditing)}
+//             error={!!errors.currentPassword}
+//             helperText={errors.currentPassword}
+//           />
+
+//           <StyledInputLabel>New Password</StyledInputLabel>
+//           <TextField
+//             fullWidth
+//             name="newPassword"
+//             type="password"
+//             value={isEditing ? form.newPassword : ""}
+//             onChange={handleChange}
+//             disabled={!isEditing}
+//             variant="outlined"
+//             size="small"
+//             sx={getCustomInputStyles(isEditing)}
+//             error={!!errors.newPassword}
+//             helperText={errors.newPassword}
+//           />
+
+//           <StyledInputLabel>Confirm New Password</StyledInputLabel>
+//           <TextField
+//             fullWidth
+//             name="confirmPassword"
+//             type="password"
+//             value={isEditing ? form.confirmPassword : ""}
+//             onChange={handleChange}
+//             disabled={!isEditing}
+//             variant="outlined"
+//             size="small"
+//             sx={{ ...getCustomInputStyles(isEditing), mb: 0 }}
+//             error={!!errors.confirmPassword}
+//             helperText={errors.confirmPassword}
+//           />
+//         </Box>
+
+//         {/* Save/Cancel Buttons */}
+//         {isEditing && (
+//           <SaveCancelButtons
+//             onCancel={handleCancel}
+//             onSave={handleSubmit}
+//             saveText="Update Password"
+//           />
+//         )}
+
+//         <Divider sx={{ my: 4, borderColor: 'divider' }} />
+
+//         {/* Delete Account */}
+//         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+//           <Box>
+//             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+//               Delete Account
+//             </Typography>
+//             <Typography sx={{ color: 'text.secondary', fontSize: '13px' }}>
+//               Permanently delete your account and all your data
+//             </Typography>
+//           </Box>
+//           <button
+//             onClick={() => navigate('/delete-account')}
+//             style={{
+//               background: '#d32f2f',
+//               color: '#fff',
+//               border: 'none',
+//               padding: '10px 20px',
+//               borderRadius: '6px',
+//               cursor: 'pointer',
+//               fontWeight: 600,
+//               fontSize: '14px'
+//             }}
+//           >
+//             Delete Account
+//           </button>
+//         </Box>
+
+//       </CardContent>
+//     </Card>
+//   );
+// }
+
+
+
+
+
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -24,6 +233,8 @@ import { useSelector } from 'react-redux';
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
 
 // ✅ OTP Imports
 import { useOtp } from '../../hooks/useOtp';
@@ -97,7 +308,7 @@ const VerifyButton = ({ onClick, isVerified, disabled }) => (
 // Main Component
 // ----------------------------------------------------------------------
 export default function Security() {
-  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -113,28 +324,16 @@ export default function Security() {
 
   // We mainly use savedData to remember the 2FA state if they cancel
   const [savedData, setSavedData] = useState({
-    twoFactor: user?.twoFactor || false
+    twoFactor: false
   });
 
   const [form, setForm] = useState({
     newPassword: "",
     confirmPassword: "",
-    twoFactor: user?.twoFactor || false
+    twoFactor: savedData.twoFactor
   });
 
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (user) {
-      setSavedData({
-        twoFactor: user.twoFactor || false
-      });
-      setForm(prev => ({
-        ...prev,
-        twoFactor: user.twoFactor || false
-      }));
-    }
-  }, [user]);
 
   // ---------------- HANDLERS ----------------
 
@@ -145,11 +344,8 @@ export default function Security() {
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
   };
 
-  const handleToggle = () => {
-    setForm(prev => ({
-      ...prev,
-      twoFactor: !prev.twoFactor
-    }));
+  const handleToggle = (e) => {
+    setForm({ ...form, twoFactor: e.target.checked });
   };
 
   const handleCancel = () => {
@@ -180,7 +376,7 @@ export default function Security() {
 
       // Final safety net: Prevent bypass if they somehow opened the fields without verifying
       if (!isEmailVerified || !isMobileVerified) {
-        alert("Authentication Error: Both Email and Mobile must be verified via OTP.");
+        dispatch(showToast({ message: "Authentication Error: Both Email and Mobile must be verified via OTP.", severity: "error" }));
         return; 
       }
     }
@@ -207,22 +403,22 @@ export default function Security() {
         });
 
         setIsEditing(false);
-        alert(isPasswordChange ? "✅ Password updated successfully" : "✅ Security settings updated successfully");
+        dispatch(showToast({ message: "Security updated successfully", severity: "success" }));
       }
 
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Update failed");
+      dispatch(showToast({ message: err.response?.data?.message || "Update failed", severity: "error" }));
     }
   };
 
   const handleVerifyClick = async (type, target) => {
-    if (!target) return alert(`No ${type} found for verification.`);
+    if (!target) return dispatch(showToast({ message: `No ${type} found for verification.`, severity: "error" }));
     try {
       await sendOtp(type, target, 'forgot_password');
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Failed to send OTP.');
+      dispatch(showToast({ message: err.message || 'Failed to send OTP.', severity: "error" }));
     }
   };
 
@@ -237,8 +433,7 @@ export default function Security() {
       fontFamily: 'sans-serif'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-
-        {/* Header */}
+        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
             Password & Security
@@ -399,26 +594,12 @@ export default function Security() {
               }}
             />
           </Box>
-          <button
-            onClick={() => navigate('/delete-account')}
-            style={{
-              background: '#d32f2f',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px'
-            }}
-          >
-            Delete Account
-          </button>
         </Box>
 
         {isEditing && (
-          <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} />
+            <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} saveText="Save Changes" />
         )}
+
       </CardContent>
 
       {/* 🌟 OTP MODAL */}

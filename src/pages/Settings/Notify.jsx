@@ -14,6 +14,8 @@ import {
   getNotificationPreferencesAPI,
   updateNotificationPreferencesAPI,
 } from '../../features/settings/settings.service';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
 
 const notificationData = [
   { id: 'newOrders', title: 'New Orders', description: 'Get notified when you receive a new order', defaultChecked: true },
@@ -23,6 +25,7 @@ const notificationData = [
 ];
 
 export default function Notifications() {
+  const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
 
   const [savedData, setSavedData] = useState(
@@ -67,10 +70,10 @@ export default function Notifications() {
       await updateNotificationPreferencesAPI(preferences);
       setSavedData({ ...preferences });
       setIsEditing(false);
-      alert("Preferences saved successfully");
+      dispatch(showToast({ message: "Preferences saved successfully", severity: "success" }));
     } catch (err) {
       console.error(err);
-      alert("Something went wrong.");
+      dispatch(showToast({ message: "Something went wrong.", severity: "error" }));
     }
   };
 
@@ -88,7 +91,6 @@ export default function Notifications() {
           <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
             Notification Preferences
           </Typography>
-          {!isEditing && <EditButton onClick={() => setIsEditing(true)} />}
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -112,9 +114,8 @@ export default function Notifications() {
                 </Box>
 
                 <Switch
-                  checked={preferences[item.id]}
-                  onChange={() => handleToggle(item.id)}
-                  disabled={!isEditing}
+                  checked={false}
+                  disabled={true}
                 />
               </Box>
 
@@ -125,11 +126,6 @@ export default function Notifications() {
           ))}
         </Box>
 
-        {isEditing && (
-            <Box sx={{ mt: 2 }}>
-                <SaveCancelButtons onCancel={handleCancel} onSave={handleSave} />
-            </Box>
-        )}
       </CardContent>
     </Card>
   );

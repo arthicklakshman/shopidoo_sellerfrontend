@@ -30,6 +30,18 @@ sendEmailOtp: async (email, type) => {
     return await api.post(`${API_BASE_URL}/verify-email-otp`, payload);
   },
 
+  checkExists: async (data) => {
+    return await api.post(`${API_BASE_URL}/check-exists`, data);
+  },
+
+  resumeOnboarding: async (email) => {
+    return await api.post(`${API_BASE_URL}/resume-onboarding`, { email, role: 'seller' });
+  },
+
+  getProfile: async () => {
+    return await api.get(`${API_BASE_URL}/me`);
+  },
+
 
 //   sendEmailOtp: async (email) => {
 //     return await api.post(`${API_BASE_URL}/send-email-otp`, { email });
@@ -59,7 +71,9 @@ sendEmailOtp: async (email, type) => {
         phone: data.phone,
         businessType: data.businessType,
         password: data.password,
-        role: 'seller'
+        role: 'seller',
+        email_verified: data.email_verified,
+        phone_verified: data.phone_verified
       }
     );
   },

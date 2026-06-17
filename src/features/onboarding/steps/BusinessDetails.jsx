@@ -238,98 +238,80 @@ export default function BusinessDetails({ onBack, onNext }) {
         alignItems="flex-start"
       >
         {/* Left Column: Info Cards */}
-        <Grid
-          item
-          xs={12}
-          md={5}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-        >
-          <Card
-            sx={{
-              borderRadius: "16px",
-              backgroundColor: "#f9f8ff",
-              border: "1px solid #f3e8ff",
-              boxShadow: "none",
-            }}
-          >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Box sx={{ color: "#8b5cf6", mb: 2 }}>
-                <DomainOutlinedIcon sx={{ fontSize: 32 }} />
+<Grid
+  item
+  xs={12}
+  md={5}
+  sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+>
+  <Card
+    sx={{
+      borderRadius: "16px",
+      backgroundColor: "#f0fdfa", // Soft mint background
+      border: "1px solid #ccfbf1", // Subtle border
+      boxShadow: "none",
+    }}
+  >
+    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+      <Box sx={{ color: "#0B8457", mb: 2 }}> {/* Brand Teal Color */}
+        <DomainOutlinedIcon sx={{ fontSize: 32 }} />
+      </Box>
+      <Typography
+        variant="h6"
+        sx={{ fontWeight: 700, color: "#111827", mb: 3 }}
+      >
+        Business Information
+      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* Helper function to use brand green for list items */}
+        {[
+          { title: "Store Name:", desc: "This is what customers will see on your storefront" },
+          { title: "Mandatory Documents:", desc: "GST number, GST certificate, and signature image are required." },
+          { title: "Documents Required:", desc: "PAN and [Government ID Redacted] needed for verification" }
+        ].map((item, idx) => (
+          <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" }}>
+            <Box sx={{ 
+                width: 6, height: 6, borderRadius: "50%", 
+                backgroundColor: "#0B8457", mt: 0.8, mr: 1.5, flexShrink: 0 
+            }} />
+            <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
+              <Box component="span" sx={{ fontWeight: 700, color: "#111827" }}>
+                {item.title}{" "}
               </Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 700, color: "#111827", mb: 3 }}
-              >
-                Business Information
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
-                  <CustomListIcon />
-                  <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
-                    <Box
-                      component="span"
-                      sx={{ fontWeight: 700, color: "#111827" }}
-                    >
-                      Store Name:{" "}
-                    </Box>
-                    This is what customers will see on your storefront
-                  </Typography>
-                </Box>
-                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
-                  <CustomListIcon />
-                  <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
-                    <Box
-                      component="span"
-                      sx={{ fontWeight: 700, color: "#111827" }}
-                    >
-                      Mandatory Documents:
-                    </Box>{" "}
-                    GST number, GST certificate image, and signature image are
-                    required to register as a seller.
-                  </Typography>
-                </Box>
-                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
-                  <CustomListIcon />
-                  <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
-                    <Box
-                      component="span"
-                      sx={{ fontWeight: 700, color: "#111827" }}
-                    >
-                      Documents Required:{" "}
-                    </Box>
-                    PAN and Aadhaar needed for identity verification
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              {item.desc}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </CardContent>
+  </Card>
 
-          <Card
-            sx={{
-              borderRadius: "16px",
-              border: "1px solid #e5e7eb",
-              boxShadow: "none",
-            }}
-          >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Box sx={{ color: "#3b82f6", mb: 2 }}>
-                <LocationOnOutlinedIcon sx={{ fontSize: 28 }} />
-              </Box>
-              <Typography
-                variant="subtitle1"
-                sx={{ fontWeight: 700, color: "#111827", mb: 2 }}
-              >
-                Address Tips
-              </Typography>
-              <Typography
-                sx={{ color: "#6b7280", fontSize: "13px", lineHeight: 1.5 }}
-              >
-                Provide your registered business address. This will be used for
-                legal documentation and may be displayed to customers.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+  <Card
+    sx={{
+      borderRadius: "16px",
+      border: "1px solid #e5e7eb",
+      boxShadow: "none",
+    }}
+  >
+    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+      <Box sx={{ color: "#0B8457", mb: 2 }}> {/* Brand Teal Color */}
+        <LocationOnOutlinedIcon sx={{ fontSize: 28 }} />
+      </Box>
+      <Typography
+        variant="subtitle1"
+        sx={{ fontWeight: 700, color: "#111827", mb: 2 }}
+      >
+        Address Tips
+      </Typography>
+      <Typography
+        sx={{ color: "#6b7280", fontSize: "13px", lineHeight: 1.5 }}
+      >
+        Provide your registered business address. This will be used for
+        legal documentation and may be displayed to customers.
+      </Typography>
+    </CardContent>
+  </Card>
+</Grid>
 
         {/* Right Column: Form Card */}
         <Grid item xs={12} md={7}>

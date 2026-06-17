@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTheme, alpha } from "@mui/material";
+import { useDispatch } from "react-redux";
+import { showToast } from "../../features/ui/uiSlice";
 import api from "../../services/api";
 
 const BASE = "/payout-requests";
@@ -209,18 +211,13 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
 
 export default function Wallet() {
   const theme = useTheme();
+  const dispatch = useDispatch();
   const [wallet,        setWallet]        = useState(null);
   const [history,       setHistory]       = useState([]);
   const [walletLoading, setWalletLoading] = useState(true);
   const [histLoading,   setHistLoading]   = useState(true);
   const [showModal,     setShowModal]     = useState(false);
   const [submitting,    setSubmitting]    = useState(false);
-  const [toast,         setToast]         = useState(null);
-
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
@@ -248,7 +245,7 @@ export default function Wallet() {
         accountNumber,
       });
     } catch {
-      showToast("Failed to load wallet data", "error");
+      dispatch(showToast({ message: "Failed to load wallet data", severity: "error" }));
     } finally {
       setWalletLoading(false);
     }
@@ -264,7 +261,7 @@ export default function Wallet() {
       }));
       setHistory(rows);
     } catch {
-      showToast("Failed to load history", "error");
+      dispatch(showToast({ message: "Failed to load history", severity: "error" }));
     } finally {
       setHistLoading(false);
     }
@@ -279,11 +276,11 @@ export default function Wallet() {
     setSubmitting(true);
     try {
       await api.post(BASE, { amount, bank_account, store_name });
-      showToast("Payout request sent to admin successfully!");
+      dispatch(showToast({ message: "Payout request sent to admin successfully!", severity: "success" }));
       setShowModal(false);
       await Promise.all([fetchWallet(), fetchHistory()]);
     } catch (err) {
-      showToast(err.response?.data?.message || "Request failed", "error");
+      dispatch(showToast({ message: err.response?.data?.message || "Request failed", severity: "error" }));
     } finally {
       setSubmitting(false);
     }
@@ -366,11 +363,6 @@ export default function Wallet() {
 
         .wl-spinner { width: 22px; height: 22px; border: 2.5px solid ${theme.palette.divider}; border-top-color: #0b8457; border-radius: 50%; animation: wl-spin 0.7s linear infinite; margin: 0 auto 10px; }
         @keyframes wl-spin { to { transform: rotate(360deg); } }
-
-        .wl-toast { position: fixed; bottom: 28px; right: 28px; display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 12px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.15); animation: wl-slideup 0.3s ease; z-index: 9999; max-width: 320px; }
-        .wl-toast.success { background: #0b8457; color: #fff; }
-        .wl-toast.error   { background: #dc2626; color: #fff; }
-        @keyframes wl-slideup { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
         @media (max-width: 600px) { .wl-grid { grid-template-columns: 1fr; } .wl-wrap { padding: 20px 16px; } }
       `}</style>
@@ -481,12 +473,6 @@ export default function Wallet() {
           onSubmit={handleWithdraw}
           loading={submitting}
         />
-      )}
-
-      {toast && (
-        <div className={`wl-toast ${toast.type}`}>
-          {toast.type === "success" ? "✓" : "✕"} {toast.msg}
-        </div>
       )}
     </>
   );

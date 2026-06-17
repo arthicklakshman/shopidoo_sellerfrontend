@@ -6,12 +6,15 @@ const api = axios.create({ baseURL: BASE_URL, headers: { 'Content-Type': 'applic
 
 api.interceptors.response.use(
  response => response,
- error => {
-   if (error.response?.status === 503) {
-      window.location.href="/maintenance";
-   }
-   return Promise.reject(error);
- }
+  error => {
+    if (!error.response) {
+      return Promise.reject(new Error('check your network '));
+    }
+    if (error.response?.status === 503) {
+       window.location.href="/maintenance";
+    }
+    return Promise.reject(error);
+  }
 );
 
 api.interceptors.request.use((config) => {
@@ -67,7 +70,7 @@ api.interceptors.response.use(
         if (!window.location.pathname.startsWith('/onboarding')) {
           window.location.href = '/login';
         }
-        return Promise.reject(err);
+        return Promise.reject(new Error('Refresh the page'));
       } finally { isRefreshing = false; }
     }
     return Promise.reject(error);
