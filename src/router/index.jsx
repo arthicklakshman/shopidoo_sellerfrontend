@@ -28,7 +28,7 @@ const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
 const Returns = lazy(() => import('../pages/Returns/SellerReturns'));
 const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
-
+const DeleteAccount = lazy(() => import('../pages/deleteaccount/DeleteAccount'));
 
 
 const PrivateRoute = ({ children }) => {
@@ -110,6 +110,7 @@ const AppRouter = () => (
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/returns" element={<Returns />} />
           <Route path="/cms" element={<SellerCMS />} />
         </Route>
