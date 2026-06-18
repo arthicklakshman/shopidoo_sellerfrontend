@@ -81,7 +81,7 @@ export default function OnboardingStepper({ currentStep = 1 }) {
     : 100;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto', p: 3, fontFamily: 'sans-serif' }}>
+    <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto', p: 3, fontFamily: 'sans-serif', background: 'linear-gradient(135deg, #f0fdfa 0%, #b2eed8 100%)', borderRadius: 3, my: 3, }}>
       
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1.5 }}>

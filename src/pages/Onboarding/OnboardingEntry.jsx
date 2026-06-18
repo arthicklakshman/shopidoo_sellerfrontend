@@ -19,9 +19,9 @@ import FlashOnIcon from '@mui/icons-material/FlashOn';
 import LocalMallOutlinedIcon from '@mui/icons-material/LocalMallOutlined';
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
-import GradientText from '../../components/shared/GradientButton/GradientText';
 
 import sellerHero from '../../assets/seller_hero.png';
+import titlelogo from '../../assets/Shopidoo_logo.png';
 
 const features = [
     { icon: <TrendingUpIcon />, title: 'Low Commission', desc: 'Keep more of what you earn' },
@@ -54,16 +54,16 @@ export default function OnboardingEntry() {
 
                 {/* HEADER */}
                 <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
-                    <GradientText
-    variant="h3"
-    sx={{
-        fontWeight: 800,
-        mb: 1,
-        letterSpacing: '1px'
-    }}
->
-    SHOPIDOO
-</GradientText>
+             
+                    <Box 
+                        component="img"
+                        src={titlelogo}
+                        alt="Shopidoo Logo"
+                        sx={{
+                            height: { xs: 40, md: 60 },
+                            objectFit: 'contain'
+                        }}
+                    />
 
                     <Typography variant="subtitle1" sx={{ color: '#4b5563' }}>
                         Start Your Selling Journey Today

@@ -14,6 +14,8 @@ import {
   getNotificationPreferencesAPI,
   updateNotificationPreferencesAPI,
 } from '../../features/settings/settings.service';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
 
 const notificationData = [
   { id: 'newOrders', title: 'New Orders', description: 'Get notified when you receive a new order', defaultChecked: true },
@@ -23,6 +25,7 @@ const notificationData = [
 ];
 
 export default function Notifications() {
+  const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
 
   const [savedData, setSavedData] = useState(
@@ -67,10 +70,10 @@ export default function Notifications() {
       await updateNotificationPreferencesAPI(preferences);
       setSavedData({ ...preferences });
       setIsEditing(false);
-      alert("Preferences saved successfully");
+      dispatch(showToast({ message: "Preferences saved successfully", severity: "success" }));
     } catch (err) {
       console.error(err);
-      alert("Something went wrong.");
+      dispatch(showToast({ message: "Something went wrong.", severity: "error" }));
     }
   };
 

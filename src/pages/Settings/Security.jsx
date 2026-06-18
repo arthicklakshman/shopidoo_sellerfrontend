@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -24,6 +23,8 @@ import { useSelector } from 'react-redux';
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
 
 // ✅ OTP Imports
 import { useOtp } from '../../hooks/useOtp';
@@ -97,7 +98,7 @@ const VerifyButton = ({ onClick, isVerified, disabled }) => (
 // Main Component
 // ----------------------------------------------------------------------
 export default function Security() {
-  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -113,28 +114,16 @@ export default function Security() {
 
   // We mainly use savedData to remember the 2FA state if they cancel
   const [savedData, setSavedData] = useState({
-    twoFactor: user?.twoFactor || false
+    twoFactor: false
   });
 
   const [form, setForm] = useState({
     newPassword: "",
     confirmPassword: "",
-    twoFactor: user?.twoFactor || false
+    twoFactor: savedData.twoFactor
   });
 
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (user) {
-      setSavedData({
-        twoFactor: user.twoFactor || false
-      });
-      setForm(prev => ({
-        ...prev,
-        twoFactor: user.twoFactor || false
-      }));
-    }
-  }, [user]);
 
   // ---------------- HANDLERS ----------------
 
@@ -145,11 +134,8 @@ export default function Security() {
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
   };
 
-  const handleToggle = () => {
-    setForm(prev => ({
-      ...prev,
-      twoFactor: !prev.twoFactor
-    }));
+  const handleToggle = (e) => {
+    setForm({ ...form, twoFactor: e.target.checked });
   };
 
   const handleCancel = () => {
@@ -180,7 +166,7 @@ export default function Security() {
 
       // Final safety net: Prevent bypass if they somehow opened the fields without verifying
       if (!isEmailVerified || !isMobileVerified) {
-        alert("Authentication Error: Both Email and Mobile must be verified via OTP.");
+        dispatch(showToast({ message: "Authentication Error: Both Email and Mobile must be verified via OTP.", severity: "error" }));
         return; 
       }
     }
@@ -207,22 +193,22 @@ export default function Security() {
         });
 
         setIsEditing(false);
-        alert(isPasswordChange ? "✅ Password updated successfully" : "✅ Security settings updated successfully");
+        dispatch(showToast({ message: "Security updated successfully", severity: "success" }));
       }
 
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Update failed");
+      dispatch(showToast({ message: err.response?.data?.message || "Update failed", severity: "error" }));
     }
   };
 
   const handleVerifyClick = async (type, target) => {
-    if (!target) return alert(`No ${type} found for verification.`);
+    if (!target) return dispatch(showToast({ message: `No ${type} found for verification.`, severity: "error" }));
     try {
       await sendOtp(type, target, 'forgot_password');
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Failed to send OTP.');
+      dispatch(showToast({ message: err.message || 'Failed to send OTP.', severity: "error" }));
     }
   };
 
@@ -237,8 +223,7 @@ export default function Security() {
       fontFamily: 'sans-serif'
     }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-
-        {/* Header */}
+        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
             Password & Security
@@ -399,26 +384,12 @@ export default function Security() {
               }}
             />
           </Box>
-          <button
-            onClick={() => navigate('/delete-account')}
-            style={{
-              background: '#d32f2f',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px'
-            }}
-          >
-            Delete Account
-          </button>
         </Box>
 
         {isEditing && (
-          <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} />
+            <SaveCancelButtons onCancel={handleCancel} onSave={handleSubmit} saveText="Save Changes" />
         )}
+
       </CardContent>
 
       {/* 🌟 OTP MODAL */}

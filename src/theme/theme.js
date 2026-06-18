@@ -28,6 +28,14 @@ const baseComponents = {
       root: { '& .MuiOutlinedInput-root': { borderRadius: 8 } },
     },
   },
+  MuiSelect: {
+    defaultProps: {
+      MenuProps: {
+        anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+        transformOrigin: { vertical: 'top', horizontal: 'left' },
+      },
+    },
+  },
   MuiChip: {
     styleOverrides: { root: { borderRadius: 6 } },
   },
@@ -70,7 +78,7 @@ export const lightTheme = createTheme({
     mode: 'light',
     primary: { main: '#7C3AED', light: '#A78BFA', dark: '#5B21B6', contrastText: '#fff' },
     secondary: { main: '#10B981', light: '#34D399', dark: '#059669', contrastText: '#fff' },
-    background: { default: '#F5F3FF', paper: '#FFFFFF' },
+    background: { default: '#f8fafc', paper: '#FFFFFF' },
     success: { main: '#059669' },
     warning: { main: '#D97706' },
     error: { main: '#DC2626' },

@@ -380,7 +380,7 @@ const ProductForm = () => {
 
   const productRules = IMAGE_RULES.product;
   const productSizeReq = `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`;
-  const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px (1:1 Ratio)`;
+  const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px${productRules.requireSquare ? ' (1:1 Ratio)' : ''}`;
 
   // ── Hooks must all be at top level, before any early returns ──
   const { commission } = useCommissionHint(form.price);
@@ -1046,27 +1046,37 @@ const renderAttributeField = (attribute) => {
       };
 
       let productId = id;
+      let productCreated = false;
 
       if (isEdit) {
         await sellerService.updateProduct(id, payload);
       } else {
         const { data } = await sellerService.createProduct(payload);
         productId = data.data.id;
+        productCreated = true;
       }
 
-      if (newFiles.length > 0) {
-        const fd = new FormData();
-        newFiles.forEach(f => fd.append('images', f));
-        await sellerService.addImages(productId, fd);
-      }
-
-      for (const [color, files] of Object.entries(colorFiles)) {
-        if (files.length > 0) {
+      try {
+        if (newFiles.length > 0) {
           const fd = new FormData();
-          files.forEach(f => fd.append('images', f));
-          fd.append('color', color);
+          newFiles.forEach(f => fd.append('images', f));
           await sellerService.addImages(productId, fd);
         }
+
+        for (const [color, files] of Object.entries(colorFiles)) {
+          if (files.length > 0) {
+            const fd = new FormData();
+            files.forEach(f => fd.append('images', f));
+            fd.append('color', color);
+            await sellerService.addImages(productId, fd);
+          }
+        }
+      } catch (imageErr) {
+        if (productCreated && productId) {
+          // Rollback: delete the product if image upload fails to avoid orphan products
+          await sellerService.deleteProduct(productId).catch(() => {});
+        }
+        throw imageErr; // Re-throw to show the error message in the UI
       }
 
       dispatch(showToast({ message: isEdit ? 'Product updated!' : 'Product created!', severity: 'success' }));

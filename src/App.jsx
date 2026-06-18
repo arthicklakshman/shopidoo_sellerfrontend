@@ -27,7 +27,10 @@ const App = () => {
             width: '100%',
             margin: 0,
             padding: 0
-          } 
+          },
+          'input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear': {
+            display: 'none',
+          }
         }} />
         <AppRouter />
       </ThemeProvider>

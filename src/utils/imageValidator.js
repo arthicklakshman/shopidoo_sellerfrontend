@@ -2,23 +2,30 @@
 
 export const IMAGE_RULES = {
   product: {
-    minSize: 500 * 1024, // 500 KB minimum
-    maxSize: 5 * 1024 * 1024, // 5 MB maximum
-    minWidth: 500, // Updated to match Amazon/Flipkart absolute minimum
-    minHeight: 500,
-    maxWidth: 10000, // Amazon maximum
+    minSize: 1024, // 1 KB
+    maxSize: 10 * 1024 * 1024, // 10 MB
+    minWidth: 200,
+    minHeight: 200,
+    maxWidth: 10000, 
     maxHeight: 10000,
-    requireSquare: true, // Flipkart explicitly requires 1:1
+    requireSquare: false, 
   },
   banner: {
-    minSize: 1 * 1024 * 1024, // 1 MB minimum
-    maxSize: 10 * 1024 * 1024, // 10 MB maximum
-    minWidth: 3000,
-    minHeight: 600,
-    maxWidth: 6000, 
+    minSize: 1024, // 1 KB 
+    maxSize: 10 * 1024 * 1024, // 10 MB
+    minWidth: 400, // Accommodates standard desktop viewports
+    minHeight: 100,
+    maxWidth: 2560, // Standard 2K/ultrawide monitor width. Anything higher is wasted bandwidth.
     maxHeight: 1200,
-    requireSquare: false,
-  }
+    requireSquare: false, 
+  },
+//   ONBOARDING_IMAGE = {
+//   allowedTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+//   minSize: 10 * 1024,       // 10 KB (Small enough for signatures)
+//   maxSize: 5 * 1024 * 1024, // 5 MB (Large enough for phone camera photos)
+//   minWidth: 200,            // Loose minimum width 
+//   minHeight: 100,           // Loose minimum height 
+// }
 };
 
 /**

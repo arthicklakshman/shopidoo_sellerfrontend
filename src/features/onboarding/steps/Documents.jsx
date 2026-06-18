@@ -52,19 +52,21 @@ const UploadZoneCard = ({ title, subtitle, required, fileData, onChange, error, 
             
             {/* 🌟 Preview & Remove Buttons */}
             <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-              <Button
-                variant="text"
-                size="small"
-                startIcon={<VisibilityOutlinedIcon />}
-                sx={{ color: '#059669', textTransform: 'none' }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onPreview(fileData);
-                }}
-              >
-                Preview
-              </Button>
+              {fileData.data && (
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<VisibilityOutlinedIcon />}
+                  sx={{ color: '#059669', textTransform: 'none' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPreview(fileData);
+                  }}
+                >
+                  Preview
+                </Button>
+              )}
               <Button 
                 variant="text" 
                 size="small" 
@@ -175,8 +177,8 @@ export default function Documents({ onBack, onNext }) {
   const handleContinue = async () => {
     const newErrors = {};
     
-    if (!documents.gstProof || !documents.gstProof.data) newErrors.gstProof = "GST Proof is required (re-upload if refreshed)";
-    if (!documents.signature || !documents.signature.data) newErrors.signature = "Signature is required (re-upload if refreshed)";
+    if (!documents.gstProof) newErrors.gstProof = "GST Proof is required";
+    if (!documents.signature) newErrors.signature = "Signature is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -217,29 +219,59 @@ export default function Documents({ onBack, onNext }) {
       <Grid container spacing={4} justifyContent="center" maxWidth="1200px" mx="auto" alignItems="flex-start">
         
         {/* Left Column: Info Cards */}
-        <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Card sx={{ borderRadius: '16px', backgroundColor: '#f9f8ff', border: '1px solid #f3e8ff', boxShadow: 'none' }}>
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Box sx={{ color: '#8b5cf6', mb: 3 }}><DescriptionOutlinedIcon sx={{ fontSize: 32 }} /></Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827', mb: 3 }}>Document Upload</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}><PurpleBullet /><Typography sx={{ color: '#4b5563', fontSize: '14px' }}><Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>Verification: </Box>Documents are verified within 24-48 hours</Typography></Box>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}><PurpleBullet /><Typography sx={{ color: '#4b5563', fontSize: '14px' }}><Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>Clear Images: </Box>Ensure all text is readable</Typography></Box>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}><PurpleBullet /><Typography sx={{ color: '#4b5563', fontSize: '14px' }}><Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>File Format: </Box>PDF, JPG, or PNG accepted</Typography></Box>
-              </Box>
-            </CardContent>
-          </Card>
+<Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+  <Card sx={{ borderRadius: '16px', backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1', boxShadow: 'none' }}>
+    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+      <Box sx={{ color: '#0B8457', mb: 3 }}>
+        <DescriptionOutlinedIcon sx={{ fontSize: 32 }} />
+      </Box>
+      <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827', mb: 3 }}>
+        Document Upload
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#0B8457', mt: 0.8, mr: 1.5, flexShrink: 0 }} />
+          <Typography sx={{ color: '#4b5563', fontSize: '14px' }}>
+            <Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>Verification: </Box>
+            Documents are verified within 24-48 hours
+          </Typography>
+        </Box>
 
-          <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: 'none' }}>
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                <ShieldOutlinedIcon sx={{ color: '#059669', fontSize: 22 }} />
-                <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '15px' }}>Privacy & Security</Typography>
-              </Box>
-              <Typography sx={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6 }}>All documents are encrypted and stored securely.</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#0B8457', mt: 0.8, mr: 1.5, flexShrink: 0 }} />
+          <Typography sx={{ color: '#4b5563', fontSize: '14px' }}>
+            <Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>Clear Images: </Box>
+            Ensure all text is readable
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#0B8457', mt: 0.8, mr: 1.5, flexShrink: 0 }} />
+          <Typography sx={{ color: '#4b5563', fontSize: '14px' }}>
+            <Box component="span" sx={{ fontWeight: 700, color: '#111827' }}>File Format: </Box>
+            PDF, JPG, or PNG accepted
+          </Typography>
+        </Box>
+        
+      </Box>
+    </CardContent>
+  </Card>
+
+  <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: 'none' }}>
+    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+        <ShieldOutlinedIcon sx={{ color: '#0B8457', fontSize: 22 }} />
+        <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '15px' }}>
+          Privacy & Security
+        </Typography>
+      </Box>
+      <Typography sx={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6 }}>
+        All documents are encrypted and stored securely.
+      </Typography>
+    </CardContent>
+  </Card>
+</Grid>
 
         {/* Right Column: Upload Forms */}
         <Grid item xs={12} md={8}>
