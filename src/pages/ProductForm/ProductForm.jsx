@@ -390,7 +390,7 @@ const ProductForm = () => {
     const mrp = parseFloat(form.compare_price) || 0;
     const comm = commission ?? 0;
     if (mrp > 0 && mrp <= selling + comm) {
-      return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + Commission ₹${comm})`;
+      return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + platform fees ₹${comm})`;
     }
     return null;
   }, [form.price, form.compare_price, commission]);
@@ -977,7 +977,7 @@ const renderAttributeField = (attribute) => {
       return;
     }
 
-    if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform Commission.'); return; }
+    if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform fees.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
@@ -1327,6 +1327,7 @@ const renderAttributeField = (attribute) => {
                         >
                           <MenuItem value="">Select GST Rate</MenuItem>
                           <MenuItem value={0}>0%</MenuItem>
+                          <MenuItem value={3}>3%</MenuItem>
                           <MenuItem value={5}>5%</MenuItem>
                           <MenuItem value={12}>12%</MenuItem>
                           <MenuItem value={18}>18%</MenuItem>

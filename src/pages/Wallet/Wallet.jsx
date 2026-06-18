@@ -185,14 +185,14 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
           disabled={loading}
           style={{
             width: "100%", height: 48,
-            background: loading ? theme.palette.action.disabledBackground : "linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)",
-            color: "#000", border: "none", borderRadius: 12,
+            background: loading ? theme.palette.action.disabledBackground : "#0b8457",
+            color: "#fff", border: "none", borderRadius: 12,
             fontSize: "0.9rem", fontWeight: 700,
             cursor: loading ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            transition: "opacity 0.2s, box-shadow 0.2s",
+            transition: "background 0.2s, box-shadow 0.2s",
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,185,177,0.35)"; }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 4px 14px rgba(11,132,87,0.35)"; }}
           onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
         >
           {loading ? (
@@ -225,28 +225,8 @@ export default function Wallet() {
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
     try {
-      const res = await api.get(`${BASE}/wallet`);
-      
-      let storeName = "";
-      let accountNumber = "";
-      try {
-        const sellerUser = JSON.parse(localStorage.getItem("sellerUser") || "{}");
-        const sellerId = sellerUser?.id;
-        if (sellerId) {
-          const sellerRes = await api.get(`/seller/${sellerId}`);
-          storeName = sellerRes.data?.data?.storeName || sellerRes.data?.data?.name || "";
-          accountNumber = sellerRes.data?.data?.accountNumber || "";
-        }
-      } catch (e) {
-        console.error("Failed to load seller details:", e);
-      }
-
-      setWallet({
-        ...res.data.data,
-        settlement_in_progress: res.data.data?.settlement_in_progress ?? res.data.data?.settlement_balance,
-        storeName,
-        accountNumber,
-      });
+      const res = await api.get("/wallet");
+      setWallet(res.data.data);
     } catch {
       showToast("Failed to load wallet data", "error");
     } finally {
@@ -323,24 +303,24 @@ export default function Wallet() {
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
         .wl-withdraw-btn { 
-          margin-top: 14px; 
-          width: 100%; 
-          height: 40px; 
-          background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
-          color: #000; 
-          border: none; 
-          border-radius: 10px; 
-          font-size: 0.85rem; 
-          font-weight: 700; 
-          cursor: pointer; 
-          transition: all 0.18s ease;
-        }
+  margin-top: 14px; 
+  width: 100%; 
+  height: 40px; 
+  background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
+  color: #000; 
+  border: none; 
+  border-radius: 10px; 
+  font-size: 0.85rem; 
+  font-weight: 700; 
+  cursor: pointer; 
+  transition: all 0.18s ease;
+}
 
-        .wl-withdraw-btn:hover:not(:disabled) { 
-          background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
-          opacity: 0.9;
-          box-shadow: 0 4px 14px rgba(11,132,87,0.3); 
-        }
+.wl-withdraw-btn:hover:not(:disabled) { 
+  background: linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%);
+  opacity: 0.9;
+  box-shadow: 0 4px 14px rgba(11,132,87,0.3); 
+}
         .wl-withdraw-btn:active:not(:disabled) { transform: scale(0.98); }
         .wl-withdraw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 

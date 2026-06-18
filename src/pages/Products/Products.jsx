@@ -558,7 +558,7 @@ const Products = () => {
                         </Typography>
                         {commission > 0 && (
                           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.25 }}>
-                            ₹{Number(product.price).toLocaleString('en-IN')} + ₹{commission} commission
+                            ₹{Number(product.price).toLocaleString('en-IN')} + ₹{commission} platform fees
                           </Typography>
                         )}
                       </TableCell>
