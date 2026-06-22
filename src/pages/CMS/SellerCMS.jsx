@@ -29,6 +29,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ImageIcon from "@mui/icons-material/Image";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import LockIcon from "@mui/icons-material/Lock"; // NEW: For the disabled state
 
 import { sellerService } from "../../services/seller.service";
 import { validateImage, IMAGE_RULES } from "../../utils/imageValidator";
@@ -55,6 +56,12 @@ const BTN_STYLE = {
 };
 
 const LOCATION_OPTIONS = ["brand_store", "store_top", "top_of_second_image"];
+
+const LOCATION_LABELS = {
+  brand_store: "Brand Store Background (1500x280)",
+  store_top: "Above Products (1200x400)",
+  top_of_second_image: "Below Products (1200x400)"
+};
 
 const BannerPreviewImage = ({ src, alt }) => {
   const [imgError, setImgError] = useState(false);
@@ -92,7 +99,7 @@ const SellerCMS = () => {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState("");
-  const [bannerError, setBannerError] = useState(""); // NEW: Specific error state for image validation
+  const [bannerError, setBannerError] = useState("");
 
   const [open, setOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -104,17 +111,26 @@ const SellerCMS = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewBanner, setPreviewBanner] = useState(null);
 
-  // ── Dynamic helper strings for UI rendering ──
   const formatBytes = (bytes) => {
+    if (!bytes) return "0 KB";
     if (bytes >= 1024 * 1024) {
       return `${(bytes / (1024 * 1024)).toFixed(1).replace('.0', '')} MB`;
     }
     return `${Math.round(bytes / 1024)} KB`;
   };
 
-  const bannerRules = IMAGE_RULES.banner;
-  const bannerSizeReq = `${formatBytes(bannerRules.minSize)} - ${formatBytes(bannerRules.maxSize)}`;
-  const bannerDimReq = `Min ${bannerRules.minWidth}x${bannerRules.minHeight}px`;
+  // Maps UI selection to Validator Keys
+  const getBannerRuleKey = (loc) => {
+    switch (loc) {
+      case "brand_store": return "brandStore_bg_banner";
+      case "store_top": return "brandStore_top_banner";
+      case "top_of_second_image": return "brandStore_bottom_banner";
+      default: return null; // Return null if no location is selected
+    }
+  };
+
+  const currentRuleKey = getBannerRuleKey(form.location);
+  const bannerRules = currentRuleKey ? IMAGE_RULES[currentRuleKey] : null;
 
   const getImageUrl = (imagePath) => {
     if (typeof imagePath !== "string" || !imagePath.trim()) return "";
@@ -158,7 +174,7 @@ const SellerCMS = () => {
     setSelectedFile(null);
     setPreviewUrl("");
     setSaveError("");
-    setBannerError(""); // Clear specific image error
+    setBannerError("");
     setOpen(true);
   };
 
@@ -174,22 +190,35 @@ const SellerCMS = () => {
     setPreviewUrl(imageUrl);
     setSelectedFile(null);
     setSaveError("");
-    setBannerError(""); // Clear specific image error
+    setBannerError("");
     setOpen(true);
   };
 
-  // ── Validation Handler for the file input ──
+  // Clear the image if the user changes the location to prevent ratio mismatches
+  const handleLocationChange = (e) => {
+    setForm({ ...form, location: e.target.value });
+    setSelectedFile(null);
+    if (!editingBanner) setPreviewUrl("");
+    setBannerError("");
+  };
+
   const handleBannerFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!currentRuleKey) {
+      setBannerError("Please select a location first so we know what size to validate against.");
+      e.target.value = "";
+      return;
+    }
+
     try {
-      const validFile = await validateImage(file, 'banner');
+      const validFile = await validateImage(file, currentRuleKey);
       setSelectedFile(validFile);
       setPreviewUrl(URL.createObjectURL(validFile));
-      setBannerError(""); // Clear any existing validation errors
+      setBannerError(""); 
     } catch (errorMessage) {
-      setBannerError(errorMessage); // Display validation error beneath the box
+      setBannerError(errorMessage); 
       e.target.value = ""; 
     }
   };
@@ -202,7 +231,24 @@ const SellerCMS = () => {
     if (!form.location.trim()) { setSaveError("Location is required."); return; }
     if (!editingBanner && !selectedFile) { setSaveError("Please upload a banner image."); return; }
 
+    if (!editingBanner || editingBanner.location !== form.location) {
+      if (form.location === "store_top" || form.location === "top_of_second_image") {
+        const locationBanners = banners.filter((b) => b.location === form.location);
+        if (locationBanners.length >= 5) {
+          setSaveError("You can only upload up to 5 banners for this location.");
+          return;
+        }
+      }
+    }
+
     try {
+      if (form.location === "brand_store") {
+        const existingBanners = banners.filter((b) => b.location === "brand_store" && b.id !== editingBanner?.id);
+        for (const oldBanner of existingBanners) {
+          await sellerService.deleteBanner(oldBanner.id);
+        }
+      }
+
       const formData = new FormData();
       formData.append("title", form.title.trim());
       formData.append("location", form.location.trim());
@@ -312,7 +358,7 @@ const SellerCMS = () => {
                   <TableCell>{b.title}</TableCell>
                   <TableCell>
                     <Chip
-                      label={b.location || "—"}
+                      label={b?.location ? (LOCATION_LABELS[b.location] || b.location) : "—"}
                       size="small"
                       sx={{ fontWeight: 600 }}
                     />
@@ -373,11 +419,12 @@ const SellerCMS = () => {
           <TextField
             fullWidth label="Location" margin="dense"
             select
-            value={form.location}
-            onChange={(e) => setForm({ ...form, location: e.target.value })}
+            value={form.location || ""}
+            onChange={handleLocationChange}
           >
+            <MenuItem value="" disabled>Select Location</MenuItem>
             {LOCATION_OPTIONS.map((loc) => (
-              <MenuItem key={loc} value={loc}>{loc.replace(/_/g, ' ')}</MenuItem>
+              <MenuItem key={loc} value={loc}>{LOCATION_LABELS[loc]}</MenuItem>
             ))}
           </TextField>
 
@@ -394,9 +441,7 @@ const SellerCMS = () => {
             label="Status"
             margin="dense"
             value={form.status || "active"}
-            onChange={(e) =>
-              setForm({ ...form, status: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
           >
             <MenuItem value="active">Active</MenuItem>
             <MenuItem value="inactive">Inactive</MenuItem>
@@ -410,22 +455,38 @@ const SellerCMS = () => {
             <input
               type="file" accept="image/*" hidden ref={fileInputRef}
               onChange={handleBannerFileChange}
+              disabled={!form.location} // Disabled if no location is selected
             />
 
             <Box
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => {
+                if (!form.location) {
+                  setBannerError("Please select a Location from the dropdown above before uploading an image.");
+                  return;
+                }
+                fileInputRef.current.click();
+              }}
               sx={{
                 width: "100%", height: 150,
                 border: "2px dashed", 
-                borderColor: bannerError ? "error.main" : "divider", // Visual feedback on box
+                borderColor: bannerError ? "error.main" : "divider",
                 borderRadius: 2,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", overflow: "hidden", bgcolor: "action.hover",
+                cursor: form.location ? "pointer" : "not-allowed", 
+                overflow: "hidden", 
+                bgcolor: form.location ? "action.hover" : "action.disabledBackground",
                 transition: "border-color 0.2s",
-                "&:hover": { borderColor: bannerError ? "error.main" : "primary.main" },
+                "&:hover": { borderColor: bannerError ? "error.main" : (form.location ? "primary.main" : "divider") },
               }}
             >
-              {previewUrl ? (
+              {!form.location && !previewUrl ? (
+                 <Stack alignItems="center" spacing={0.5}>
+                   <LockIcon sx={{ color: "text.disabled", fontSize: 32 }} />
+                   <Typography variant="caption" color="text.secondary">
+                     Select a Location first
+                   </Typography>
+                 </Stack>
+              ) : previewUrl ? (
                 <img
                   src={previewUrl}
                   alt="Preview"
@@ -442,19 +503,19 @@ const SellerCMS = () => {
               )}
             </Box>
 
-            {/* NEW: Displays dynamic validation rules */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-               <strong>Requirements:</strong> {bannerDimReq} resolution, {bannerSizeReq} file size.
-            </Typography>
+            {bannerRules && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                 <strong>Requirements:</strong> Min {bannerRules.minWidth}x{bannerRules.minHeight}px resolution, {formatBytes(bannerRules.minSize)} - {formatBytes(bannerRules.maxSize)} file size.
+              </Typography>
+            )}
 
-            {/* NEW: Dedicated space for the image validation error */}
             {bannerError && (
               <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
                  {bannerError}
               </Typography>
             )}
 
-            {previewUrl && (
+            {previewUrl && form.location && (
               <Button
                 size="small"
                 onClick={() => { setPreviewUrl(""); setSelectedFile(null); setBannerError(""); }}
@@ -467,9 +528,7 @@ const SellerCMS = () => {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpen(false)} sx={{textTransform: "none",
-    color: "#000",
-    fontWeight: 600 }}>Cancel</Button>
+          <Button onClick={() => setOpen(false)} sx={{textTransform: "none", color: "#000", fontWeight: 600 }}>Cancel</Button>
           <Button variant="contained" onClick={handleSave} sx={BTN_STYLE}>
             {editingBanner ? "Update Banner" : "Create Banner"}
           </Button>
@@ -492,7 +551,7 @@ const SellerCMS = () => {
                 <Stack direction="row" spacing={2}>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Location</Typography>
-                    <Typography variant="body2" fontWeight={600}>{previewBanner.location || "—"}</Typography>
+                    <Typography variant="body2" fontWeight={600}>{previewBanner?.location ? (LOCATION_LABELS[previewBanner.location] || previewBanner.location) : "—"}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Status</Typography>
@@ -513,9 +572,6 @@ const SellerCMS = () => {
 };
 
 export default SellerCMS;
-
-
-
 
 
 

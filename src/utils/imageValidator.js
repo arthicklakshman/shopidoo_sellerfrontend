@@ -2,36 +2,47 @@
 
 export const IMAGE_RULES = {
   product: {
-    minSize: 1024, // 1 KB
-    maxSize: 10 * 1024 * 1024, // 10 MB
-    minWidth: 200,
-    minHeight: 200,
-    maxWidth: 10000, 
+    minSize: 10 * 1024, // 10 KB (Just to prevent corrupted/empty files)
+    maxSize: 5 * 1024 * 1024, // 5 MB
+    minWidth: 500,
+    minHeight: 500,
+    maxWidth: 10000,
     maxHeight: 10000,
-    requireSquare: false, 
+    requireSquare: true,
   },
-  banner: {
-    minSize: 1024, // 1 KB 
+  brandStore_bg_banner: {
+    minSize: 15 * 1024, // 15 KB
     maxSize: 10 * 1024 * 1024, // 10 MB
-    minWidth: 400, // Accommodates standard desktop viewports
-    minHeight: 100,
-    maxWidth: 2560, // Standard 2K/ultrawide monitor width. Anything higher is wasted bandwidth.
-    maxHeight: 1200,
-    requireSquare: false, 
+    minWidth: 1500,
+    minHeight: 280,
+    maxWidth: 7500,
+    maxHeight: 1400,
+    aspectRatio: 1500 / 280,
   },
-//   ONBOARDING_IMAGE = {
-//   allowedTypes: ['image/jpeg', 'image/png', 'application/pdf'],
-//   minSize: 10 * 1024,       // 10 KB (Small enough for signatures)
-//   maxSize: 5 * 1024 * 1024, // 5 MB (Large enough for phone camera photos)
-//   minWidth: 200,            // Loose minimum width 
-//   minHeight: 100,           // Loose minimum height 
-// }
+  brandStore_top_banner: {
+    minSize: 15 * 1024,
+    maxSize: 10 * 1024 * 1024,
+    minWidth: 1200,
+    minHeight: 400,
+    maxWidth: 4800,
+    maxHeight: 1600,
+    aspectRatio: 1200 / 400, // 3.0
+  },
+  brandStore_bottom_banner: {
+    minSize: 15 * 1024,
+    maxSize: 10 * 1024 * 1024,
+    minWidth: 1200,
+    minHeight: 400,
+    maxWidth: 4800,
+    maxHeight: 1600,
+    aspectRatio: 1200 / 400, // 3.0
+  },
 };
 
 /**
- * Validates an image file's size and resolution.
+ * Validates an image file's size, resolution, and aspect ratio.
  * @param {File} file - The image file from the input event.
- * @param {string} [imageType] - 'product', 'banner', etc.
+ * @param {string} [imageType] - 'product', 'banner_top', etc.
  * @returns {Promise<File>} - Resolves with the file if valid, rejects with an error string.
  */
 export const validateImage = (file, imageType) => {
@@ -40,8 +51,10 @@ export const validateImage = (file, imageType) => {
 
     // 1. Bypass check
     if (!rules) {
-      console.warn(`No rules found for image type: ${imageType || 'unknown'}. Bypassing strict validation.`);
-      return resolve(file); 
+      console.warn(
+        `No rules found for image type: ${imageType || "unknown"}. Bypassing strict validation.`,
+      );
+      return resolve(file);
     }
 
     // 2. Validate File Size
@@ -55,31 +68,49 @@ export const validateImage = (file, imageType) => {
       return reject(`File is too large. Maximum size is ${maxMB}MB.`);
     }
 
-    // 3. Validate Resolution
+    // 3. Validate Resolution & Ratio
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
 
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl); 
+      URL.revokeObjectURL(objectUrl);
 
       const { width, height } = img;
 
       // Check minimums
       if (width < rules.minWidth || height < rules.minHeight) {
-        return reject(`Image too small. Minimum resolution is ${rules.minWidth}x${rules.minHeight}px (Uploaded: ${width}x${height}px).`);
+        return reject(
+          `Image too small. Minimum resolution is ${rules.minWidth}x${rules.minHeight}px (Uploaded: ${width}x${height}px).`,
+        );
       }
 
       // Check maximums
       if (width > rules.maxWidth || height > rules.maxHeight) {
-        return reject(`Image too large. Maximum resolution is ${rules.maxWidth}x${rules.maxHeight}px (Uploaded: ${width}x${height}px).`);
+        return reject(
+          `Image too large. Maximum resolution is ${rules.maxWidth}x${rules.maxHeight}px (Uploaded: ${width}x${height}px).`,
+        );
       }
 
-      // Check aspect ratio if square is required
+      // Check strict square requirement
       if (rules.requireSquare && width !== height) {
-        return reject(`Image must be a perfect square (1:1 aspect ratio). Uploaded image is ${width}x${height}px.`);
+        return reject(
+          `Image must be a perfect square (1:1 aspect ratio). Uploaded image is ${width}x${height}px.`,
+        );
       }
 
-      resolve(file); 
+      // Check aspect ratio with a 0.05 tolerance margin
+      if (rules.aspectRatio) {
+        const currentRatio = width / height;
+        const ratioDifference = Math.abs(currentRatio - rules.aspectRatio);
+
+        if (ratioDifference > 0.05) {
+          return reject(
+            `Incorrect image shape. Please upload an image matching the required aspect ratio of ${rules.aspectRatio.toFixed(2)}.`,
+          );
+        }
+      }
+
+      resolve(file);
     };
 
     img.onerror = () => {
@@ -90,11 +121,6 @@ export const validateImage = (file, imageType) => {
     img.src = objectUrl;
   });
 };
-
-
-
-
-
 
 // // src/utils/imageValidator.js
 
@@ -124,7 +150,7 @@ export const validateImage = (file, imageType) => {
 //     // 1. Bypass check: If it's not a restricted type, let it pass.
 //     if (!rules) {
 //       console.warn(`No rules found for image type: ${imageType || 'unknown'}. Bypassing strict validation.`);
-//       return resolve(file); 
+//       return resolve(file);
 //     }
 
 //     // 2. Validate File Size
@@ -146,7 +172,7 @@ export const validateImage = (file, imageType) => {
 //       }
 
 //       // Passes all checks
-//       resolve(file); 
+//       resolve(file);
 //     };
 
 //     img.onerror = () => {
