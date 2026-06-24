@@ -982,7 +982,7 @@ const Orders = () => {
                         </Typography>
                       </TableCell>
                       <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
-                      <TableCell><Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" fontWeight={600}>{formatCurrency(item.display_amount ?? item.total_price)}</Typography></TableCell>
                       <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
                       <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
                       <TableCell>
@@ -996,7 +996,7 @@ const Orders = () => {
                                 customer: (item.Order || item.order)?.user?.name || '-',
                                 product: item.product?.name || '-',
                                 quantity: item.quantity,
-                                amount: item.total_price,
+                               amount: item.display_amount ?? item.total_price,
                                 status: displayStatus,
                                 createdAt: item.created_at,
                                 address: (item.Order || item.order)?.address,
