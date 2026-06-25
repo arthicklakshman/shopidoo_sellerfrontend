@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Grid, Button, Checkbox, Avatar, CircularProgress
 } from '@mui/material';
+// Add this import at the top
+import { useNavigate } from 'react-router-dom';
 
 // Icons
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -207,17 +209,31 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
           <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Checkbox checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-                <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I accept the Terms & Conditions </Box>
-                <Box component="span" sx={{ color: '#4b5563' }}>By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
-              </Typography>
+             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+  <Box component="span" sx={{ color: '#4b5563' }}>I accept the </Box>
+  <Box
+    component="span"
+    onClick={() => window.open('/terms-and-conditions', '_blank')}
+    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+  >
+    Terms & Conditions
+  </Box>
+  <Box component="span" sx={{ color: '#4b5563' }}> — By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
+</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-                <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>I agree to Seller Policies </Box>
-                <Box component="span" sx={{ color: '#4b5563' }}>This includes product listing guidelines, return policies, and commission structure.</Box>
-              </Typography>
+             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+  <Box component="span" sx={{ color: '#4b5563' }}>I agree to </Box>
+  <Box
+    component="span"
+    onClick={() => window.open('/seller-policies', '_blank')}
+    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+  >
+    Seller Policies
+  </Box>
+  <Box component="span" sx={{ color: '#4b5563' }}> — This includes product listing guidelines, return policies, and commission structure.</Box>
+</Typography>
             </Box>
           </CardContent>
         </Card>

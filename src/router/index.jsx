@@ -30,7 +30,8 @@ const Notifications = lazy(() => import('../pages/Notifications/Notifications'))
 const Returns = lazy(() => import('../pages/Returns/SellerReturns'));
 const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
 const DeleteAccount = lazy(() => import('../pages/deleteaccount/DeleteAccount'));
-
+const TermsAndConditions = lazy(() => import('../pages/TermsAndConditions/TermsAndConditions'));
+const SellerPolicies = lazy(() => import('../pages/SellerPolicies/SellerPolicies'));
 
 
 const PrivateRoute = ({ children }) => {
@@ -126,6 +127,10 @@ const AppRouter = () => (
           <Route path="/returns" element={<Returns />} />
           <Route path="/cms" element={<SellerCMS />} />
         </Route>
+
+        {/* ✅ Public routes - no auth needed */}
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/seller-policies" element={<SellerPolicies />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
