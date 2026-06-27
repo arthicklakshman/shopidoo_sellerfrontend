@@ -2107,6 +2107,15 @@ const CommissionBadge = ({ price }) => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
+
 const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
@@ -2149,6 +2158,7 @@ const ProductForm = () => {
   const [variants, setVariants] = useState([]);
   const [colorGroups, setColorGroups] = useState([]);
   const [customSpecs, setCustomSpecs] = useState([]);
+  const [shippingRules, setShippingRules] = useState([]);
   const [images, setImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [colorFiles, setColorFiles] = useState({});
@@ -2263,6 +2273,7 @@ const ProductForm = () => {
             setVariantAttributeValues(formattedVariantAttrs);
           }
           setCustomSpecs((p.specifications || []).filter(spec => spec.is_custom || (!spec.attribute_id && !spec.is_variant)));
+          setShippingRules(p.shipping_rules || []);
           setImages(p.images || []);
         }).finally(() => setLoading(false))
       );
@@ -2817,6 +2828,7 @@ const renderAttributeField = (attribute) => {
         delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
         free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
         express_delivery_charge: shippingPreference === 'platform' ? null : (form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null),
+        shipping_rules: shippingPreference === 'platform' ? [] : shippingRules.filter(r => r.state),
         specifications: buildSpecifications(),
         hsn_code: form.hsn_code?.trim() || null,
         gst_rate: form.gst_rate || null,
@@ -3469,6 +3481,117 @@ const renderAttributeField = (attribute) => {
                       helperText="Optional faster delivery fee."
                       inputProps={{ min: 0, step: 0.01 }}
                     />
+
+                    {/* State-wise Shipping Rules */}
+                    {form.delivery_type !== 'free' && (
+                      <Box sx={{ mt: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" fontWeight={700}>State-wise Delivery Charges</Typography>
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          startIcon={<AddIcon />}
+                          sx={secondaryButtonStyle}
+                          onClick={() => setShippingRules(prev => [...prev, { state: '', delivery_type: 'free', delivery_charge: '', free_delivery_min_order: '' }])}
+                        >
+                          Add State Rule
+                        </Button>
+                      </Box>
+                      {shippingRules.length > 0 && (
+                        <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Table size="small">
+                            <TableHead sx={{ bgcolor: 'background.default' }}>
+                              <TableRow>
+                                <TableCell>State</TableCell>
+                                <TableCell>Type</TableCell>
+                                <TableCell>Charge / Threshold</TableCell>
+                                <TableCell align="right">Action</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {shippingRules.map((rule, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell sx={{ minWidth: 150 }}>
+                                    <FormControl fullWidth size="small">
+                                      <Select
+                                        value={rule.state}
+                                        onChange={(e) => {
+                                          const newRules = [...shippingRules];
+                                          newRules[idx].state = e.target.value;
+                                          setShippingRules(newRules);
+                                        }}
+                                        displayEmpty
+                                      >
+                                        <MenuItem value="" disabled>Select State</MenuItem>
+                                        {INDIAN_STATES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                                      </Select>
+                                    </FormControl>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 130 }}>
+                                    <FormControl fullWidth size="small">
+                                      <Select
+                                        value={rule.delivery_type}
+                                        onChange={(e) => {
+                                          const newRules = [...shippingRules];
+                                          newRules[idx].delivery_type = e.target.value;
+                                          if (e.target.value === 'free') {
+                                            newRules[idx].delivery_charge = '';
+                                            newRules[idx].free_delivery_min_order = '';
+                                          }
+                                          setShippingRules(newRules);
+                                        }}
+                                      >
+                                        <MenuItem value="free">Free</MenuItem>
+                                        <MenuItem value="fixed">Fixed</MenuItem>
+                                        <MenuItem value="conditional">Conditional</MenuItem>
+                                      </Select>
+                                    </FormControl>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 180 }}>
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                      {rule.delivery_type !== 'free' && (
+                                        <TextField
+                                          size="small"
+                                          placeholder="Charge (₹)"
+                                          type="number"
+                                          value={rule.delivery_charge}
+                                          onChange={(e) => {
+                                            const newRules = [...shippingRules];
+                                            newRules[idx].delivery_charge = e.target.value;
+                                            setShippingRules(newRules);
+                                          }}
+                                          inputProps={{ min: 0, step: 0.01 }}
+                                        />
+                                      )}
+                                      {rule.delivery_type === 'conditional' && (
+                                        <TextField
+                                          size="small"
+                                          placeholder="Above (₹)"
+                                          type="number"
+                                          value={rule.free_delivery_min_order}
+                                          onChange={(e) => {
+                                            const newRules = [...shippingRules];
+                                            newRules[idx].free_delivery_min_order = e.target.value;
+                                            setShippingRules(newRules);
+                                          }}
+                                          inputProps={{ min: 0, step: 0.01 }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    <IconButton size="small" color="error" onClick={() => setShippingRules(prev => prev.filter((_, i) => i !== idx))}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                    </Box>
+                    )}
 
                     {/* Shipping Summary Preview */}
                     <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
