@@ -707,15 +707,13 @@ const SellerReturns = () => {
                     variant="filled"
                     SelectProps={{
                       MenuProps: {
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left'
+                        anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+                        transformOrigin: { vertical: 'top', horizontal: 'left' },
+                        disableScrollLock: true,
+                        slotProps: {
+                          paper: { style: { maxHeight: 300, marginTop: 4 } },
                         },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left'
-                        }
-                      }
+                      },
                     }}
                   >
                     <MenuItem value="Approve Refund">Approve Refund</MenuItem>
@@ -850,15 +848,13 @@ const SellerReturns = () => {
                     variant="filled"
                     SelectProps={{
                       MenuProps: {
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left'
+                        anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                        transformOrigin: { vertical: 'top', horizontal: 'left' },
+                        disableScrollLock: true,
+                        slotProps: {
+                          paper: { style: { maxHeight: 300, marginTop: 4 } },
                         },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left'
-                        }
-                      }
+                      },
                     }}
                   >
                     <MenuItem value="pending">Pending</MenuItem>

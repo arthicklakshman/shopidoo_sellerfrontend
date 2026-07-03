@@ -8,7 +8,7 @@ export default function DeleteAccount() {
 
   const handleDelete = async () => {
     try {
-      await api.delete('/user/delete-account');
+      await api.delete('/seller/delete-account');
 
       localStorage.clear();
       alert('Account deleted successfully');

@@ -1,214 +1,489 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { toWords } from 'number-to-words';
+import SHOPIDOO_LOGO from '../assets/shopidoo_logo.png';
+// ─── Shopidoo constants ───────────────────────────────────────────────────────
+const SHOPIDOO = {
+  name: 'Shopidoo',
+  city: 'Nagercoil',
+  gst:  '33AABCS1234E1ZK',
+  pan:  'AABCS1234E',
+};
 
-export const generateInvoice = (orderItem, isSeller = false) => {
-  const doc = new jsPDF();
-  const order = orderItem.Order || orderItem.order;
-  if (!order) {
-    console.error('Order details missing');
-    return;
+// ─── Layout / colour tokens ──────────────────────────────────────────────────
+const BLACK   = [30,  30,  30];
+const GREY_BG = [248, 248, 248];
+const GREY_TX = [90,  90,  90];
+const WHITE   = [255, 255, 255];
+const DARK    = [20,  20,  20];
+const PAGE_W  = 210;
+const MARGIN  = 12;
+const FULL_W  = PAGE_W - MARGIN * 2;
+const COL_W   = FULL_W / 2 - 1;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function sf(doc, style = 'normal', size = 9) {
+  doc.setFont('helvetica', style);
+  doc.setFontSize(size);
+}
+
+function box(doc, x, y, w, h) {
+  doc.setDrawColor(180, 180, 180);
+  doc.setFillColor(...GREY_BG);
+  doc.rect(x, y, w, h, 'FD');
+}
+
+function hline(doc, x1, y1, x2) {
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(x1, y1, x2, y1);
+}
+
+function txt(doc, text, x, y, { color = BLACK, align = 'left', size = 8 } = {}) {
+  doc.setTextColor(...color);
+  doc.setFontSize(size);
+  doc.text(String(text ?? ''), x, y, { align });
+}
+
+function wrap(doc, text, maxWidth) {
+  return doc.splitTextToSize(String(text ?? ''), maxWidth);
+}
+
+function fmtDate(val) {
+  if (!val) return '-';
+  const d = new Date(val);
+  return isNaN(d) ? String(val) : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtRs(n) {
+  return 'Rs.' + (parseFloat(n) || 0).toFixed(2);
+}
+
+function addrString(addr) {
+  if (!addr) return '';
+  if (typeof addr === 'string') return addr;
+  return [
+    addr.full_name || addr.name || '',
+    addr.phone     || '',
+    addr.address_line1 || addr.address || '',
+    addr.address_line2 || '',
+    [addr.city, addr.state].filter(Boolean).join(', '),
+    addr.pincode ? '- ' + addr.pincode : '',
+  ].map(s => s.trim()).filter(Boolean).join(', ');
+}
+
+function fmtPayment(method) {
+  if (!method) return '-';
+  const m = method.toLowerCase();
+  if (m.includes('cod') || m.includes('cash'))                             return 'Cash on Delivery (COD)';
+  if (m.includes('upi'))                                                   return 'UPI';
+  if (m.includes('card') || m.includes('credit') || m.includes('debit'))  return 'Card';
+  if (m.includes('net')  || m.includes('neft'))                           return 'Net Banking';
+  if (m.includes('wallet'))                                                return 'Wallet';
+  return method.toUpperCase();
+}
+
+function toWords(amount) {
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+    'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two   = n => n < 20 ? ones[n] : tens[Math.floor(n/10)] + (n%10 ? ' '+ones[n%10] : '');
+  const three = n => n >= 100 ? ones[Math.floor(n/100)]+' Hundred'+(n%100 ? ' '+two(n%100) : '') : two(n);
+  const r = Math.floor(amount);
+  const p = Math.round((amount - r) * 100);
+  if (!r && !p) return 'Zero Rupees only';
+  let w = '';
+  if (r >= 10000000)        w += three(Math.floor(r/10000000))          + ' Crore ';
+  if (r%10000000 >= 100000) w += three(Math.floor((r%10000000)/100000)) + ' Lakh ';
+  if (r%100000   >= 1000)   w += three(Math.floor((r%100000)/1000))     + ' Thousand ';
+  if (r%1000     >= 100)    w += ones[Math.floor((r%1000)/100)]          + ' Hundred ';
+  if (r%100)                w += two(r%100) + ' ';
+  w = w.trim() + ' Rupees';
+  if (p) w += ' and ' + two(p) + ' Paise';
+  return w + ' only';
+}
+
+// ─── Data resolvers ───────────────────────────────────────────────────────────
+
+function getSellerProfile(data, isSeller) {
+  let s = {};
+  if (isSeller) {
+    // Sequelize may wrap in dataValues — check both
+    const prod = data?.product?.dataValues || data?.product || {};
+    s = prod.seller?.dataValues || prod.seller || data?.seller?.dataValues || data?.seller || {};
+  } else {
+    const first = data?.rawItems?.[0] || {};
+    const prod = first.product?.dataValues || first.product || {};
+    s = prod.seller?.dataValues || prod.seller || first.seller?.dataValues || first.seller || {};
   }
 
-  const { order_number, created_at, address, user } = order;
-  const product = orderItem.product || {};
+  const structuredAddr = [
+    s.addressLine1 || s.address_line1 || '',
+    s.addressLine2 || s.address_line2 || '',
+    s.city   || '',
+    s.state  || '',
+    s.pincode || s.pin_code || '',
+  ].filter(Boolean).join(', ');
 
-  const orderDate = new Date(created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const invoiceNumber = `INV-${order_number}`;
+  return {
+    name:         s.storeName || s.businessName || s.business_name || s.name || (isSeller ? '' : data?.seller) || 'Seller',
+    address:      addrString(s.address || s.gst_address) || structuredAddr,
+    pan:          s.panNumber  || s.pan_number  || s.pan || '',
+    gst:          s.gstNumber  || s.gst_number  || s.gst || '',
+    signatureUrl: s.signatureImage || s.signature_url || s.signatureUrl || null,
+  };
+}
 
-  const seller = orderItem.seller || {};
-  const sellerName = seller.businessName || seller.name || 'SHOPIDOO RETAIL PRIVATE LIMITED';
-  const sellerAddress = seller.addressLine1 
-    ? `${seller.addressLine1}${seller.addressLine2 ? '\n' + seller.addressLine2 : ''}\n${seller.city || ''}, ${seller.state || ''} - ${seller.pincode || ''}\nIN`
-    : 'No. 1/8, Tech Park, Guindy.\nChennai, Tamil Nadu, 600032\nIN';
+function getOrderData(data, isSeller) {
+  if (isSeller) {
+    const order = data?.Order || data?.order || {};
+    return {
+      orderNumber:   order.order_number || `ORD${String(data.id||'').padStart(5,'0')}`,
+      orderDate:     data.created_at    || order.created_at,
+      invoiceDate:   data.created_at    || order.created_at,
+      customer:      order.user?.name   || 'Customer',
+      address:       addrString(order.address || data.address),
+      paymentMethod: order.payment?.payment_method || order.payment_method || '',
+      paymentStatus: order.payment?.status         || order.payment_status || 'pending',
+    };
+  }
+  return {
+    orderNumber:   data.orderNumber  || data.order_number || '',
+    orderDate:     data.createdAt    || data.created_at,
+    invoiceDate:   data.createdAt    || data.created_at,
+    customer:      data.customer     || '',
+    address:       addrString(data.address),
+    paymentMethod: data.paymentMethod || '',
+    paymentStatus: data.payment       || 'pending',
+  };
+}
 
-  const customerName = address?.name || user?.name || 'Customer';
-  const customerAddress = typeof address === 'string' 
-    ? address 
-    : address 
-      ? `${address.address_line1 || ''}\n${address.address_line2 ? address.address_line2 + '\n' : ''}${address.city || ''}, ${address.state || ''} - ${address.pincode || ''}\n${address.country || 'IN'}\nState/UT Code: 33` 
-      : 'N/A';
+function getLineItems(data, isSeller) {
+  const calc = (totalPrice, taxRate) => {
+    const tax = parseFloat((totalPrice - totalPrice / (1 + taxRate / 100)).toFixed(2));
+    const net = parseFloat((totalPrice - tax).toFixed(2));
+    return { net, tax };
+  };
 
-  const totalAmount = parseFloat(orderItem.total_price || 0);
-  const qty = parseInt(orderItem.quantity || 1);
-  const taxRate = 18; 
-  const netAmountVal = (totalAmount * 100) / (100 + taxRate);
-  const taxAmountVal = totalAmount - netAmountVal;
-  const halfTax = taxAmountVal / 2;
-  const unitPriceVal = qty > 0 ? netAmountVal / qty : netAmountVal;
+  if (isSeller) {
+    const total   = parseFloat(data.display_amount ?? data.dataValues?.display_amount ?? data.total_price ?? 0);
+    const qty     = data.quantity || 1;
+    // Sequelize wraps in dataValues — check both levels
+    const prod    = data.product?.dataValues || data.product || {};
+    const taxRate = parseFloat(prod.gst_rate ?? prod.tax_rate ?? 18);
+    const { net, tax } = calc(total, taxRate);
+    const hsn = prod.hsn_code || prod.hsn || '';
+    return [{
+      name:      prod.name || data.product?.name || 'Product',
+      hsn:       String(hsn).trim(),
+      unitPrice: parseFloat((total / qty).toFixed(2)),
+      discount:  0,
+      qty,
+      net,
+      taxRate,
+      taxAmount: tax,
+      total,
+    }];
+  }
 
-  // Draw Header
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0);
-  doc.text('Shopidoo', 10, 20);
+  return (data.rawItems || []).map(item => {
+    const total   = parseFloat(item.display_amount ?? item.dataValues?.display_amount ?? item.total_price ?? 0);
+    const qty     = item.quantity || 1;
+    const prod    = item.product?.dataValues || item.product || {};
+    const taxRate = parseFloat(prod.gst_rate ?? prod.tax_rate ?? 18);
+    const { net, tax } = calc(total, taxRate);
+    const hsn = prod.hsn_code || prod.hsn || '';
+    return {
+      name:      prod.name || item.product?.name || 'Product',
+      hsn:       String(hsn).trim(),
+      unitPrice: parseFloat((total / qty).toFixed(2)),
+      discount:  0,
+      qty,
+      net,
+      taxRate,
+      taxAmount: tax,
+      total,
+    };
+  });
+}
 
-  doc.setFontSize(9);
-  doc.text('Tax Invoice / Bill of Supply / Cash Memo', 200, 18, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(100);
-  doc.text('(Original for Recipient)', 200, 22, { align: 'right' });
+// ─── PDF sections ─────────────────────────────────────────────────────────────
 
-  // Outer Box
-  doc.setDrawColor(150);
-  doc.setLineWidth(0.2);
-  doc.rect(10, 28, 190, 92); 
+function drawHeader(doc) {
+  // Logo only — no text heading
+ try {
+  doc.addImage(SHOPIDOO_LOGO, 'PNG', MARGIN, 3, 35, 14);
+} catch (_) {}
 
-  // Middle vertical line
-  doc.line(105, 28, 105, 120); 
+  // Title right side
+  sf(doc, 'bold', 9);
+  doc.setTextColor(...DARK);
+  doc.text('Tax Invoice / Bill of Supply / Cash Memo', PAGE_W - MARGIN, 8, { align: 'right' });
+  sf(doc, 'normal', 7.5);
+  doc.setTextColor(...GREY_TX);
+  doc.text('(Original for Recipient)', PAGE_W - MARGIN, 13, { align: 'right' });
 
-  // Horizontal line 1 (y=60)
-  doc.line(10, 60, 200, 60);
+  // Divider line below header
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, 19, PAGE_W - MARGIN, 19);
 
-  // Horizontal line 2 (y=105)
-  doc.line(10, 105, 200, 105);
+  return 23;
+}
 
-  // Fill text for Sold By
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0);
-  doc.text('Sold By :', 12, 33);
-  doc.setFont('helvetica', 'normal');
-  doc.text(sellerName, 12, 38);
-  doc.text(doc.splitTextToSize(sellerAddress, 85), 12, 42);
+function drawBoxes(doc, startY, seller, od) {
+  const lX  = MARGIN;
+  const rX  = MARGIN + COL_W + 2;
+  const bH  = 36;
+  const gap = 3;
 
-  // Fill text for Billing Address
-  doc.setFont('helvetica', 'bold');
-  doc.text('Billing Address :', 107, 33);
-  doc.setFont('helvetica', 'normal');
-  doc.text(customerName, 107, 38);
-  doc.text(doc.splitTextToSize(customerAddress, 85), 107, 42);
+  // ── ROW 1: BOX 1 Sold By | BOX 2 Billing Address ──────────────────────────
+  box(doc, lX, startY, COL_W, bH);
+  txt(doc, 'Sold By', lX + 3, startY + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 8.5);
+  txt(doc, seller.name, lX + 3, startY + 11, { color: DARK, size: 8.5 });
+  sf(doc, 'normal', 7);
+  const selLines = wrap(doc, seller.address, COL_W - 8);
+  let sy = startY + 17;
+  selLines.slice(0, 2).forEach(l => { txt(doc, l, lX + 3, sy, { color: GREY_TX, size: 7 }); sy += 4; });
+  if (sy < startY + 25) sy = startY + 25;
+  if (seller.pan) { txt(doc, `PAN : ${seller.pan}`, lX + 3, sy, { color: GREY_TX, size: 7 }); sy += 4; }
+  if (seller.gst) { txt(doc, `GST : ${seller.gst}`, lX + 3, sy, { color: GREY_TX, size: 7 }); }
 
-  // Fill text for PAN & QR
-  doc.setFont('helvetica', 'bold');
-  doc.text(`PAN No: ${seller.panNumber || 'AABCS1234E'}`, 12, 65);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`GST Registration No: ${seller.gstNumber || '33AABCS1234E1ZK'}`, 12, 69);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Dynamic QR Code:', 12, 74);
-  doc.rect(12, 78, 20, 20); // QR code box
-  doc.setFontSize(6);
-  doc.setTextColor(150);
-  doc.text('QR', 22, 89, { align: 'center' });
-  
-  // Fill text for Shipping Address
-  doc.setFontSize(8);
-  doc.setTextColor(0);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Shipping Address :', 107, 65);
-  doc.setFont('helvetica', 'normal');
-  doc.text(customerName, 107, 70);
-  doc.text(doc.splitTextToSize(customerAddress, 85), 107, 74);
+  box(doc, rX, startY, COL_W, bH);
+  txt(doc, 'Billing Address', rX + 3, startY + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 8.5);
+  txt(doc, od.customer, rX + 3, startY + 11, { color: DARK, size: 8.5 });
+  sf(doc, 'normal', 7);
+  const billLines = wrap(doc, od.address, COL_W - 8);
+  let by = startY + 17;
+  billLines.slice(0, 4).forEach(l => { txt(doc, l, rX + 3, by, { color: GREY_TX, size: 7 }); by += 4; });
 
-  // Fill text for Order & Invoice Data
-  doc.text(`Order Number: ${order_number}`, 12, 110);
-  doc.text(`Order Date: ${orderDate}`, 12, 115);
-  
-  doc.text('Place of supply: TAMIL NADU', 107, 110);
-  doc.text(`Invoice Number: ${invoiceNumber}`, 107, 114);
-  doc.text(`Invoice Date: ${orderDate}`, 107, 118);
+  // ── ROW 2: BOX 3 Shopidoo | BOX 4 Shipping Address ────────────────────────
+  const row2Y = startY + bH + gap;
 
-  // Table
-  const tableData = [
-    [
-      '1',
-      `${product?.name || 'Product'}\nHSN: ${product?.hsn_code || '85183020'}`,
-      `${unitPriceVal.toFixed(2)}`,
-      `0.00`,
-      qty.toString(),
-      `${netAmountVal.toFixed(2)}`,
-      '9%\n9%',
-      'CGST\nSGST',
-      `${halfTax.toFixed(2)}\n${halfTax.toFixed(2)}`,
-      `${totalAmount.toFixed(2)}`
-    ],
-    [
-      '',
-      'Shipping Charges',
-      `0.00`,
-      `0.00`,
-      '',
-      `0.00`,
-      '0%',
-      'CGST',
-      `0.00`,
-      `0.00`
-    ]
-  ];
+  box(doc, lX, row2Y, COL_W, bH);
+  txt(doc, 'Platform', lX + 3, row2Y + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 9);
+  txt(doc, SHOPIDOO.name, lX + 3, row2Y + 11, { color: DARK, size: 9 });
+  sf(doc, 'normal', 7);
+  txt(doc, SHOPIDOO.city, lX + 3, row2Y + 17, { color: GREY_TX, size: 7 });
+  txt(doc, `PAN : ${SHOPIDOO.pan}`, lX + 3, row2Y + 22, { color: GREY_TX, size: 7 });
+  txt(doc, `GST : ${SHOPIDOO.gst}`, lX + 3, row2Y + 27, { color: GREY_TX, size: 7 });
+
+  box(doc, rX, row2Y, COL_W, bH);
+  txt(doc, 'Shipping Address', rX + 3, row2Y + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 8.5);
+  txt(doc, od.customer, rX + 3, row2Y + 11, { color: DARK, size: 8.5 });
+  sf(doc, 'normal', 7);
+  const shipLines = wrap(doc, od.address, COL_W - 8);
+  let hy = row2Y + 17;
+  shipLines.slice(0, 4).forEach(l => { txt(doc, l, rX + 3, hy, { color: GREY_TX, size: 7 }); hy += 4; });
+
+  // ── ROW 3: BOX 5 Order Details | BOX 6 Invoice + Payment ──────────────────
+  const row3Y = row2Y + bH + gap;
+  const smH   = 26;
+
+  box(doc, lX, row3Y, COL_W, smH);
+  txt(doc, 'Order Details', lX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 7.5);
+  txt(doc, 'Order Number :', lX + 3, row3Y + 12, { color: GREY_TX, size: 7.5 });
+  sf(doc, 'normal', 8);
+  txt(doc, od.orderNumber, lX + 3, row3Y + 18, { color: DARK, size: 8 });
+  sf(doc, 'bold', 7.5);
+  txt(doc, 'Order Date :', lX + COL_W / 2, row3Y + 12, { color: GREY_TX, size: 7.5 });
+  sf(doc, 'normal', 8);
+  txt(doc, fmtDate(od.orderDate), lX + COL_W / 2, row3Y + 18, { color: DARK, size: 8 });
+
+  box(doc, rX, row3Y, COL_W, smH);
+  txt(doc, 'Invoice Details', rX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
+  sf(doc, 'bold', 7.5);
+  txt(doc, 'Invoice Number :', rX + 3, row3Y + 12, { color: GREY_TX, size: 7.5 });
+  sf(doc, 'normal', 8);
+  txt(doc, `INV-${od.orderNumber}`, rX + 3, row3Y + 18, { color: DARK, size: 8 });
+  sf(doc, 'bold', 7.5);
+  txt(doc, 'Invoice Date :', rX + COL_W / 2 - 4, row3Y + 12, { color: GREY_TX, size: 7.5 });
+  sf(doc, 'normal', 8);
+  txt(doc, fmtDate(od.invoiceDate), rX + COL_W / 2 - 4, row3Y + 18, { color: DARK, size: 8 });
+
+  hline(doc, rX + 2, row3Y + 21, rX + COL_W - 2);
+  sf(doc, 'bold', 7.5);
+  txt(doc, `Payment Mode : ${fmtPayment(od.paymentMethod)}`, rX + 3, row3Y + 25, { color: DARK, size: 7.5 });
+
+  return row3Y + smH + gap;
+}
+
+function drawItemsTable(doc, y, items) {
+  const rows = items.map((item, i) => [
+    i + 1,
+    // HSN shown on second line under product name
+    item.name + (item.hsn ? `\nHSN Code: ${item.hsn}` : ''),
+    fmtRs(item.unitPrice),
+    fmtRs(item.discount),
+    item.qty,
+    fmtRs(item.net),
+    `${item.taxRate}%`,
+    'GST',
+    fmtRs(item.taxAmount),
+    fmtRs(item.total),
+  ]);
+
+  const totalTax   = items.reduce((s, i) => s + i.taxAmount, 0);
+  const grandTotal = items.reduce((s, i) => s + i.total,     0);
 
   autoTable(doc, {
-    startY: 120,
-    margin: { left: 10, right: 10 },
+    startY: y,
+    head: [['Sl.\nNo', 'Description', 'Unit\nPrice', 'Discount', 'Qty',
+            'Net\nAmount', 'Tax\nRate', 'Tax\nType', 'Tax\nAmount', 'Total\nAmount']],
+    body: rows,
+    foot: [['', '', '', '', '', '', '', 'TOTAL:', fmtRs(totalTax), fmtRs(grandTotal)]],
     theme: 'grid',
-    head: [['Sl.\nNo', 'Description', 'Unit\nPrice', 'Discount', 'Qty', 'Net\nAmount', 'Tax\nRate', 'Tax\nType', 'Tax\nAmount', 'Total\nAmount']],
-    body: tableData,
-    styles: { lineColor: [150, 150, 150], lineWidth: 0.2, fontSize: 7, textColor: 0 },
-    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', valign: 'middle' },
-    bodyStyles: { valign: 'middle' },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 8 },
-      1: { halign: 'left' },
-      2: { halign: 'right', cellWidth: 16 },
-      3: { halign: 'right', cellWidth: 16 },
-      4: { halign: 'center', cellWidth: 10 },
-      5: { halign: 'right', cellWidth: 16 },
-      6: { halign: 'center', cellWidth: 10 },
-      7: { halign: 'center', cellWidth: 12 },
-      8: { halign: 'right', cellWidth: 16 },
-      9: { halign: 'right', cellWidth: 18 },
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 2.5,
+      textColor: DARK,
+      lineColor: [180, 180, 180],
+      lineWidth: 0.3,
+      overflow: 'linebreak',
+      font: 'helvetica',
     },
-    foot: [['', '', '', '', 'TOTAL:', `${netAmountVal.toFixed(2)}`, '', '', `${taxAmountVal.toFixed(2)}`, `${totalAmount.toFixed(2)}`]],
-    footStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' },
-    willDrawCell: (data) => {
-      // Custom alignment for specific columns in the foot
-      if (data.section === 'foot' && data.column.index === 4) {
-        data.cell.styles.halign = 'left';
-      }
-    }
+    headStyles: {
+      fillColor: WHITE,
+      textColor: DARK,
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'center',
+      lineColor: [150, 150, 150],
+      lineWidth: 0.4,
+    },
+    footStyles: {
+      fillColor: [235, 235, 235],
+      textColor: DARK,
+      fontStyle: 'bold',
+      fontSize: 7.5,
+    },
+    alternateRowStyles: {
+      fillColor: [252, 252, 252],
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 8  },
+      1: { cellWidth: 44 },
+      2: { halign: 'right',  cellWidth: 19 },
+      3: { halign: 'right',  cellWidth: 16 },
+      4: { halign: 'center', cellWidth: 10 },
+      5: { halign: 'right',  cellWidth: 20 },
+      6: { halign: 'center', cellWidth: 12 },
+      7: { halign: 'center', cellWidth: 11 },
+      8: { halign: 'right',  cellWidth: 18 },
+      9: { halign: 'right',  cellWidth: 28 },
+    },
+    margin: { left: MARGIN, right: MARGIN },
   });
 
-  const finalY = doc.lastAutoTable.finalY;
-  
-  // Footer Box
-  const boxHeight = 55;
-  doc.setDrawColor(150);
-  doc.rect(10, finalY, 190, boxHeight);
-  
-  // Amount in Words
-  const amountInWords = toWords(Math.round(totalAmount));
-  const amountInWordsCapitalized = amountInWords.replace(/\b\w/g, l => l.toUpperCase()) + ' Rupees only';
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Amount in Words:', 12, finalY + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(amountInWordsCapitalized, 12, finalY + 10);
-  
-  // Horizontal line separating amount in words and signature
-  doc.line(10, finalY + 15, 200, finalY + 15);
-  
-  // Signature Area
-  doc.setFont('helvetica', 'bold');
-  doc.text(`For ${sellerName}:`, 198, finalY + 20, { align: 'right' });
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(150);
-  doc.text('Authorized Signatory', 198, finalY + 40, { align: 'right' });
-  
-  // Horizontal line separating signature and footer
-  doc.line(10, finalY + 45, 200, finalY + 45);
-  
-  // Footer text inside the box
-  doc.setFontSize(6);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
-  doc.text('Whether tax is payable under reverse charge - No', 12, finalY + 50);
-  
-  // Out of box text
-  doc.setTextColor(150);
-  doc.text('This is a computer-generated invoice and does not require a physical signature. For support: support@shopidoo.com', 105, finalY + 60, { align: 'center' });
-  
-  doc.text('Page 1 of 1', 200, finalY + 60, { align: 'right' });
+  return doc.lastAutoTable.finalY + 4;
+}
 
-  doc.save(`${invoiceNumber}.pdf`);
-};
+async function drawFooter(doc, y, items, seller) {
+  const grandTotal = items.reduce((s, i) => s + i.total, 0);
+
+  // Amount in words
+  const wH = 13;
+  box(doc, MARGIN, y, FULL_W, wH);
+  sf(doc, 'bold', 7.5);
+  txt(doc, 'Amount in Words :', MARGIN + 3, y + 5, { color: GREY_TX, size: 7.5 });
+  sf(doc, 'normal', 8);
+  txt(doc, toWords(grandTotal), MARGIN + 3, y + 10, { color: DARK, size: 8 });
+
+  // Signature box — right side
+  const sigY = y + wH + 3;
+  const sigH = 28;
+  const rX   = MARGIN + COL_W + 2;
+  box(doc, rX, sigY, COL_W, sigH);
+  sf(doc, 'bold', 7.5);
+  txt(doc, `For ${seller.name} :`, rX + 3, sigY + 6, { color: GREY_TX, size: 7.5 });
+
+  if (seller.signatureUrl) {
+    try {
+      let imgData = seller.signatureUrl;
+      if (imgData.startsWith('http')) {
+        imgData = await imgToBase64(imgData);
+      } else if (!imgData.startsWith('data:')) {
+        imgData = 'data:image/png;base64,' + imgData;
+      }
+      if (imgData) {
+        doc.addImage(imgData, 'PNG', rX + 3, sigY + 8, 50, 14, undefined, 'FAST');
+      } else {
+        sigFallback(doc, seller.name, rX, sigY, sigH);
+      }
+    } catch (_) {
+      sigFallback(doc, seller.name, rX, sigY, sigH);
+    }
+  } else {
+    sigFallback(doc, seller.name, rX, sigY, sigH);
+  }
+
+  sf(doc, 'bold', 7);
+  txt(doc, 'Authorized Signatory', rX + 3, sigY + sigH - 4, { color: GREY_TX, size: 7 });
+
+  return sigY + sigH + 4;
+}
+
+function sigFallback(doc, name, rX, sigY, sigH) {
+  sf(doc, 'italic', 9);
+  doc.setTextColor(60, 60, 60);
+  doc.text(name, rX + 5, sigY + sigH / 2 + 2);
+}
+
+function drawNotice(doc, y) {
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  sf(doc, 'normal', 7);
+  doc.setTextColor(...GREY_TX);
+  doc.text('Whether tax is payable under reverse charge - No', MARGIN, y + 5);
+  sf(doc, 'italic', 6.5);
+  doc.text('This is a computer-generated invoice. For support: support@shopidoo.com',
+    PAGE_W / 2, y + 10, { align: 'center' });
+  sf(doc, 'normal', 6.5);
+  doc.text('Page 1 of 1', PAGE_W - MARGIN, y + 10, { align: 'right' });
+}
+
+function imgToBase64(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c.toDataURL('image/png'));
+      } catch (_) { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export async function generateInvoice(data, isSeller = false) {
+  if (!data) { console.warn('[generateInvoice] No data provided'); return; }
+
+  const seller    = getSellerProfile(data, isSeller);
+  const orderData = getOrderData(data, isSeller);
+  const items     = getLineItems(data, isSeller);
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  let y = drawHeader(doc);
+  y = drawBoxes(doc, y, seller, orderData);
+  y = drawItemsTable(doc, y, items);
+  y = await drawFooter(doc, y, items, seller);
+  drawNotice(doc, y);
+
+  doc.save(`INV-${orderData.orderNumber}.pdf`);
+}
+
+export default generateInvoice;

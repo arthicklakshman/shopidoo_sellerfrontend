@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme, alpha } from '@mui/material';
-import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress, Menu } from '@mui/material';
+import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress } from '@mui/material';
 import { sellerService } from '../../services/seller.service';
 import { shipmentService } from '../../services/shipment.service';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -652,57 +652,63 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
             <Typography variant="body2" color="text.secondary">{order.createdAt ? formatDate(order.createdAt) : '-'}</Typography>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+       <Box sx={{ display: 'flex', gap: 2 }}>
           <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, height: 40, ...OUTLINED_GREEN_SX }} onClick={() => generateInvoice(order.rawItem, true)}>
             Download Invoice
           </Button>
-          <Button 
-            variant="outlined"
-            endIcon={<KeyboardArrowDownIcon sx={{ color: statusMenuAnchor ? '#0B8457' : '#0FB9B1' }} />}
-            disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0} 
-            onClick={(e) => setStatusMenuAnchor(e.currentTarget)} 
-            sx={{ ...BUTTON_GREEN_SX, flex: 1 }}
-          >
-            Update Status
-          </Button>
-          <Menu
-            anchorEl={statusMenuAnchor}
-            open={Boolean(statusMenuAnchor)}
-            onClose={() => setStatusMenuAnchor(null)}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'left',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            slotProps={{
-              paper: {
-                style: {
-                  width: statusMenuAnchor ? statusMenuAnchor.clientWidth : undefined,
-                  marginTop: '4px',
-                }
-              }
-            }}
-          >
-            {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
-              const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
-              return (
-                <MenuItem 
-                  key={status} 
-                  onClick={() => {
-                    handleStatusChange(status);
-                    setStatusMenuAnchor(null);
-                  }} 
-                  sx={{ textTransform: 'capitalize' }}
-                >
-                  {label}
-                </MenuItem>
-              );
-            })}
-          </Menu>
-        </Box>
+
+          <Box sx={{ flex: 1, position: 'relative' }}>
+            <Button 
+              variant="outlined"
+              fullWidth
+              endIcon={<KeyboardArrowDownIcon sx={{ color: statusMenuAnchor ? '#0B8457' : '#0FB9B1' }} />}
+              disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0} 
+              onClick={(e) => setStatusMenuAnchor(statusMenuAnchor ? null : e.currentTarget)} 
+              sx={{ ...BUTTON_GREEN_SX, height: 40 }}
+            >
+              Update Status
+            </Button>
+
+            {Boolean(statusMenuAnchor) && (
+              <>
+                <Box
+                  onClick={() => setStatusMenuAnchor(null)}
+                  sx={{ position: 'fixed', inset: 0, zIndex: 1300 }}
+                />
+                 <Box
+  sx={{
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    right: 0,
+    mb: 0.5,
+    bgcolor: 'background.paper',
+    borderRadius: '8px',
+    boxShadow: 3,
+    zIndex: 1301,
+    overflow: 'hidden',
+  }}
+>
+                  {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
+                    const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
+                    return (
+                      <MenuItem 
+                        key={status} 
+                        onClick={() => {
+                          handleStatusChange(status);
+                          setStatusMenuAnchor(null);
+                        }} 
+                        sx={{ textTransform: 'capitalize' }}
+                      >
+                        {label}
+                      </MenuItem>
+                    );
+                  })}
+                </Box>
+              </>
+            )}
+          </Box>
+        </Box> 
       </DialogContent>
     </Dialog>
   );

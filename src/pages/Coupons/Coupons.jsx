@@ -34,6 +34,18 @@ const initialErrors = {
   usage_limit: '',
 };
 
+// ── Same dropdown anchor config used in ProductForm.jsx / SellerCMS.jsx ──
+const menuPropsDownward = {
+  anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+  transformOrigin: { vertical: 'top', horizontal: 'left' },
+  disableScrollLock: true,
+  slotProps: {
+    paper: {
+      style: { maxHeight: 300, marginTop: 4 },
+    },
+  },
+};
+
 const formatCurrency = (value) => `Rs ${Number(value || 0).toFixed(2)}`;
 
 const formatDiscount = (coupon) => (
@@ -513,6 +525,9 @@ const Coupons = () => {
               onChange={(e) =>
                 handleInputChange('discount_type', e.target.value)
               }
+              SelectProps={{
+                MenuProps: menuPropsDownward,
+              }}
             >
               <MenuItem value="fixed">Fixed</MenuItem>
               <MenuItem value="percentage">Percentage</MenuItem>
@@ -604,6 +619,9 @@ const Coupons = () => {
               onChange={(e) =>
                 handleInputChange('is_active', e.target.value === 'true')
               }
+              SelectProps={{
+                MenuProps: menuPropsDownward,
+              }}
             >
               <MenuItem value="true">Active</MenuItem>
               <MenuItem value="false">Inactive</MenuItem>
