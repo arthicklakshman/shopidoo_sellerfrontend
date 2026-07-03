@@ -686,7 +686,6 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
               paper: {
                 style: {
                   width: statusMenuAnchor ? statusMenuAnchor.clientWidth : undefined,
-                  marginTop: '4px',
                 }
               }
             }}

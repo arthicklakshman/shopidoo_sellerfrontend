@@ -27,6 +27,7 @@ import {
   Grid
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { returnService } from '../../services/return.service';
 import { formatDate } from '../../utils/formatDate';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -85,6 +86,9 @@ const SellerReturns = () => {
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', response: '' });
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState('');
+  const [lightboxType, setLightboxType] = useState('image');
   
   // Inspection & Refund states
   const [inspectionResult, setInspectionResult] = useState('Approve Refund');
@@ -372,6 +376,7 @@ const SellerReturns = () => {
               <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>SLA Status</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Penalty</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
               <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
             </TableRow>
@@ -379,7 +384,7 @@ const SellerReturns = () => {
           <TableBody>
             {returns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 10 }}>
                   <Typography color="text.secondary" variant="body1">No return requests found.</Typography>
                 </TableCell>
               </TableRow>
@@ -440,6 +445,14 @@ const SellerReturns = () => {
                       />
                     );
                   })()}
+                </TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                  {parseFloat(req.total_penalty_amount || 0) > 0
+                    ? <Typography variant="body2" fontWeight={700} color="error.main" sx={{ whiteSpace: 'nowrap' }}>
+                        {`-₹${parseFloat(req.total_penalty_amount).toFixed(2)}`}
+                      </Typography>
+                    : <Typography variant="body2" color="text.disabled">—</Typography>
+                  }
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{formatDate(req.created_at)}</Typography>
@@ -567,12 +580,30 @@ const SellerReturns = () => {
               {selectedReturn.proof_image && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Image Proof</Typography>
-                  <Box sx={{ mt: 1, textAlign: 'center' }}>
-                    <img
-                      src={selectedReturn.proof_image}
-                      alt="Proof"
-                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
-                    />
+                  <Box sx={{ mt: 1 }}>
+                    <Button 
+                      variant="contained" 
+                      size="small" 
+                      onClick={() => {
+                        setLightboxSrc(selectedReturn.proof_image);
+                        setLightboxType('image');
+                        setLightboxOpen(true);
+                      }}
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                        color: '#000',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                          boxShadow: 'none',
+                          opacity: 0.9
+                        }
+                      }}
+                    >
+                      🖼️ View Image Proof
+                    </Button>
                   </Box>
                 </Box>
               )}
@@ -580,12 +611,30 @@ const SellerReturns = () => {
               {selectedReturn.proof_video && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Video Proof</Typography>
-                  <Box sx={{ mt: 1, textAlign: 'center' }}>
-                    <video 
-                      src={selectedReturn.proof_video} 
-                      controls 
-                      style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} 
-                    />
+                  <Box sx={{ mt: 1 }}>
+                    <Button 
+                      variant="contained" 
+                      size="small" 
+                      onClick={() => {
+                        setLightboxSrc(selectedReturn.proof_video);
+                        setLightboxType('video');
+                        setLightboxOpen(true);
+                      }}
+                      sx={{ 
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                        color: '#000',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                          boxShadow: 'none',
+                          opacity: 0.9
+                        }
+                      }}
+                    >
+                      🎥 View Video Proof
+                    </Button>
                   </Box>
                 </Box>
               )}
@@ -924,6 +973,21 @@ const SellerReturns = () => {
             Cancel
           </Button>
         </DialogActions>
+      </Dialog>
+      <Dialog fullScreen open={lightboxOpen} onClose={() => setLightboxOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)' } }}>
+        <IconButton 
+          onClick={() => setLightboxOpen(false)}
+          sx={{ position: 'absolute', top: 16, right: 16, color: 'white', zIndex: 9999 }}
+        >
+          <CloseIcon fontSize="large" />
+        </IconButton>
+        <DialogContent sx={{ p: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100vw' }}>
+          {lightboxType === 'image' ? (
+            <img src={lightboxSrc} alt="Proof Full" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+          ) : (
+            <video src={lightboxSrc} controls autoPlay style={{ maxWidth: '100%', maxHeight: '100%' }} />
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

@@ -9,11 +9,11 @@ const BASE = "/payout-requests";
 function StatusBadge({ status }) {
   const theme = useTheme();
   const key = (status || "pending").toLowerCase();
-  
+
   const styles = {
-    pending:   { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark, dot: theme.palette.warning.main },
+    pending: { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark, dot: theme.palette.warning.main },
     completed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark, dot: theme.palette.success.main },
-    rejected:  { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark, dot: theme.palette.error.main },
+    rejected: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark, dot: theme.palette.error.main },
   };
 
   const s = styles[key] || styles.pending;
@@ -38,29 +38,319 @@ function formatDate(dateStr) {
 }
 
 function fmt(n) {
-  return Math.max(0, Number(n || 0)).toLocaleString("en-IN");
+  return Number(n ?? 0).toLocaleString("en-IN");
 }
 
-function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
+function TransactionsModal({ onClose, payoutRequests = [] }) {
   const theme = useTheme();
-  const [amount,    setAmount]    = useState("");
-  const [bankAcc,   setBankAcc]   = useState(wallet?.accountNumber || "");
-  const [storeName, setStoreName] = useState(wallet?.storeName || "");
-  const [error,     setError]     = useState("");
+  const [txns, setTxns] = useState([]);
+  const [txnsLoading, setTxnsLoading] = useState(true);
+  const [filter, setFilter] = useState('All');
+  const [displayLimit, setDisplayLimit] = useState(50);
 
-   
-  const available = Math.max(0, Number(wallet?.available_balance || 0));
+  useEffect(() => {
+    const fetchTxns = async () => {
+      try {
+        const res = await api.get('/wallet/transactions');
+        let fetchedTxns = res.data?.data?.transactions || res.data?.data || [];
+        
+        fetchedTxns = fetchedTxns.filter(t => t.reference_type !== 'payout');
+
+        const formattedPayouts = payoutRequests.map(req => {
+          const formattedStatus = req.status ? req.status.charAt(0).toUpperCase() + req.status.slice(1) : 'Pending';
+          return {
+            id: `payout-${req.id}`,
+            type: 'debit',
+            amount: req.amount,
+            description: `Payout request made by seller (${formattedStatus})`,
+            createdAt: req.createdAt || req.created_at,
+            isPayout: true,
+          };
+        });
+
+        const combined = [...fetchedTxns, ...formattedPayouts].sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.created_at || 0);
+          const dateB = new Date(b.createdAt || b.created_at || 0);
+          return dateB - dateA;
+        });
+
+        setTxns(combined);
+      } catch (err) {
+        console.error("Failed to load transactions", err);
+      } finally {
+        setTxnsLoading(false);
+      }
+    };
+    fetchTxns();
+  }, [payoutRequests]);
+
+  const filteredTxns = txns.filter(t => {
+    if (filter === 'All') return true;
+    if (filter === 'Credits') return t.type === 'credit';
+    if (filter === 'Debits') return t.type === 'debit' && !t.isPayout;
+    if (filter === 'Payouts') return t.type === 'debit' && t.isPayout;
+    return true;
+  });
+
+  const displayedTxns = filteredTxns.slice(0, displayLimit);
+
+  const orderGroups = {};
+  const otherTxns = [];
+
+  displayedTxns.forEach(t => {
+    if (t.order_number) {
+      if (!orderGroups[t.order_number]) {
+        orderGroups[t.order_number] = [];
+      }
+      orderGroups[t.order_number].push(t);
+    } else {
+      otherTxns.push(t);
+    }
+  });
+
+  const otherTxnsGroups = {};
+  otherTxns.forEach(t => {
+    const dStr = formatDate(t.createdAt || t.created_at);
+    if (!otherTxnsGroups[dStr]) otherTxnsGroups[dStr] = [];
+    otherTxnsGroups[dStr].push(t);
+  });
+
+  const handleExportCSV = () => {
+    const headers = ["Order Number", "Date", "Type", "Amount", "Description"];
+    const rows = filteredTxns.map(t => {
+      const orderNum = t.order_number ? `#${t.order_number}` : "-";
+      const date = formatDate(t.createdAt || t.created_at);
+      const amountStr = (t.type === 'credit' ? '+' : '-') + Number(t.amount).toString();
+      const desc = `"${(t.description || "—").replace(/"/g, '""')}"`;
+      return [orderNum, date, t.type.toUpperCase(), amountStr, desc].join(",");
+    });
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `wallet_transactions_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: theme.palette.background.paper, zIndex: 9999 }}
+    >
+      <div style={{
+        width: "100%", height: "100%", background: theme.palette.background.paper, borderRadius: 0, padding: "32px 5%",
+        animation: "wm-in 0.22s cubic-bezier(0.34,1.56,0.64,1)",
+        display: "flex", flexDirection: "column", boxSizing: "border-box"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: theme.palette.text.primary }}>Wallet Transactions</h2>
+            <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: theme.palette.text.secondary }}>All credits, debits & penalties grouped by Order</p>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              {['All', 'Credits', 'Debits', 'Payouts'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => { setFilter(f); setDisplayLimit(50); }}
+                  style={{
+                    padding: "4px 14px", borderRadius: 16, border: `1px solid ${filter === f ? "#0b8457" : theme.palette.divider}`,
+                    background: filter === f ? alpha("#0b8457", 0.1) : "transparent",
+                    color: filter === f ? "#0b8457" : theme.palette.text.secondary,
+                    fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", transition: "all 0.2s"
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={handleExportCSV} style={{
+              height: 36, padding: "0 16px", borderRadius: 18, border: `1px solid ${theme.palette.divider}`,
+              background: theme.palette.background.default, cursor: "pointer", fontSize: "0.85rem", fontWeight: 600,
+              display: "flex", alignItems: "center", justifyContent: "center", color: theme.palette.text.primary,
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = alpha(theme.palette.divider, 0.1)}
+            onMouseLeave={e => e.currentTarget.style.background = theme.palette.background.default}
+            >
+              📥 Export CSV
+            </button>
+            <button onClick={onClose} style={{
+              width: 36, height: 36, borderRadius: "50%", border: `1px solid ${theme.palette.divider}`,
+              background: theme.palette.background.default, cursor: "pointer", fontSize: "1rem",
+              display: "flex", alignItems: "center", justifyContent: "center", color: theme.palette.text.secondary,
+            }}>✕</button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, display: "flex", flexDirection: "column", gap: 16 }}>
+          {txnsLoading ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: theme.palette.text.secondary }}>
+              <div style={{ width: 28, height: 28, border: "3px solid rgba(11,132,87,0.2)", borderTopColor: "#0b8457", borderRadius: "50%", animation: "wm-spin 0.7s linear infinite", margin: "0 auto 12px" }} />
+              Loading transactions...
+            </div>
+          ) : txns.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: theme.palette.text.secondary }}>
+              No wallet transactions found.
+            </div>
+          ) : (
+            <>
+              {Object.keys(orderGroups).map(orderNum => {
+                const group = orderGroups[orderNum];
+                const dateStr = formatDate(group[0]?.createdAt || group[0]?.created_at);
+                
+                return (
+                  <div key={orderNum} style={{
+                    border: `1px solid ${theme.palette.divider}`, borderRadius: 16,
+                    background: theme.palette.background.default, overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      padding: "12px 18px", borderBottom: `1px solid ${theme.palette.divider}`,
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      background: theme.palette.background.paper, backdropFilter: "blur(12px)",
+                      position: "sticky", top: 0, zIndex: 10
+                    }}>
+                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: theme.palette.text.primary }}>
+                        📦 Order #{orderNum}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
+                        {dateStr}
+                      </div>
+                    </div>
+                    <div>
+                      {group.map((t, idx) => (
+                        <div key={t.id} style={{
+                          padding: "14px 18px",
+                          borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}>
+                          <div style={{ flex: 1, paddingRight: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                              <span style={{
+                                fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
+                                background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                                color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
+                                textTransform: "uppercase"
+                              }}>
+                                {t.type}
+                              </span>
+                              <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
+                                {t.description || "—"}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                            color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
+                            whiteSpace: "nowrap"
+                          }}>
+                            {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {Object.keys(otherTxnsGroups).map(dateStr => {
+                const group = otherTxnsGroups[dateStr];
+                return (
+                  <div key={dateStr} style={{
+                    border: `1px solid ${theme.palette.divider}`, borderRadius: 16,
+                    background: theme.palette.background.default, overflow: 'hidden',
+                    marginTop: 8
+                  }}>
+                    <div style={{
+                      padding: "12px 18px", borderBottom: `1px solid ${theme.palette.divider}`,
+                      background: theme.palette.background.paper, backdropFilter: "blur(12px)",
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      position: "sticky", top: 0, zIndex: 10
+                    }}>
+                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: theme.palette.text.primary }}>
+                        📋 Other Transactions
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
+                        {dateStr}
+                      </div>
+                    </div>
+                    <div>
+                      {group.map((t, idx) => (
+                        <div key={t.id} style={{
+                          padding: "14px 18px",
+                          borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}>
+                          <div style={{ flex: 1, paddingRight: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                              <span style={{
+                                fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
+                                background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                                color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
+                                textTransform: "uppercase"
+                              }}>
+                                {t.type}
+                              </span>
+                              <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
+                                {t.description || "—"}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                            color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
+                            whiteSpace: "nowrap"
+                          }}>
+                            {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {displayLimit < filteredTxns.length && (
+                <div style={{ textAlign: "center", marginTop: 24, marginBottom: 32 }}>
+                  <button onClick={() => setDisplayLimit(l => l + 50)} style={{
+                    padding: "10px 28px", borderRadius: 24, border: `1px solid ${theme.palette.divider}`,
+                    background: theme.palette.background.default, cursor: "pointer", fontSize: "0.85rem", fontWeight: 700,
+                    color: theme.palette.text.primary, transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = alpha(theme.palette.divider, 0.1); e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = theme.palette.background.default; e.currentTarget.style.transform = "none"; }}
+                  >
+                    Load More Transactions ({filteredTxns.length - displayLimit} remaining)
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions }) {
+  const theme = useTheme();
+  const [amount, setAmount] = useState("");
+  const [bankAcc, setBankAcc] = useState(wallet?.accountNumber || "");
+  const [storeName, setStoreName] = useState(wallet?.storeName || "");
+  const [error, setError] = useState("");
+
+  const available = Number(wallet?.available_balance ?? 0);
 
   const handleConfirm = () => {
-  setError("");
-  const num = Number(amount);
-  if (!amount || isNaN(num) || num <= 0) { setError("Please enter a valid amount"); return; }
-  if (available <= 0)  { setError("You have no available balance to withdraw."); return; }
-  if (num > available) { setError(`Insufficient balance. Max available: ₹${available.toLocaleString("en-IN")}`); return; }
-  if (!storeName.trim()) { setError("Please enter your store name"); return; }
-  if (!bankAcc.trim())   { setError("Please enter your bank account number"); return; }
-  onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
-};
+    setError("");
+    const num = Number(amount);
+    if (!amount || isNaN(num) || num <= 0) { setError("Please enter a valid amount"); return; }
+    if (available <= 0) { setError("You have no available balance to withdraw."); return; }
+    if (num > available) { setError(`Insufficient balance. Max available: ₹${available.toLocaleString("en-IN")}`); return; }
+    if (!storeName.trim()) { setError("Please enter your store name"); return; }
+    if (!bankAcc.trim()) { setError("Please enter your bank account number"); return; }
+    onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
+  };
 
   const inputStyle = {
     width: "100%", height: 46, padding: "0 14px",
@@ -72,7 +362,7 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
   };
 
   const focus = e => { e.target.style.borderColor = "#0b8457"; e.target.style.boxShadow = "0 0 0 3px rgba(11,132,87,0.1)"; };
-  const blur  = e => { e.target.style.borderColor = theme.palette.divider; e.target.style.boxShadow = "none"; };
+  const blur = e => { e.target.style.borderColor = theme.palette.divider; e.target.style.boxShadow = "none"; };
 
   return (
     <div
@@ -117,6 +407,19 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
             </div>
           </div>
           <div style={{ fontSize: "2rem", opacity: 0.7 }}>🏦</div>
+        </div>
+
+        <div style={{ textAlign: "right", marginBottom: 16, marginTop: -14 }}>
+          <button
+            onClick={onViewTransactions}
+            style={{
+              background: "none", border: "none", color: "#0b8457",
+              fontSize: "0.8rem", fontWeight: 700, cursor: "pointer",
+              padding: "4px 8px", textDecoration: "underline"
+            }}
+          >
+            View All Transactions →
+          </button>
         </div>
 
         <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Amount (₹) *</label>
@@ -209,21 +512,23 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading }) {
   );
 }
 
+
 export default function Wallet() {
   const theme = useTheme();
   const dispatch = useDispatch();
-  const [wallet,        setWallet]        = useState(null);
-  const [history,       setHistory]       = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [history, setHistory] = useState([]);
   const [walletLoading, setWalletLoading] = useState(true);
-  const [histLoading,   setHistLoading]   = useState(true);
-  const [showModal,     setShowModal]     = useState(false);
-  const [submitting,    setSubmitting]    = useState(false);
+  const [histLoading, setHistLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [showTxnModal, setShowTxnModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
     try {
       const res = await api.get(`${BASE}/wallet`);
-      
+
       let storeName = "";
       let accountNumber = "";
       try {
@@ -286,13 +591,13 @@ export default function Wallet() {
     }
   };
 
-  const avail = Math.max(0, Number(wallet?.available_balance || 0));
+  const avail = Number(wallet?.available_balance ?? 0);
 
   const statCards = [
-    { label: "Total Earnings",         value: wallet?.total_earnings,       sub: "All-time earnings",     icon: "💼", iconBg: alpha("#9333ea", 0.1), accent: "#9333ea" },
-    { label: "Available to Withdraw",  value: avail,                        sub: "Ready for payout",      icon: "📈", iconBg: alpha("#16a34a", 0.1), accent: "#16a34a", action: true },
-    { label: "Settlement in Progress", value: wallet?.settlement_in_progress,   sub: "Will be released soon", icon: "⏱️", iconBg: alpha("#3b82f6", 0.1), accent: "#3b82f6" },
-    { label: "Pending Orders Value",   value: wallet?.pending_orders_value, sub: "Not delivered yet",     icon: "📦", iconBg: alpha("#f59e0b", 0.1), accent: "#f59e0b" },
+    { label: "Total Earnings", value: wallet?.total_earnings, sub: "All-time earnings", icon: "💼", iconBg: alpha("#9333ea", 0.1), accent: "#9333ea" },
+    { label: "Available to Withdraw", value: avail, sub: "Ready for payout", icon: "📈", iconBg: alpha("#16a34a", 0.1), accent: "#16a34a", action: true },
+    { label: "Settlement in Progress", value: wallet?.settlement_in_progress, sub: "Will be released soon", icon: "⏱️", iconBg: alpha("#3b82f6", 0.1), accent: "#3b82f6" },
+    { label: "Pending Orders Value", value: wallet?.pending_orders_value, sub: "Not delivered yet", icon: "📦", iconBg: alpha("#f59e0b", 0.1), accent: "#f59e0b" },
   ];
 
   return (
@@ -373,6 +678,19 @@ export default function Wallet() {
           <p>Request and track your earnings withdrawals</p>
         </div>
 
+        {wallet && Number(wallet?.available_balance || 0) < 0 && (
+          <div style={{
+            background: alpha(theme.palette.error.main, 0.1), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, borderRadius: 12,
+            padding: "16px 20px", marginBottom: 24, fontSize: "0.9rem", color: theme.palette.error.dark, display: "flex", alignItems: "center", gap: 12
+          }}>
+            <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+            <span>
+              Your wallet has a debt of <strong>₹{Math.abs(Number(wallet?.available_balance)).toLocaleString("en-IN")}</strong>.
+              This will be deducted from your next settlement.
+            </span>
+          </div>
+        )}
+
         <div className="wl-grid">
           {statCards.map((card, i) => (
             <div className="wl-stat" key={i}>
@@ -381,17 +699,40 @@ export default function Wallet() {
               <div className="wl-stat-label">{card.label}</div>
               {walletLoading
                 ? <div className="wl-skeleton" style={{ height: 28, width: "60%", marginTop: 6, marginBottom: 6 }} />
-                : <div className="wl-stat-value">₹{fmt(card.value)}</div>
+                : <div className="wl-stat-value" style={{ color: card.value < 0 ? '#ef4444' : 'inherit' }}>
+                    {card.value < 0 ? '-' : ''}₹{fmt(Math.abs(card.value))}
+                  </div>
               }
               <div className="wl-stat-sub">{card.sub}</div>
               {card.action && (
-                <button
-                  className="wl-withdraw-btn"
-                  onClick={() => setShowModal(true)}
-                  disabled={walletLoading}
-                >
-                  Request Payout
-                </button>
+                <>
+                  <button
+                    className="wl-withdraw-btn"
+                    onClick={() => setShowModal(true)}
+                    disabled={walletLoading || avail < 0}
+                  >
+                    {avail < 0 ? 'Wallet in Debt' : 'Request Payout'}
+                  </button>
+                  <button
+                    onClick={() => setShowTxnModal(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0b8457',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      marginTop: 8,
+                      padding: '2px 0',
+                      textDecoration: 'underline',
+                      width: '100%',
+                      textAlign: 'center',
+                      letterSpacing: '0.2px',
+                    }}
+                  >
+                    View All Transactions →
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -472,7 +813,15 @@ export default function Wallet() {
           onClose={() => setShowModal(false)}
           onSubmit={handleWithdraw}
           loading={submitting}
+          onViewTransactions={() => {
+            setShowModal(false);
+            setShowTxnModal(true);
+          }}
         />
+      )}
+
+      {showTxnModal && (
+        <TransactionsModal onClose={() => setShowTxnModal(false)} payoutRequests={history} />
       )}
     </>
   );
