@@ -3,12 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useSelector } from 'react-redux';
 import PageLoader from '../components/common/PageLoader/PageLoader';
 import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
-import Support from '../pages/Support/Support';
+const Support = lazy(() => import('../pages/Support/Support'));
 // For Inventory
-import Inventory from "../pages/Inventory/Inventory";
+const Inventory = lazy(() => import("../pages/Inventory/Inventory"));
 //settings
-import Maintenance from '../pages/Maintenance/Maintenance';
-import Settings from '../pages/Settings/Setting';
+const Maintenance = lazy(() => import('../pages/Maintenance/Maintenance'));
+const Settings = lazy(() => import('../pages/Settings/Setting'));
 
 
 const Login = lazy(() => import('../pages/Auth/Login'));

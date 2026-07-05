@@ -124,6 +124,8 @@ export default function BasicInformation({ onNext, sellerId }) {
                setFormData(prev => ({ ...prev, email_verified: 1, verifiedEmailValue: formData.email }));
                setIsEmailVerified(true);
              }
+          } else {
+             setFormData(prev => ({ ...prev, isRegistered: null }));
           }
         } catch (e) { console.error('Check exists failed:', e); }
       }
@@ -144,6 +146,8 @@ export default function BasicInformation({ onNext, sellerId }) {
                setFormData(prev => ({ ...prev, phone_verified: 1, verifiedPhoneValue: formData.phone }));
                setIsMobileVerified(true);
              }
+          } else {
+             setFormData(prev => ({ ...prev, isRegistered: null }));
           }
         } catch (e) { console.error('Check exists failed:', e); }
       }
@@ -324,7 +328,7 @@ const handleSendOtp = async (type) => {
         });
       } else if (isResumingOnboarding) {
         // New Feature: Bypass password and fetch token if they exist but haven't finished onboarding
-        response = await onboardingService.resumeOnboarding(formData.email);
+        response = await onboardingService.resumeOnboarding({ email: formData.email, phone: formData.phone });
       } else {
         try {
           response = await onboardingService.registerBasicInfo({

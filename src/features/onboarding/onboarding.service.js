@@ -34,8 +34,8 @@ sendEmailOtp: async (email, type) => {
     return await api.post(`${API_BASE_URL}/check-exists`, data);
   },
 
-  resumeOnboarding: async (email) => {
-    return await api.post(`${API_BASE_URL}/resume-onboarding`, { email, role: 'seller' });
+  resumeOnboarding: async (data) => {
+    return await api.post(`${API_BASE_URL}/resume-onboarding`, { ...data, role: 'seller' });
   },
 
   getProfile: async () => {
