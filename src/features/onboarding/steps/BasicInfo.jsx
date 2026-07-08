@@ -515,8 +515,7 @@ const handleSendOtp = async (type) => {
                   <Typography sx={{ color: '#ef4444', ml: 0.5, fontSize: '14px', fontWeight: 600 }}>*</Typography>
                   <HelpOutlineIcon sx={{ color: '#9ca3af', fontSize: 16, ml: 1 }} />
                 </Box>
-                <TextField select fullWidth name="businessType" value={formData.businessType} onChange={handleInputChange} variant="outlined" size="small" error={!!errors.businessType} sx={customInputStyles} SelectProps={{ displayEmpty: true, renderValue: (value) => { if (value === "") return <span style={{ color: '#9ca3af' }}>Select business type</span>; if (value === 'sole_proprietorship') return 'Sole Proprietorship'; if (value === 'partnership') return 'Partnership'; if (value === 'llc') return 'LLC'; if (value === 'corporation') return 'Corporation'; return value; } }} >
-                  <MenuItem value="" disabled>Select business type</MenuItem>
+                  <TextField select fullWidth name="businessType" value={formData.businessType} onChange={handleInputChange} variant="outlined" size="small" error={!!errors.businessType} sx={customInputStyles} SelectProps={{ displayEmpty: true, MenuProps: { disableScrollLock: true, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)' } } }, renderValue: (value) => { if (value === "") return <span style={{ color: '#9ca3af' }}>Select business type</span>; if (value === 'manufacturing') return 'Manufacturing'; if (value === 'reseller_retailer') return 'Reseller / Retailer'; return value; } }} >
                   <MenuItem value="sole_proprietorship">Sole Proprietorship</MenuItem>
                   <MenuItem value="partnership">Partnership</MenuItem>
                   <MenuItem value="llc">LLC</MenuItem>

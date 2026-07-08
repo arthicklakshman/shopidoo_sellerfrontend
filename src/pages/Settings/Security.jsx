@@ -24,6 +24,8 @@ import { useSelector } from 'react-redux';
 import { EditButton, SaveCancelButtons } from '../../pages/Settings/SettingActions';
 import { validateSecurity } from '../../utils/validation';
 import { updateSecurityAPI } from "../../features/settings/settings.service";
+import api from '../../services/api';
+
 
 // ✅ OTP Imports
 import { useOtp } from '../../hooks/useOtp';
@@ -135,6 +137,23 @@ export default function Security() {
       }));
     }
   }, [user]);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const res = await api.get('/payout-requests/wallet');
+        setWalletBalance(Number(res.data?.data?.balance ?? 0));
+      } catch (err) {
+        console.error("Failed to fetch wallet", err);
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+    fetchWallet();
+  }, []);
+
 
   // ---------------- HANDLERS ----------------
 
@@ -399,21 +418,37 @@ export default function Security() {
               }}
             />
           </Box>
-          <button
-            onClick={() => navigate('/delete-account')}
-            style={{
-              background: '#d32f2f',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px'
-            }}
-          >
-            Delete Account
-          </button>
+
+          <Box sx={{ mt: 3 }}>
+            {walletBalance < 0 && (
+              <Box sx={{
+                background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px',
+                padding: '16px 20px', marginBottom: '16px', fontSize: '0.9rem', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '12px'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                <span>
+                  Your wallet has a debt of <strong>₹{Math.abs(walletBalance).toLocaleString("en-IN")}</strong>. Please clear your dues before deleting your account.
+                </span>
+              </Box>
+            )}
+            <button
+              onClick={() => navigate('/delete-account')}
+              disabled={loadingWallet || walletBalance < 0}
+              style={{
+                background: (loadingWallet || walletBalance < 0) ? '#e5e7eb' : '#d32f2f',
+                color: (loadingWallet || walletBalance < 0) ? '#9ca3af' : '#fff',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: (loadingWallet || walletBalance < 0) ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Delete Account
+            </button>
+          </Box> 
         </Box>
 
         {isEditing && (

@@ -446,15 +446,16 @@ useEffect(() => {
             </Tooltip>
 
             <Tooltip title="Notifications">
-              <IconButton
-                size="small"
+               <Box
                 onClick={handleOpenNotifications}
-                sx={{ ml: 1 }}
+                 sx={{ display: 'flex', alignItems: 'center', height: '100%', cursor: 'pointer', ml: 1 }}
               >
-                <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsNoneIcon />
-                </Badge>
-              </IconButton>
+               <IconButton component="span" size="small">
+                  <Badge badgeContent={unreadCount} color="error">
+                    <NotificationsNoneIcon />
+                  </Badge>
+                </IconButton>
+              </Box> 
             </Tooltip>
 
             <Menu
@@ -463,6 +464,8 @@ useEffect(() => {
               open={Boolean(notificationAnchor)}
               onClose={handleCloseNotifications}
               keepMounted={false}
+              disableScrollLock={true}
+              marginThreshold={0}
               anchorOrigin={{
                 vertical: 'bottom',
                 horizontal: 'right',
@@ -474,7 +477,6 @@ useEffect(() => {
               PaperProps={{
                 sx: {
                   width: 360,
-                  mt: 1,
                   borderRadius: 3,
                   overflow: 'hidden',
                 },
@@ -628,6 +630,7 @@ useEffect(() => {
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
+                  height: '100%',
                   gap: 1.5,
                   ml: 2,
                   cursor: 'pointer',
@@ -688,11 +691,12 @@ useEffect(() => {
                 horizontal: 'right',
                 vertical: 'bottom',
               }}
-              PaperProps={{
+               disableScrollLock={true}
+               marginThreshold={0}
+               PaperProps={{
                 elevation: 4,
                 sx: {
                   minWidth: 200,
-                  mt: 1,
                   borderRadius: 2,
                 },
               }}
