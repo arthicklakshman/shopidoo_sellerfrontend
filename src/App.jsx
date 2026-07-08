@@ -13,7 +13,7 @@ const App = () => {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <GlobalStyles styles={{ 
+        <GlobalStyles styles={{
           'html': {
             zoom: '0.8',
             scrollbarWidth: 'none', /* Firefox */
@@ -22,7 +22,7 @@ const App = () => {
           'html::-webkit-scrollbar, body::-webkit-scrollbar': {
             display: 'none', /* Chrome, Safari, Opera */
           },
-          'html, body': { 
+          'html, body': {
             overflowX: 'clip',
             width: '100%',
             margin: 0,

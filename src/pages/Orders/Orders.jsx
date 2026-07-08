@@ -219,7 +219,10 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   };
 
   const shipment = order.rawItem?.Order?.shipments?.[0] || order.rawItem?.order?.shipments?.[0] || null;
-  const isSelfShipping = shipment?.shippingMode === 'self' || (order.rawItem?.Order || order.rawItem?.order)?.shippingMode === 'self' || shipment?.courierName?.toLowerCase() === 'self shipping' || (order.rawItem?.Order || order.rawItem?.order)?.shipping_courier?.toLowerCase() === 'self shipping';
+  // Before a Shipment record exists yet, fall back to the seller's own shippingPreference
+  // (this is the seller's own Orders page, so it's always the same seller for every row) —
+  // Order itself has no shippingMode/shipping_courier field, so those old fallbacks never matched.
+  const isSelfShipping = shipment?.shippingMode === 'self' || (!shipment && order.rawItem?.seller?.shippingPreference === 'self');
 
   const handleManualShip = async () => {
     if (!manualCourier || !manualTracking) {
@@ -893,9 +896,9 @@ const Orders = () => {
     sx={{ minWidth: 120, bgcolor: 'action.hover' }}
   >
     <MenuItem value="">All Years</MenuItem>
-    <MenuItem value="2026">2026</MenuItem>
-    <MenuItem value="2025">2025</MenuItem>
-    <MenuItem value="2024">2024</MenuItem>
+    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+      <MenuItem key={year} value={String(year)}>{year}</MenuItem>
+    ))}
   </Select>
 </FormControl>
 

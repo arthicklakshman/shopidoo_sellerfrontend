@@ -172,7 +172,8 @@ const SellerReturns = () => {
     setErrorMsg('');
     
     // Prevent receiving returns without customer tracking data and receipts uploaded (Self Shipping only)
-    const isSelfShip = !selectedReturn.returnShipment || selectedReturn.returnShipment.shippingMode === 'self';
+    // Mirrors the backend default in return.service.js#updateReturnStatusSeller: a missing shipment record is treated as platform logistics, not self-ship.
+    const isSelfShip = !!selectedReturn.returnShipment && selectedReturn.returnShipment.shippingMode === 'self';
     if (isSelfShip && (statusUpdate.status === 'received_by_seller' || statusUpdate.status === 'inspection_pending')) {
       if (!selectedReturn.return_tracking_number || !selectedReturn.return_receipt_url) {
         setErrorMsg('Verification Error: Customer must submit a tracking number and courier receipt before you can receive the product.');

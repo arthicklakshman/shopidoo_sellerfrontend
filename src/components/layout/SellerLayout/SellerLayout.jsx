@@ -57,7 +57,7 @@ const DRAWER_WIDTH = 240;
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { label: 'Products', icon: InventoryIcon, path: '/products' },
-  { label: 'Reviews', icon:ReviewsIcon, path: '/sellerreviews'},
+  { label: 'Reviews', icon: ReviewsIcon, path: '/sellerreviews' },
   { label: 'Orders', icon: ShoppingBagIcon, path: '/orders' },
   { label: 'Returns', icon: AssignmentReturnIcon, path: '/returns' },
   { label: 'Inventory', icon: Inventory2Icon, path: '/inventory' },
@@ -93,94 +93,94 @@ const SellerLayout = () => {
   }, [dispatch]);
 
   useEffect(() => {
-  fetchNotifications();
+    fetchNotifications();
 
-  socket.emit('join', `seller_${user?.id}`, {
-    id: user?.id,
-    name: user?.storeName || user?.businessName || user?.name || 'Seller Store',
-  });
+    socket.emit('join', `seller_${user?.id}`, {
+      id: user?.id,
+      name: user?.storeName || user?.businessName || user?.name || 'Seller Store',
+    });
 
-  const handleNewNotification = (data) => {
-    console.log('SELLER NEW NOTIFICATION', data);
+    const handleNewNotification = (data) => {
+      console.log('SELLER NEW NOTIFICATION', data);
 
-    if (
-      data.type === 'product_status' ||
-      data.type === 'support_reply' ||
-      data.type === 'payout_status' ||
-      data.type === 'new_order' ||
-      data.type === 'new_review' ||
-      data.type === 'low_stock'
-    ) {
-      setNotifications((prev) => {
-        const exists = prev.some((n) => n.id === data.id);
+      if (
+        data.type === 'product_status' ||
+        data.type === 'support_reply' ||
+        data.type === 'payout_status' ||
+        data.type === 'new_order' ||
+        data.type === 'new_review' ||
+        data.type === 'low_stock'
+      ) {
+        setNotifications((prev) => {
+          const exists = prev.some((n) => n.id === data.id);
 
-        if (exists) return prev;
+          if (exists) return prev;
 
-        return [data, ...prev];
-      });
+          return [data, ...prev];
+        });
+      }
+    };
+
+    socket.on('new_notification', handleNewNotification);
+
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (notificationAnchor) {
+      setNotificationAnchor(null);
+    }
+  }, [location.pathname]);
+
+
+  useEffect(() => {
+    const handleNotificationRead = (e) => {
+      const id = e.detail;
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, is_read: true } : n
+        )
+      );
+    };
+
+    window.addEventListener('notification-read', handleNotificationRead);
+    return () => {
+      window.removeEventListener('notification-read', handleNotificationRead);
+    };
+  }, []);
+
+  useEffect(() => {
+    const closeMenu = () => {
+      setNotificationAnchor(null);
+    };
+
+    window.addEventListener('close-notification-menu', closeMenu);
+    return () => {
+      window.removeEventListener('close-notification-menu', closeMenu);
+    };
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get('/notifications');
+
+      const onlyProductNotifications = (res.data.data || []).filter(
+        (item) =>
+          item.type === 'product_status' ||
+          item.type === 'support_reply' ||
+          item.type === 'payout_status' ||
+          item.type === 'new_order' ||
+          item.type === 'new_review' ||
+          item.type === 'low_stock'
+      );
+
+      setNotifications(onlyProductNotifications);
+    } catch (err) {
+      console.error(err);
     }
   };
-
-  socket.on('new_notification', handleNewNotification);
-
-  return () => {
-    socket.off('new_notification', handleNewNotification);
-  };
-}, [user?.id]);
-
-useEffect(() => {
-  if (notificationAnchor) {
-    setNotificationAnchor(null);
-  }
-}, [location.pathname]);
-
-
-useEffect(() => {
-  const handleNotificationRead = (e) => {
-    const id = e.detail;
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === id ? { ...n, is_read: true } : n
-      )
-    );
-  };
-
-  window.addEventListener('notification-read', handleNotificationRead);
-  return () => {
-    window.removeEventListener('notification-read', handleNotificationRead);
-  };
-}, []);
-
-useEffect(() => {
-  const closeMenu = () => {
-    setNotificationAnchor(null);
-  };
-
-  window.addEventListener('close-notification-menu', closeMenu);
-  return () => {
-    window.removeEventListener('close-notification-menu', closeMenu);
-  };
-}, []);
-  
-  const fetchNotifications = async () => {
-  try {
-    const res = await api.get('/notifications');
-
-    const onlyProductNotifications = (res.data.data || []).filter(
-      (item) =>
-        item.type === 'product_status' ||
-        item.type === 'support_reply' ||
-        item.type === 'payout_status' ||
-        item.type === 'new_order' ||
-        item.type === 'new_review' ||
-        item.type === 'low_stock'
-    );
-
-    setNotifications(onlyProductNotifications);
-  } catch (err) {
-    console.error(err);
-  }
-};
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -206,9 +206,9 @@ useEffect(() => {
         prev.map((n) =>
           n.id === item.id
             ? {
-                ...n,
-                is_read: true,
-              }
+              ...n,
+              is_read: true,
+            }
             : n
         )
       );
@@ -296,24 +296,24 @@ useEffect(() => {
                   borderRadius: 2,
                   mb: 0.5,
                   background: active
-                  ? 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)'
-                  : 'transparent',
-                    color: active ? '#000' : 'text.primary',
-                    '&:hover': {
-                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                      color: '#000',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: active ? '#000' : 'text.secondary',
-                    },
-                    '&:hover .MuiListItemIcon-root': {
-                      color: '#000',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-                    <Icon fontSize="small" />
-                  </ListItemIcon>
+                    ? 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)'
+                    : 'transparent',
+                  color: active ? '#000' : 'text.primary',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                    color: '#000',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: active ? '#000' : 'text.secondary',
+                  },
+                  '&:hover .MuiListItemIcon-root': {
+                    color: '#000',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                  <Icon fontSize="small" />
+                </ListItemIcon>
 
                 <ListItemText
                   primary={label}
@@ -601,27 +601,27 @@ useEffect(() => {
                 )}
               </Box>
 
-            <Box
-              onClick={() => {
-                handleCloseNotifications();
-                navigate('/notifications');
-              }}
-              sx={{
-                py: 1.5,
-                textAlign: 'center',
-                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 800,
-                cursor: 'pointer',
-                borderTop: `1px solid ${theme.palette.divider}`,
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                },
-              }}
-            >
-              View All Notifications
-            </Box>
+              <Box
+                onClick={() => {
+                  handleCloseNotifications();
+                  navigate('/notifications');
+                }}
+                sx={{
+                  py: 1.5,
+                  textAlign: 'center',
+                  background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  borderTop: `1px solid ${theme.palette.divider}`,
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                View All Notifications
+              </Box>
             </Menu>
 
             <Tooltip title="Account">
