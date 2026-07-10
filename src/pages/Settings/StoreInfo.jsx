@@ -166,9 +166,7 @@ export default function StoreInfo() {
         if (!form.email) temp.email = "Email is required";
         if (!form.phone) temp.phone = "Phone number is required";
         if (!form.categories || form.categories.length === 0) temp.categories = "At least one category is required";
-        if (form.shippingPreference === 'self' && (form.selfShippingRate === '' || Number(form.selfShippingRate) < 0 || Number.isNaN(Number(form.selfShippingRate)))) {
-            temp.selfShippingRate = "Enter a valid shipping rate";
-        }
+
         setErrors(temp);
         return Object.keys(temp).length === 0;
     };
@@ -364,24 +362,7 @@ export default function StoreInfo() {
                                             <Typography sx={{ fontSize: '13px', color: 'text.secondary', mb: 1 }}>
                                                 Use your own courier partners and manage shipping yourself
                                             </Typography>
-                                            {form.shippingPreference === 'self' && (
-                                                <Box sx={{ maxWidth: 220, mt: 1 }}>
-                                                    <StyledInputLabel>Self Shipping Rate (₹)</StyledInputLabel>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        type="number"
-                                                        name="selfShippingRate"
-                                                        value={form.selfShippingRate ?? 0}
-                                                        onChange={(e) => setForm({ ...form, selfShippingRate: e.target.value })}
-                                                        disabled={!isEditing}
-                                                        sx={getCustomInputStyles(isEditing)}
-                                                        inputProps={{ min: 0, step: '0.01' }}
-                                                        error={!!errors.selfShippingRate}
-                                                        helperText={errors.selfShippingRate || 'Charged when a product has no delivery charge set'}
-                                                    />
-                                                </Box>
-                                            )}
+
                                         </Box>
                                     </Box>
                                 </RadioGroup>

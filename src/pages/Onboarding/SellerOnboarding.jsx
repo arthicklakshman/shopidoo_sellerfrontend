@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import OnboardingHeader from './OnboardingHeader';
 import OnboardingStepper from './OnboardingStepper';
 import OnboardingContent from './OnboardingContent';
+import WhatsApp from '../../components/shared/OnboardingHelpline/WhatsApp';
+import Mobile from '../../components/shared/OnboardingHelpline/Mobile';
 
 const TOTAL_STEPS = 6;
 
@@ -42,6 +44,8 @@ const SellerOnboarding = () => {
         onBack={handleBack}
         onEditStep={handleEdit} // 🌟 NEW: Pass it to the content component
       />
+      <WhatsApp supportNumber="919487082294" />
+      <Mobile supportNumber="919487082294" />
     </>
   );
 };

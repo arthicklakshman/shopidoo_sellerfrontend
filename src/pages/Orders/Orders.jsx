@@ -121,18 +121,18 @@ const BUTTON_GREEN_SX = {
 };
 
 const DELIVERY_COLORS = (theme) => ({
-  delivered:          { bg: alpha(theme.palette.success.main, 0.1),   color: theme.palette.success.dark },
-  cancelled:          { bg: alpha(theme.palette.error.main, 0.1),     color: theme.palette.error.dark },
-  shipped:            { bg: alpha(theme.palette.info.main, 0.1),      color: theme.palette.info.dark },
-  processing:         { bg: alpha(theme.palette.warning.main, 0.1),   color: theme.palette.warning.dark },
-  confirmed:          { bg: alpha(theme.palette.success.main, 0.1),   color: theme.palette.success.dark },
-  pending:            { bg: theme.palette.action.hover,                color: theme.palette.text.secondary },
-  refunded:           { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
-  packed:             { bg: alpha(theme.palette.warning.main, 0.15),  color: theme.palette.warning.dark },
-  ready_to_ship:      { bg: alpha(theme.palette.primary.main, 0.15),  color: theme.palette.primary.dark },
-  returned:           { bg: alpha(theme.palette.info.main, 0.1),      color: theme.palette.info.dark },
-  return_requested:   { bg: alpha(theme.palette.warning.main, 0.15),  color: theme.palette.warning.dark }, 
-  replacement_sent:   { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark }, 
+  delivered: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
+  cancelled: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
+  shipped: { bg: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
+  processing: { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
+  confirmed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
+  pending: { bg: theme.palette.action.hover, color: theme.palette.text.secondary },
+  refunded: { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
+  packed: { bg: alpha(theme.palette.warning.main, 0.15), color: theme.palette.warning.dark },
+  ready_to_ship: { bg: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.dark },
+  returned: { bg: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
+  return_requested: { bg: alpha(theme.palette.warning.main, 0.15), color: theme.palette.warning.dark },
+  replacement_sent: { bg: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark },
 });
 
 const StatusBadge = ({ label, colorMap }) => {
@@ -150,9 +150,9 @@ const getNextStatuses = (currentStatus, isSelf = false) => {
   if(s==="confirmed") return ["packed"];
   if(s==="packed") return isSelf ? [] : ["ready_to_ship"];
   if(s==="processing") return ["shipped"];
-  if(s==="ready_to_ship") return isSelf ? [] : ["shipped"];
-  if(s==="shipped") return isSelf ? ["in_transit"] : ["delivered"];
-  if(s==="in_transit") return ["delivered"];
+  if(s==="ready_to_ship") return []; // Platform shipments stop manual updates here
+  if(s==="shipped") return isSelf ? ["in_transit"] : [];
+  if(s==="in_transit") return isSelf ? ["delivered"] : [];
   if(s==="return_requested") return [];
   return [];
 };
@@ -432,8 +432,8 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
 
                 {shipment.status && !shipment.failureReason && (
                   <Box sx={{ width: '100%', my: 3 }}>
-                    <Stepper 
-                      activeStep={getShipmentActiveStep(shipment.status)} 
+                    <Stepper
+                      activeStep={getShipmentActiveStep(shipment.status)}
                       alternativeLabel
                       sx={{
                         '& .MuiStepIcon-root.Mui-active': {
@@ -545,9 +545,9 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                         />
                       </Grid>
                       <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        <Button 
-                          size="small" 
-                          onClick={() => setShowManualShipForm(false)} 
+                        <Button
+                          size="small"
+                          onClick={() => setShowManualShipForm(false)}
                           disabled={actionLoading}
                           sx={{
                             color: '#0FB9B1',
@@ -560,10 +560,10 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                         >
                           Cancel
                         </Button>
-                        <Button 
-                          variant="contained" 
-                          size="small" 
-                          onClick={handleManualShip} 
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={handleManualShip}
                           disabled={actionLoading}
                           sx={{
                             background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
@@ -588,12 +588,12 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
 
                 {shipment.awbCode && (
                   <Box sx={{ mt: 1.5 }}>
-                    <Button 
-                      size="small" 
-                      onClick={handleToggleTracking} 
-                      endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />} 
-                      sx={{ 
-                        textTransform: 'none', 
+                    <Button
+                      size="small"
+                      onClick={handleToggleTracking}
+                      endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      sx={{
+                        textTransform: 'none',
                         fontWeight: 600,
                         color: '#0B8457',
                         '&:hover': {
@@ -664,11 +664,11 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
           <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, height: 40, ...OUTLINED_GREEN_SX }} onClick={() => generateInvoice(order.rawItem, true)}>
             Download Invoice
           </Button>
-          <Button 
+          <Button
             variant="outlined"
             endIcon={<KeyboardArrowDownIcon sx={{ color: statusMenuAnchor ? '#0B8457' : '#0FB9B1' }} />}
-            disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0} 
-            onClick={(e) => setStatusMenuAnchor(e.currentTarget)} 
+            disabled={updating || getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).length === 0}
+            onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
             sx={{ ...BUTTON_GREEN_SX, flex: 1 }}
           >
             Update Status
@@ -696,12 +696,12 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
             {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
               const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
               return (
-                <MenuItem 
-                  key={status} 
+                <MenuItem
+                  key={status}
                   onClick={() => {
                     handleStatusChange(status);
                     setStatusMenuAnchor(null);
-                  }} 
+                  }}
                   sx={{ textTransform: 'capitalize' }}
                 >
                   {label}
@@ -798,154 +798,154 @@ const Orders = () => {
       {/* StatCards Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard 
-            title="Total Shipments" 
-            value={analytics?.totalShipments || 0} 
-            icon={<TrendingUpIcon />} 
-            color={theme.palette.primary.main} 
-            loading={analyticsLoading} 
+          <StatCard
+            title="Total Shipments"
+            value={analytics?.totalShipments || 0}
+            icon={<TrendingUpIcon />}
+            color={theme.palette.primary.main}
+            loading={analyticsLoading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard 
-            title="Active Shipments" 
+          <StatCard
+            title="Active Shipments"
             value={
-              (analytics?.totalShipments || 0) - 
-              (analytics?.statusBreakdown?.delivered || 0) - 
-              (analytics?.statusBreakdown?.cancelled || 0) - 
+              (analytics?.totalShipments || 0) -
+              (analytics?.statusBreakdown?.delivered || 0) -
+              (analytics?.statusBreakdown?.cancelled || 0) -
               (analytics?.rtoCount || 0)
-            } 
-            icon={<LocalShippingIcon />} 
-            color={theme.palette.info.main} 
-            loading={analyticsLoading} 
+            }
+            icon={<LocalShippingIcon />}
+            color={theme.palette.info.main}
+            loading={analyticsLoading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard 
-            title="Delivered" 
-            value={analytics?.statusBreakdown?.delivered || 0} 
-            icon={<CheckCircleOutlineIcon />} 
-            color={theme.palette.success.main} 
-            loading={analyticsLoading} 
+          <StatCard
+            title="Delivered"
+            value={analytics?.statusBreakdown?.delivered || 0}
+            icon={<CheckCircleOutlineIcon />}
+            color={theme.palette.success.main}
+            loading={analyticsLoading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard 
-            title="Delayed SLA" 
-            value={analytics?.delayedCount || 0} 
-            icon={<ScheduleIcon />} 
-            color={theme.palette.warning.main} 
-            loading={analyticsLoading} 
+          <StatCard
+            title="Delayed SLA"
+            value={analytics?.delayedCount || 0}
+            icon={<ScheduleIcon />}
+            color={theme.palette.warning.main}
+            loading={analyticsLoading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard 
-            title="Failed / RTO" 
-            value={analytics?.rtoCount || 0} 
-            icon={<ErrorOutlineIcon />} 
-            color={theme.palette.error.main} 
-            loading={analyticsLoading} 
+          <StatCard
+            title="Failed / RTO"
+            value={analytics?.rtoCount || 0}
+            icon={<ErrorOutlineIcon />}
+            color={theme.palette.error.main}
+            loading={analyticsLoading}
           />
         </Grid>
       </Grid>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
-  <FormControl size="small">
-    <Select
-      value={statusFilter}
-      onChange={(e) => {
-        setStatusFilter(e.target.value);
-        setPage(1);
-      }}
-      displayEmpty
-      sx={{ minWidth: 140, bgcolor: 'action.hover' }}
-    >
-      <MenuItem value="">All Status</MenuItem>
-      {ALLOWED_STATUSES.map((status) => (
-        <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>
-          {status}
-        </MenuItem>
-      ))}
-    </Select>
-  </FormControl>
+        <FormControl size="small">
+          <Select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            displayEmpty
+            sx={{ minWidth: 140, bgcolor: 'action.hover' }}
+          >
+            <MenuItem value="">All Status</MenuItem>
+            {ALLOWED_STATUSES.map((status) => (
+              <MenuItem key={status} value={status} sx={{ textTransform: 'capitalize' }}>
+                {status}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-  <FormControl size="small">
-    <Select
-      value={sortFilter}
-      onChange={(e) => {
-        setSortFilter(e.target.value);
-        setPage(1);
-      }}
-      sx={{ minWidth: 180, bgcolor: 'action.hover' }}
-    >
-      <MenuItem value="newest">Newest</MenuItem>
-      <MenuItem value="oldest">Oldest</MenuItem>
-      <MenuItem value="orderIdAsc">Order ID Increment</MenuItem>
-      <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
-    </Select>
-  </FormControl>
-  <FormControl size="small">
-  <Select
-    value={yearFilter}
-    onChange={(e) => {
-      setYearFilter(e.target.value);
-      setMonthFilter('');
-      setPage(1);
-    }}
-    displayEmpty
-    sx={{ minWidth: 120, bgcolor: 'action.hover' }}
-  >
-    <MenuItem value="">All Years</MenuItem>
-    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-      <MenuItem key={year} value={String(year)}>{year}</MenuItem>
-    ))}
-  </Select>
-</FormControl>
+        <FormControl size="small">
+          <Select
+            value={sortFilter}
+            onChange={(e) => {
+              setSortFilter(e.target.value);
+              setPage(1);
+            }}
+            sx={{ minWidth: 180, bgcolor: 'action.hover' }}
+          >
+            <MenuItem value="newest">Newest</MenuItem>
+            <MenuItem value="oldest">Oldest</MenuItem>
+            <MenuItem value="orderIdAsc">Order ID Increment</MenuItem>
+            <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small">
+          <Select
+            value={yearFilter}
+            onChange={(e) => {
+              setYearFilter(e.target.value);
+              setMonthFilter('');
+              setPage(1);
+            }}
+            displayEmpty
+            sx={{ minWidth: 120, bgcolor: 'action.hover' }}
+          >
+            <MenuItem value="">All Years</MenuItem>
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+              <MenuItem key={year} value={String(year)}>{year}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-<FormControl size="small" disabled={!yearFilter}>
-  <Select
-    value={monthFilter}
-    onChange={(e) => {
-      setMonthFilter(e.target.value);
-      setPage(1);
-    }}
-    displayEmpty
-    sx={{ minWidth: 140, bgcolor: 'action.hover' }}
-  >
-    <MenuItem value="">All Months</MenuItem>
-    <MenuItem value="1">January</MenuItem>
-    <MenuItem value="2">February</MenuItem>
-    <MenuItem value="3">March</MenuItem>
-    <MenuItem value="4">April</MenuItem>
-    <MenuItem value="5">May</MenuItem>
-    <MenuItem value="6">June</MenuItem>
-    <MenuItem value="7">July</MenuItem>
-    <MenuItem value="8">August</MenuItem>
-    <MenuItem value="9">September</MenuItem>
-    <MenuItem value="10">October</MenuItem>
-    <MenuItem value="11">November</MenuItem>
-    <MenuItem value="12">December</MenuItem>
-  </Select>
-</FormControl>
-<TextField
-  type="date"
-  size="small"
-  value={dateFilter}
-  onChange={(e) => {
-    setDateFilter(e.target.value);
-    setYearFilter('');
-    setMonthFilter('');
-    setPage(1);
-  }}
-  sx={{
-    minWidth: 170,
-    bgcolor: 'action.hover',
-  }}
-  InputLabelProps={{
-    shrink: true,
-  }}
-/> 
-</Box>
+        <FormControl size="small" disabled={!yearFilter}>
+          <Select
+            value={monthFilter}
+            onChange={(e) => {
+              setMonthFilter(e.target.value);
+              setPage(1);
+            }}
+            displayEmpty
+            sx={{ minWidth: 140, bgcolor: 'action.hover' }}
+          >
+            <MenuItem value="">All Months</MenuItem>
+            <MenuItem value="1">January</MenuItem>
+            <MenuItem value="2">February</MenuItem>
+            <MenuItem value="3">March</MenuItem>
+            <MenuItem value="4">April</MenuItem>
+            <MenuItem value="5">May</MenuItem>
+            <MenuItem value="6">June</MenuItem>
+            <MenuItem value="7">July</MenuItem>
+            <MenuItem value="8">August</MenuItem>
+            <MenuItem value="9">September</MenuItem>
+            <MenuItem value="10">October</MenuItem>
+            <MenuItem value="11">November</MenuItem>
+            <MenuItem value="12">December</MenuItem>
+          </Select>
+        </FormControl>
+        <TextField
+          type="date"
+          size="small"
+          value={dateFilter}
+          onChange={(e) => {
+            setDateFilter(e.target.value);
+            setYearFilter('');
+            setMonthFilter('');
+            setPage(1);
+          }}
+          sx={{
+            minWidth: 170,
+            bgcolor: 'action.hover',
+          }}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
+      </Box>
       <Card>
         <TableContainer>
           <Table>
@@ -972,60 +972,61 @@ const Orders = () => {
                     </TableRow>
                   )
                   : orders.map((item) => {
-                      const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
-                      const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
-                      
-                      return (
-                    <TableRow key={item.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                         {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
-                        </Typography>
-                      </TableCell>
-                      <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {(item.Order || item.order)?.user?.name || '—'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
-                        {Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
-                           <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
-                             {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
-                           </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
-                      <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
-                      <TableCell>
-                        <Tooltip title="View Details">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedOrder({
-                                itemId: item.id,
-                                orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
-                                customer: (item.Order || item.order)?.user?.name || '-',
-                                product: item.product?.name || '-',
-                                quantity: item.quantity,
-                                amount: item.total_price,
-                                status: displayStatus,
-                                createdAt: item.created_at,
-                                address: (item.Order || item.order)?.address,
-                                rawItem: item
-                              });
-                              setDialogOpen(true);
-                            }}
-                            sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
-                          >
-                            <VisibilityOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  )})
+                    const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
+                    const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
+
+                    return (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>
+                            {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
+                          </Typography>
+                        </TableCell>
+                        <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {(item.Order || item.order)?.user?.name || '—'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
+                          {Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
+                              {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
+                        <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
+                        <TableCell>
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedOrder({
+                                  itemId: item.id,
+                                  orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
+                                  customer: (item.Order || item.order)?.user?.name || '-',
+                                  product: item.product?.name || '-',
+                                  quantity: item.quantity,
+                                  amount: item.total_price,
+                                  status: displayStatus,
+                                  createdAt: item.created_at,
+                                  address: (item.Order || item.order)?.address,
+                                  rawItem: item
+                                });
+                                setDialogOpen(true);
+                              }}
+                              sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
+                            >
+                              <VisibilityOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
               }
             </TableBody>
           </Table>

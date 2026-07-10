@@ -1543,7 +1543,7 @@
 //                         Product ₹{Number(form.price || 0).toLocaleString('en-IN')}
 //                       </Typography>
 //                       <Typography variant="body2" color="text.secondary">
-//                         Commission ₹{commission ?? 0}
+//                         Platform Fee ₹{commission ?? 0}
 //                       </Typography>
 //                       <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
 //                         Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `₹${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
@@ -1865,9 +1865,23 @@ const emptyForm = {
   height: '',
   custom_category: '',
   gst_rate: '',
+  warranty_type: '',
+  warranty_duration: '',
+  warranty_duration_unit: 'months',
+  warranty_description: ''
 };
 
 const MAX_PRODUCT_IMAGES = 6;
+const menuPropsDownward = {
+  anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+  transformOrigin: { vertical: 'top', horizontal: 'left' },
+  disableScrollLock: true,
+  slotProps: {
+    paper: {
+      style: { maxHeight: 300, marginTop: 4 },
+    },
+  },
+};
 
 const primaryButtonStyle = {
   background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
@@ -2249,6 +2263,10 @@ const ProductForm = () => {
             hsn_code: p.hsn_code || '',
             gst_rate: p.gst_rate != null ? String(p.gst_rate) : '',
             custom_category: p.custom_category || '',
+            warranty_type: p.warranty_type || '',
+            warranty_duration: p.warranty_duration || '',
+            warranty_duration_unit: p.warranty_duration_unit || 'months',
+            warranty_description: p.warranty_description || '',
           });
           setAttributeValues(
             (p.specifications || []).reduce((acc, spec) => {
@@ -2473,11 +2491,12 @@ const renderAttributeField = (attribute) => {
     return (
       <FormControl fullWidth>
         <InputLabel>{label} (Variant)</InputLabel>
-        <Select
+         <Select
           multiple value={value}
           onChange={handleVariantAttributeChange(attribute.id, attribute.name)}
           renderValue={selected => selected.join(', ')}
           label={`${label} (Variant)`}
+          MenuProps={menuPropsDownward}
         >
           {options.map(option => (
             <MenuItem key={option.id} value={option.value}>
@@ -2525,10 +2544,11 @@ const renderAttributeField = (attribute) => {
             size="medium"
           />
           <FormControl sx={{ minWidth: 90 }}>
-            <Select
+    <Select
               value={unitValue}
               onChange={(e) => syncValue(qtyValue, e.target.value)}
               size="medium"
+              MenuProps={menuPropsDownward}
             >
               {VOLUME_UNITS.map(u => (
                 <MenuItem key={u} value={u}>{u}</MenuItem>
@@ -2581,6 +2601,7 @@ const renderAttributeField = (attribute) => {
               value={unitValue}
               onChange={(e) => syncValue(qtyValue, e.target.value)}
               size="medium"
+              MenuProps={menuPropsDownward}
             >
               {WEIGHT_UNITS.map(u => (
                 <MenuItem key={u} value={u}>{u}</MenuItem>
@@ -2606,7 +2627,7 @@ const renderAttributeField = (attribute) => {
       <Box>
         <FormControl fullWidth required={attribute.is_required}>
           <InputLabel>{label}</InputLabel>
-          <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)}>
+          <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)} MenuProps={menuPropsDownward}>
             <MenuItem value="">Select {attribute.name}</MenuItem>
             {options.map(option => (
               <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
@@ -2833,6 +2854,10 @@ const renderAttributeField = (attribute) => {
         hsn_code: form.hsn_code?.trim() || null,
         gst_rate: form.gst_rate || null,
         custom_category: form.custom_category?.trim() || null,
+        warranty_type: form.warranty_type || null,
+        warranty_duration: form.warranty_duration ? parseInt(form.warranty_duration) : null,
+        warranty_duration_unit: form.warranty_type ? form.warranty_duration_unit : null,
+        warranty_description: form.warranty_description?.trim() || null,
         variants: submittedVariants.length > 0 ? submittedVariants.map(v => ({
           ...v,
           price: parseFloat(v.price) || 0,
@@ -2994,11 +3019,12 @@ const renderAttributeField = (attribute) => {
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth>
                         <InputLabel>Product Condition</InputLabel>
-                        <Select
-                          value={form.condition}
-                          label="Product Condition"
-                          onChange={handleChange('condition')}
-                        >
+                         <Select
+                           value={form.condition}
+                           label="Product Condition"
+                           onChange={handleChange('condition')}
+                           MenuProps={menuPropsDownward}
+                         >
                           <MenuItem value="new">New</MenuItem>
                           <MenuItem value="used">Used</MenuItem>
                           <MenuItem value="refurbished">Refurbished</MenuItem>
@@ -3010,7 +3036,7 @@ const renderAttributeField = (attribute) => {
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth required>
                         <InputLabel id="cat-label">Category</InputLabel>
-                        <Select
+                       <Select
                           labelId="cat-label"
                           label="Category"
                           value={form.category_id}
@@ -3027,22 +3053,9 @@ const renderAttributeField = (attribute) => {
                             setVariants([]);
                             setColorGroups([]);
                           }}
-                          MenuProps={{
-                            anchorOrigin: {
-                              vertical: 'bottom',
-                              horizontal: 'left'
-                            },
-                            transformOrigin: {
-                              vertical: 'top',
-                              horizontal: 'left'
-                            },
-                            PaperProps: {
-                              style: {
-                                maxHeight: 300
-                              }
-                            }
-                          }}
+                          MenuProps={menuPropsDownward}
                         >
+                          
                           <MenuItem value="">Select Category</MenuItem>
                           {categories.filter(c => c.depth === 0).map(c => (
                             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
@@ -3068,7 +3081,7 @@ const renderAttributeField = (attribute) => {
                       <Grid item xs={12} sm={6}>
                         <FormControl fullWidth>
                           <InputLabel id="subcat-label">Subcategory</InputLabel>
-                          <Select
+                         <Select
                             labelId="subcat-label"
                             label="Subcategory"
                             value={form.subcategory_id}
@@ -3080,21 +3093,7 @@ const renderAttributeField = (attribute) => {
                               setVariants([]);
                               setColorGroups([]);
                             }}
-                            MenuProps={{
-                              anchorOrigin: {
-                                vertical: 'bottom',
-                                horizontal: 'left'
-                              },
-                              transformOrigin: {
-                                vertical: 'top',
-                                horizontal: 'left'
-                              },
-                              PaperProps: {
-                                style: {
-                                  maxHeight: 300
-                                }
-                              }
-                            }}
+                            MenuProps={menuPropsDownward}
                           >
                             <MenuItem value="">None</MenuItem>
                             {categories.filter(c => c.parent_id === Number(form.category_id)).map(c => (
@@ -3119,11 +3118,12 @@ const renderAttributeField = (attribute) => {
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth required>
                         <InputLabel>GST Rate (%)</InputLabel>
-                        <Select
-                          value={form.gst_rate}
-                          label="GST Rate (%)"
-                          onChange={handleChange('gst_rate')}
-                        >
+                         <Select
+                           value={form.gst_rate}
+                           label="GST Rate (%)"
+                           onChange={handleChange('gst_rate')}
+                           MenuProps={menuPropsDownward}
+                         >
                           <MenuItem value="">Select GST Rate</MenuItem>
                           <MenuItem value={0}>0%</MenuItem>
                           <MenuItem value={3}>3%</MenuItem>
@@ -3212,6 +3212,7 @@ const renderAttributeField = (attribute) => {
                                           label="Color Name"
                                           value={group.color}
                                           onChange={(e) => updateColorGroup(groupIndex, 'color', e.target.value)}
+                                          MenuProps={menuPropsDownward}
                                         >
                                           <MenuItem value="">Select color</MenuItem>
                                           {colorOptions.map(option => (
@@ -3286,10 +3287,11 @@ const renderAttributeField = (attribute) => {
                                               <TableCell>
                                                 {sizeOptions.length > 0 ? (
                                                   <FormControl fullWidth size="small">
-                                                    <Select
+                                                  <Select
                                                       value={sizeRow.size}
                                                       onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
                                                       displayEmpty
+                                                      MenuProps={menuPropsDownward}
                                                     >
                                                       <MenuItem value="">{sizeLabel}</MenuItem>
                                                       {sizeOptions.map(option => (
@@ -3513,7 +3515,7 @@ const renderAttributeField = (attribute) => {
                                 <TableRow key={idx}>
                                   <TableCell sx={{ minWidth: 150 }}>
                                     <FormControl fullWidth size="small">
-                                      <Select
+                                  <Select
                                         value={rule.state}
                                         onChange={(e) => {
                                           const newRules = [...shippingRules];
@@ -3521,6 +3523,7 @@ const renderAttributeField = (attribute) => {
                                           setShippingRules(newRules);
                                         }}
                                         displayEmpty
+                                        MenuProps={menuPropsDownward}
                                       >
                                         <MenuItem value="" disabled>Select State</MenuItem>
                                         {INDIAN_STATES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
@@ -3529,7 +3532,7 @@ const renderAttributeField = (attribute) => {
                                   </TableCell>
                                   <TableCell sx={{ minWidth: 130 }}>
                                     <FormControl fullWidth size="small">
-                                      <Select
+                                     <Select
                                         value={rule.delivery_type}
                                         onChange={(e) => {
                                           const newRules = [...shippingRules];
@@ -3540,6 +3543,7 @@ const renderAttributeField = (attribute) => {
                                           }
                                           setShippingRules(newRules);
                                         }}
+                                        MenuProps={menuPropsDownward}
                                       >
                                         <MenuItem value="free">Free</MenuItem>
                                         <MenuItem value="fixed">Fixed</MenuItem>
@@ -3600,7 +3604,7 @@ const renderAttributeField = (attribute) => {
                         Product ₹{Number(form.price || 0).toLocaleString('en-IN')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Commission ₹{commission ?? 0}
+                        Platform Fee ₹{commission ?? 0}
                       </Typography>
                       <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
                         Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `₹${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
@@ -3613,6 +3617,76 @@ const renderAttributeField = (attribute) => {
                   </CardContent>
                 </Card>
               )}
+              {/* Warranty */}
+<Card sx={{ mb: 3 }}>
+  <CardContent>
+    <Typography variant="h6" fontWeight={700} gutterBottom>Warranty</Typography>
+    <Divider sx={{ mb: 2 }} />
+    <Grid container spacing={2}>
+
+      <Grid item xs={12} sm={6}>
+        <FormControl fullWidth>
+          <InputLabel>Warranty type</InputLabel>
+          <Select
+    value={form.warranty_type}
+    label="Warranty type"
+    onChange={handleChange('warranty_type')}
+    MenuProps={menuPropsDownward}
+  >
+            <MenuItem value="">No warranty</MenuItem>
+            <MenuItem value="seller">Seller warranty</MenuItem>
+            <MenuItem value="brand">Brand warranty</MenuItem>
+            <MenuItem value="manufacturer">Manufacturer warranty</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+
+      {form.warranty_type && (
+        <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              label="Duration"
+              type="number"
+              value={form.warranty_duration}
+              onChange={handleChange('warranty_duration')}
+              inputProps={{ min: 1 }}
+              sx={{ flex: 1 }}
+              placeholder="e.g. 12"
+            />
+            <FormControl sx={{ minWidth: 110 }}>
+              <InputLabel>Unit</InputLabel>
+              <Select
+                value={form.warranty_duration_unit}
+                label="Unit"
+                onChange={handleChange('warranty_duration_unit')}
+                MenuProps={menuPropsDownward}
+                >
+                <MenuItem value="days">Days</MenuItem>
+                <MenuItem value="months">Months</MenuItem>
+                <MenuItem value="years">Years</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Grid>
+      )}
+
+      {form.warranty_type && (
+        <Grid item xs={12}>
+          <TextField
+            label="What's covered (optional)"
+            value={form.warranty_description}
+            onChange={handleChange('warranty_description')}
+            fullWidth
+            multiline
+            rows={2}
+            placeholder="e.g. Manufacturing defects, parts replacement"
+          />
+        </Grid>
+      )}
+
+    </Grid>
+  </CardContent>
+</Card>
 
               {/* General images gallery */}
               <Card sx={{ mb: 3 }}>

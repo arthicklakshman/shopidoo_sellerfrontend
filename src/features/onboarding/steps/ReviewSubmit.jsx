@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Grid, Button, Checkbox, Avatar, CircularProgress
 } from '@mui/material';
+// Add this import at the top
+import { useNavigate } from 'react-router-dom';
 
 // Icons
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -25,28 +27,18 @@ const InfoField = ({ label, value, verified = false }) => (
   </Box>
 );
 
-const DocumentItem = ({ label, isUploaded, isOptional }) => {
-  if (!isUploaded && isOptional) {
-    return (
-      <Box sx={{ mb: 2 }}>
-        <Typography sx={{ color: '#9ca3af', fontSize: '13px', mb: 0.5 }}>{label}</Typography>
-        <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 500 }}>Not provided</Typography>
-      </Box>
-    );
-  }
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-      {isUploaded ? (
-        <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 20 }} />
-      ) : (
-        <ErrorOutlineIcon sx={{ color: '#ef4444', fontSize: 20 }} />
-      )}
-      <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500 }}>
-        {label} {isUploaded ? "(Uploaded)" : "(Missing)"}
-      </Typography>
-    </Box>
-  );
-};
+const DocumentItem = ({ label, isUploaded }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+    {isUploaded ? (
+      <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 20 }} />
+    ) : (
+      <ErrorOutlineIcon sx={{ color: '#ef4444', fontSize: 20 }} />
+    )}
+    <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500 }}>
+      {label} {isUploaded ? "(Uploaded)" : "(Missing)"}
+    </Typography>
+  </Box>
+);
 
 const SectionCard = ({ step, title, onEdit, children }) => (
   <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', mb: 4 }}>
@@ -145,9 +137,9 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
       fields: [
         { label: "Business Name", value: data.step2.businessName },
         { label: "Store Name", value: data.step2.displayStoreName },
-        { label: "GST Number", value: data.step2.gstNumber ? data.step2.gstNumber : "Not applicable" },
+        { label: "GST Number", value: data.step2.hasGst ? data.step2.gstNumber : "Not applicable" },
         { label: "PAN Number", value: data.step2.panNumber },
-        { label: "Business Address", value: `${data.step2.addressLine1 || ''}, ${data.step2.city || ''}, ${data.step2.state || ''} - ${data.step2.pincode || ''}`.replace(/^, | , | - $/g, ''), fullWidth: true },
+        { label: "Business Address", value: `${data.step2.addressLine1}, ${data.step2.city || ''}, ${data.step2.state || ''} - ${data.step2.pincode || ''}`, fullWidth: true },
       ]
     },
     {
@@ -162,11 +154,10 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     {
       step: "4", title: "Documents", stepIndex: 4,
       fields: [
-        { label: "GST Certificate", isDocument: true, isUploaded: !!data.step5.gstProof, isOptional: false },
-        { label: "Signature", isDocument: true, isUploaded: !!data.step5.signature, isOptional: false },
-        { label: "PAN Card", isDocument: true, isUploaded: !!data.step5.panCard, isOptional: true },
-        { label: "Aadhaar Front", isDocument: true, isUploaded: !!data.step5.aadhaarFront, isOptional: true },
-        { label: "Aadhaar Back", isDocument: true, isUploaded: !!data.step5.aadhaarBack, isOptional: true },
+        { label: "PAN Card", isDocument: true, isUploaded: !!data.step5.panCard },
+        { label: "Aadhaar Front", isDocument: true, isUploaded: !!data.step5.aadhaarFront },
+        { label: "Aadhaar Back", isDocument: true, isUploaded: !!data.step5.aadhaarBack },
+        { label: "Signature", isDocument: true, isUploaded: !!data.step5.signature },
       ]
     },
     {
@@ -193,102 +184,59 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
           </Box>
         )}
 
-        <Box sx={{ maxHeight: '60vh', overflowY: 'auto', pr: 1, mb: 4, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: '#d1d5db', borderRadius: '10px' } }}>
-          {REVIEW_SECTIONS.map((section) => (
-            <SectionCard 
-              key={section.step} 
-              step={section.step} 
-              title={section.title} 
-              onEdit={() => handleEditClick(section.stepIndex)} 
-            >
-              <Grid container spacing={2}>
-                {section.fields.map((field, index) => (
-                  <Grid item xs={12} sm={field.fullWidth ? 12 : 6} key={index}>
-                    {field.isDocument ? (
-                      <DocumentItem label={field.label} isUploaded={field.isUploaded} isOptional={field.isOptional} />
-                    ) : (
-                      <InfoField label={field.label} value={field.value} verified={field.verified} />
-                    )}
-                  </Grid>
-                ))}
-              </Grid>
-            </SectionCard>
-          ))}
+        {REVIEW_SECTIONS.map((section) => (
+          <SectionCard 
+            key={section.step} 
+            step={section.step} 
+            title={section.title} 
+            onEdit={() => handleEditClick(section.stepIndex)} 
+          >
+            <Grid container spacing={2}>
+              {section.fields.map((field, index) => (
+                <Grid item xs={12} sm={field.fullWidth ? 12 : 6} key={index}>
+                  {field.isDocument ? (
+                    <DocumentItem label={field.label} isUploaded={field.isUploaded} />
+                  ) : (
+                    <InfoField label={field.label} value={field.value} verified={field.verified} />
+                  )}
+                </Grid>
+              ))}
+            </Grid>
+          </SectionCard>
+        ))}
 
-          <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: 4 }}>
-  <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-    
-    {/* Terms & Conditions Checkbox */}
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-      <Checkbox 
-        checked={termsAccepted} 
-        onChange={(e) => setTermsAccepted(e.target.checked)} 
-        disableRipple 
-        sx={{ 
-          p: 0, 
-          mt: -0.25, 
-          color: '#d1d5db',
-          '&.Mui-checked': { color: '#0B8457' } 
-        }} 
-      />
-      <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-        <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>
-          I accept the Terms & Conditions{' '}
-        </Box>
-        {/* First sentence as a single navigate link */}
-        <Box 
-          component="span" 
-          onClick={() => navigate('/terms-and-conditions')} 
-          sx={{ 
-            color: '#0B8457', // Brand Teal default
-            cursor: 'pointer', 
-            fontWeight: 500,
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {textDecoration: 'underline' } 
-          }}
-        >
-          By checking this, you agree to our seller terms, privacy policy, and platform guidelines.
-        </Box>
-      </Typography>
-    </Box>
-
-    {/* Seller Policies Checkbox */}
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-      <Checkbox 
-        checked={policiesAccepted} 
-        onChange={(e) => setPoliciesAccepted(e.target.checked)} 
-        disableRipple 
-        sx={{ 
-          p: 0, 
-          mt: -0.25, 
-          color: '#d1d5db',
-          '&.Mui-checked': { color: '#0B8457' } 
-        }} 
-      />
-      <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-        <Box component="span" sx={{ fontWeight: 600, color: '#111827' }}>
-          I agree to Seller Policies{' '}
-        </Box>
-        {/* Second sentence as a single navigate link */}
-        <Box 
-          component="span" 
-          onClick={() => navigate('/seller-policies')} 
-          sx={{ 
-            color: '#0B8457', // Brand Teal default
-            cursor: 'pointer', 
-            fontWeight: 500,
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {  textDecoration: 'underline' } 
-          }}
-        >
-          This includes product listing guidelines, return policies, and commission structure.
-        </Box>
-      </Typography>
-    </Box>
-
-  </CardContent>
-</Card>
-        </Box>
+        <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: 4 }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Checkbox checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
+             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+  <Box component="span" sx={{ color: '#4b5563' }}>I accept the </Box>
+  <Box
+    component="span"
+    onClick={() => window.open('/terms-and-conditions', '_blank')}
+    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+  >
+    Terms & Conditions
+  </Box>
+  <Box component="span" sx={{ color: '#4b5563' }}> — By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
+</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
+             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+  <Box component="span" sx={{ color: '#4b5563' }}>I agree to </Box>
+  <Box
+    component="span"
+    onClick={() => window.open('/seller-policies', '_blank')}
+    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+  >
+    Seller Policies
+  </Box>
+  <Box component="span" sx={{ color: '#4b5563' }}> — This includes product listing guidelines, return policies, and commission structure.</Box>
+</Typography>
+            </Box>
+          </CardContent>
+        </Card>
 
         {/* 🌟 FIXED: Replaced standard buttons with your custom Gradient components */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
@@ -327,11 +275,3 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     </Box>
   );
 }
-
-
-
-
-
-
-
-
