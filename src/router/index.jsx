@@ -28,7 +28,7 @@ const Coupons = lazy(() => import('../pages/Coupons/Coupons'));
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'));
 const Returns = lazy(() => import('../pages/Returns/SellerReturns'));
 const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
-const DeleteAccount = lazy(() => import('../pages/deleteaccount/DeleteAccount'));
+const DeleteAccount = lazy(() => import('../pages/DeleteAccount/DeleteAccount'));
 
 
 

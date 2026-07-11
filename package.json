@@ -4,7 +4,7 @@
   "description": "Shopidoo – Seller Dashboard",
   "type": "module",
   "scripts": {
-    "dev": "vite --open --port 5174",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
