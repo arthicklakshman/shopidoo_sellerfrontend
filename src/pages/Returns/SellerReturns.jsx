@@ -74,10 +74,10 @@ const SLA_STATUS_COLORS = {
 };
 
 const getActiveSla = (req) => {
-  if (!req.slaLogs || req.slaLogs.length === 0) return null;
-  const active = req.slaLogs.find(log => ['active', 'paused', 'overdue'].includes(log.status));
+  if (!req.sla_logs || req.sla_logs.length === 0) return null;
+  const active = req.sla_logs.find(log => ['active', 'paused', 'overdue'].includes(log.status));
   if (active) return active;
-  return req.slaLogs[req.slaLogs.length - 1];
+  return req.sla_logs[req.sla_logs.length - 1];
 };
 
 const SellerReturns = () => {
@@ -89,7 +89,7 @@ const SellerReturns = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState('');
   const [lightboxType, setLightboxType] = useState('image');
-  
+
   // Inspection & Refund states
   const [inspectionResult, setInspectionResult] = useState('Approve Refund');
   const [inspectionNotes, setInspectionNotes] = useState('');
@@ -170,7 +170,7 @@ const SellerReturns = () => {
 
   const handleUpdateStatus = async () => {
     setErrorMsg('');
-    
+
     // Prevent receiving returns without customer tracking data and receipts uploaded (Self Shipping only)
     // Mirrors the backend default in return.service.js#updateReturnStatusSeller: a missing shipment record is treated as platform logistics, not self-ship.
     const isSelfShip = !!selectedReturn.returnShipment && selectedReturn.returnShipment.shippingMode === 'self';
@@ -250,9 +250,9 @@ const SellerReturns = () => {
       {metrics && metrics.enabled !== false && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              p: 2.5, 
-              borderRadius: 3, 
+            <Card sx={{
+              p: 2.5,
+              borderRadius: 3,
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bbf7d0',
@@ -276,9 +276,9 @@ const SellerReturns = () => {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              p: 2.5, 
-              borderRadius: 3, 
+            <Card sx={{
+              p: 2.5,
+              borderRadius: 3,
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fefafd, #fae8ff)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#f5d0fe',
@@ -295,16 +295,16 @@ const SellerReturns = () => {
                 </Typography>
                 <Typography variant="caption" color="text.secondary">Avg First Response Time</Typography>
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                Avg Resolution: {metrics.avgResolutionTime ? `${metrics.avgResolutionTime} hrs` : '0 hrs'}
+              <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 600, color: '#334155' }}>
+                Avg Resolution: {metrics.avgResolutionTime ? `${metrics.avgResolutionTime} days` : '0 days'}
               </Typography>
             </Card>
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              p: 2.5, 
-              borderRadius: 3, 
+            <Card sx={{
+              p: 2.5,
+              borderRadius: 3,
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fffbeb, #fef3c7)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#fde68a',
@@ -328,9 +328,9 @@ const SellerReturns = () => {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              p: 2.5, 
-              borderRadius: 3, 
+            <Card sx={{
+              p: 2.5,
+              borderRadius: 3,
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bae6fd',
@@ -361,11 +361,11 @@ const SellerReturns = () => {
           )}
         </Grid>
       )}
-      
-      <TableContainer component={Paper} sx={{ 
-        borderRadius: 3, 
-        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(0,0,0,0.05)', 
-        overflow: 'hidden' 
+
+      <TableContainer component={Paper} sx={{
+        borderRadius: 3,
+        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
+        overflow: 'hidden'
       }}>
         <Table>
           <TableHead sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'grey.50' }}>
@@ -410,7 +410,6 @@ const SellerReturns = () => {
                 </TableCell>
 
                 <TableCell>
-                  {/* ✅ Removed custom color so it uses the default text color */}
                   <Typography variant="body2" fontWeight={700}>
                     {formatCurrency(req.order?.total_amount || req.orderItem?.total_price || req.product?.price || 0)}
                   </Typography>
@@ -425,10 +424,10 @@ const SellerReturns = () => {
                   <Typography variant="body2">{req.reason}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip 
-                    label={req.status.toUpperCase().replace(/_/g, ' ')} 
-                    size="small" 
-                    color={STATUS_COLORS[req.status] || 'default'} 
+                  <Chip
+                    label={req.status.toUpperCase().replace(/_/g, ' ')}
+                    size="small"
+                    color={STATUS_COLORS[req.status] || 'default'}
                     sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.65rem' }}
                   />
                 </TableCell>
@@ -438,10 +437,10 @@ const SellerReturns = () => {
                     if (!activeSla) return <Typography variant="caption" color="text.secondary">-</Typography>;
                     const label = `${STAGE_LABELS[activeSla.stage] || activeSla.stage}: ${activeSla.status.toUpperCase()}`;
                     return (
-                      <Chip 
-                        label={label.replace(/_/g, ' ')} 
-                        size="small" 
-                        color={SLA_STATUS_COLORS[activeSla.status] || 'default'} 
+                      <Chip
+                        label={label.replace(/_/g, ' ')}
+                        size="small"
+                        color={SLA_STATUS_COLORS[activeSla.status] || 'default'}
                         sx={{ fontWeight: 700, borderRadius: 1.5, fontSize: '0.65rem' }}
                       />
                     );
@@ -450,8 +449,8 @@ const SellerReturns = () => {
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
                   {parseFloat(req.total_penalty_amount || 0) > 0
                     ? <Typography variant="body2" fontWeight={700} color="error.main" sx={{ whiteSpace: 'nowrap' }}>
-                        {`-₹${parseFloat(req.total_penalty_amount).toFixed(2)}`}
-                      </Typography>
+                      {`-₹${parseFloat(req.total_penalty_amount).toFixed(2)}`}
+                    </Typography>
                     : <Typography variant="body2" color="text.disabled">—</Typography>
                   }
                 </TableCell>
@@ -511,22 +510,22 @@ const SellerReturns = () => {
 
               {/* SLA Information */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="overline" color="text.secondary" fontWeight={700}>SLA Information</Typography>
-                {(!selectedReturn.slaLogs || selectedReturn.slaLogs.length === 0) ? (
+                <Typography variant="overline" color="text.secondary" fontWeight={700}>SLA Monitoring</Typography>
+                {(!selectedReturn.sla_logs || selectedReturn.sla_logs.length === 0) ? (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>No SLA tracking history available.</Typography>
                 ) : (
-                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {selectedReturn.slaLogs.map((log) => {
+                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {selectedReturn.sla_logs.map((log) => {
                       return (
                         <Paper key={log.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderColor: log.status === 'overdue' ? 'error.light' : log.status === 'paused' ? 'warning.light' : 'divider' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="body2" fontWeight={700} color={log.status === 'overdue' ? 'error.main' : 'text.primary'}>
                               {STAGE_LABELS[log.stage] || log.stage}
                             </Typography>
-                            <Chip 
-                              label={log.status.toUpperCase()} 
-                              size="small" 
-                              color={SLA_STATUS_COLORS[log.status] || 'default'} 
+                            <Chip
+                              label={log.status.toUpperCase()}
+                              size="small"
+                              color={SLA_STATUS_COLORS[log.status] || 'default'}
                               sx={{ fontWeight: 800, fontSize: '0.55rem', height: 18 }}
                             />
                           </Box>
@@ -582,15 +581,15 @@ const SellerReturns = () => {
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Image Proof</Typography>
                   <Box sx={{ mt: 1 }}>
-                    <Button 
-                      variant="contained" 
-                      size="small" 
+                    <Button
+                      variant="contained"
+                      size="small"
                       onClick={() => {
                         setLightboxSrc(selectedReturn.proof_image);
                         setLightboxType('image');
                         setLightboxOpen(true);
                       }}
-                      sx={{ 
+                      sx={{
                         textTransform: 'none',
                         fontWeight: 600,
                         background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
@@ -613,15 +612,15 @@ const SellerReturns = () => {
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="overline" color="text.secondary" fontWeight={700}>Video Proof</Typography>
                   <Box sx={{ mt: 1 }}>
-                    <Button 
-                      variant="contained" 
-                      size="small" 
+                    <Button
+                      variant="contained"
+                      size="small"
                       onClick={() => {
                         setLightboxSrc(selectedReturn.proof_video);
                         setLightboxType('video');
                         setLightboxOpen(true);
                       }}
-                      sx={{ 
+                      sx={{
                         textTransform: 'none',
                         fontWeight: 600,
                         background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
@@ -662,14 +661,14 @@ const SellerReturns = () => {
                       </Grid>
                     )}
                     <Grid item xs={12}>
-                      <Button 
-                        variant="outlined" 
-                        size="small" 
-                        component="a" 
-                        href={selectedReturn.return_receipt_url} 
-                        target="_blank" 
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        component="a"
+                        href={selectedReturn.return_receipt_url}
+                        target="_blank"
                         rel="noopener noreferrer"
-                        sx={{ 
+                        sx={{
                           textTransform: 'none',
                           borderColor: '#0FB9B1',
                           color: '#0FB9B1',
@@ -719,30 +718,10 @@ const SellerReturns = () => {
               {/* Action Forms based on Status */}
               {['refund_approved', 'refund_pending'].includes(selectedReturn.status) ? (
                 <Box>
-                  <Typography variant="overline" color="primary" fontWeight={800}>Process Refund (Razorpay Prepared)</Typography>
-                  <TextField
-                    fullWidth
-                    label="Refund Amount (INR) *"
-                    type="number"
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
-                    margin="normal"
-                    variant="filled"
-                    required
-                  />
-                  <Button 
-                    variant="contained" 
-                    fullWidth 
-                    onClick={handleRefundSubmit} 
-                    sx={{ 
-                      mt: 2, 
-                      fontWeight: 700,
-                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                      '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
-                    }}
-                  >
-                    Complete & Issue Refund
-                  </Button>
+                  <Typography variant="overline" color="primary" fontWeight={800}>Refund Processing</Typography>
+                  <Alert severity="info" sx={{ mt: 1, borderRadius: 2 }}>
+                    The physical inspection was passed. The financial refund is currently being processed by the Platform Admin. No further action is required from you.
+                  </Alert>
                 </Box>
               ) : ['inspection_pending', 'received_by_seller', 'returned_to_seller'].includes(selectedReturn.status) ? (
                 <Box>
@@ -770,8 +749,6 @@ const SellerReturns = () => {
                   >
                     <MenuItem value="Approve Refund">Approve Refund</MenuItem>
                     <MenuItem value="Reject Refund">Reject Refund</MenuItem>
-                    <MenuItem value="Partial Refund">Partial Refund</MenuItem>
-                    <MenuItem value="Replacement Dispatch">Replacement Dispatch</MenuItem>
                   </TextField>
                   <TextField
                     fullWidth
@@ -790,20 +767,20 @@ const SellerReturns = () => {
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Button
-                           variant="outlined"
-                           component="label"
-                           fullWidth
-                           disabled={uploadingEvidence}
-                           sx={{ 
-                             textTransform: 'none',
-                             borderColor: '#0FB9B1',
-                             color: '#0FB9B1',
-                             '&:hover': {
-                               borderColor: '#0B8457',
-                               color: '#0B8457',
-                               backgroundColor: 'rgba(15, 185, 177, 0.04)'
-                             }
-                           }}
+                          variant="outlined"
+                          component="label"
+                          fullWidth
+                          disabled={uploadingEvidence}
+                          sx={{
+                            textTransform: 'none',
+                            borderColor: '#0FB9B1',
+                            color: '#0FB9B1',
+                            '&:hover': {
+                              borderColor: '#0B8457',
+                              color: '#0B8457',
+                              backgroundColor: 'rgba(15, 185, 177, 0.04)'
+                            }
+                          }}
                         >
                           Upload Condition Photo
                           <input
@@ -820,7 +797,7 @@ const SellerReturns = () => {
                           component="label"
                           fullWidth
                           disabled={uploadingEvidence || !!inspectionVideo}
-                          sx={{ 
+                          sx={{
                             textTransform: 'none',
                             borderColor: '#0FB9B1',
                             color: '#0FB9B1',
@@ -872,13 +849,13 @@ const SellerReturns = () => {
                       </Box>
                     )}
                   </Box>
-                  <Button 
-                    variant="contained" 
-                    fullWidth 
-                    onClick={handleInspectionSubmit} 
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handleInspectionSubmit}
                     disabled={uploadingEvidence}
-                    sx={{ 
-                      mt: 2, 
+                    sx={{
+                      mt: 2,
                       fontWeight: 700,
                       background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                       '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
@@ -911,26 +888,33 @@ const SellerReturns = () => {
                       }
                     }}
                   >
-                    <MenuItem value="pending">Pending</MenuItem>
-                    <MenuItem value="approved">Approve Return</MenuItem>
-                    <MenuItem value="rejected">Reject Return</MenuItem>
-                    {statusUpdate.status === 'return_requested' && (
-                      <MenuItem value="return_requested">Return Requested</MenuItem>
+                    {selectedReturn.status === 'pending' && (
+                      <MenuItem value="approved">Approve Return</MenuItem>
                     )}
+                    {selectedReturn.status === 'pending' && (
+                      <MenuItem value="rejected">Reject Return</MenuItem>
+                    )}
+
                     {selectedReturn.status === 'customer_shipped' && (
-                      <MenuItem value="received_by_seller">Received By Seller</MenuItem>
+                      <MenuItem value="received_by_seller">Mark as Received</MenuItem>
                     )}
                     {selectedReturn.status === 'reverse_pickup_scheduled' && (
-                      <MenuItem value="picked_up">Picked Up</MenuItem>
+                      <MenuItem value="picked_up">Mark as Picked Up</MenuItem>
                     )}
                     {selectedReturn.status === 'picked_up' && (
-                      <MenuItem value="return_in_transit">Return In Transit</MenuItem>
+                      <MenuItem value="return_in_transit">Mark as In Transit</MenuItem>
                     )}
                     {selectedReturn.status === 'return_in_transit' && (
-                      <MenuItem value="returned_to_seller">Returned To Seller</MenuItem>
+                      <MenuItem value="returned_to_seller">Mark as Returned</MenuItem>
                     )}
-                    {!['pending', 'approved', 'rejected', 'customer_shipped', 'reverse_pickup_scheduled', 'picked_up', 'return_in_transit'].includes(statusUpdate.status) && (
-                      <MenuItem value={statusUpdate.status}>{statusUpdate.status.toUpperCase().replace(/_/g, ' ')}</MenuItem>
+
+                    {/* Fallback to show current status if no valid transitions are available above */}
+                    {!['pending', 'customer_shipped', 'reverse_pickup_scheduled', 'picked_up', 'return_in_transit'].includes(selectedReturn.status) && (
+                      <MenuItem value={statusUpdate.status}>
+                        {statusUpdate.status === 'approved' ? 'Approve Return' :
+                          statusUpdate.status === 'rejected' ? 'Reject Return' :
+                            statusUpdate.status.toUpperCase().replace(/_/g, ' ')}
+                      </MenuItem>
                     )}
                   </TextField>
 
@@ -944,13 +928,13 @@ const SellerReturns = () => {
                     margin="normal"
                     placeholder="Provide details about approval, rejection, or pickup..."
                   />
-                  <Button 
-                    variant="contained" 
-                    fullWidth 
-                    onClick={handleUpdateStatus} 
-                    sx={{ 
-                      mt: 2, 
-                      fontWeight: 700, 
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handleUpdateStatus}
+                    sx={{
+                      mt: 2,
+                      fontWeight: 700,
                       background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
                       '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
                     }}
@@ -963,9 +947,9 @@ const SellerReturns = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
-          <Button 
-            onClick={() => setOpenDetail(false)} 
-            sx={{ 
+          <Button
+            onClick={() => setOpenDetail(false)}
+            sx={{
               fontWeight: 700,
               color: '#0FB9B1',
               '&:hover': { color: '#0B8457' }
@@ -976,7 +960,7 @@ const SellerReturns = () => {
         </DialogActions>
       </Dialog>
       <Dialog fullScreen open={lightboxOpen} onClose={() => setLightboxOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)' } }}>
-        <IconButton 
+        <IconButton
           onClick={() => setLightboxOpen(false)}
           sx={{ position: 'absolute', top: 16, right: 16, color: 'white', zIndex: 9999 }}
         >

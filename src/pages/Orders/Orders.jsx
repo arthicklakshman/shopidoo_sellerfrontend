@@ -9,6 +9,8 @@ import OrderStatusChip from '../../components/shared/OrderStatusChip/OrderStatus
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { generateInvoice } from '../../utils/generateInvoice';
+import { getZoomCorrectedAnchor } from '../../utils/zoomCorrectedAnchor';
+import { fetchSettingsOnce } from '../../utils/settingsCache';
 import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -38,7 +40,39 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 
+
 const ALLOWED_STATUSES = ['pending', 'confirmed', 'packed', 'ready_to_ship', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'returned', 'return_requested', 'replacement_sent'];
+
+// ── Fee/GST helper (shared logic with Wallet & Dashboard) ────────────────────
+// Cached at module scope so every component on this page shares one fetch.
+let cachedFeeRates = null;
+let feeRatesPromise = null;
+
+const getFeeRates = () => {
+  if (cachedFeeRates) return Promise.resolve(cachedFeeRates);
+  if (!feeRatesPromise) {
+    feeRatesPromise = fetchSettingsOnce()
+      .then((raw) => {
+        cachedFeeRates = {
+          gatewayFeeRate: Number(raw?.gatewayFee || 0) / 100,
+          gstRate: Number(raw?.gst || 0) / 100,
+        };
+        return cachedFeeRates;
+      })
+      .catch(() => {
+        cachedFeeRates = { gatewayFeeRate: 0, gstRate: 0 };
+        return cachedFeeRates;
+      });
+  }
+  return feeRatesPromise;
+};
+
+const computeNetAmount = (grossAmount, rates) => {
+  const gross = Number(grossAmount) || 0;
+  const gatewayFee = gross * (rates?.gatewayFeeRate || 0);
+  const gstOnFee = gatewayFee * (rates?.gstRate || 0);
+  return Math.round((gross - gatewayFee - gstOnFee) * 100) / 100;
+};
 
 const GRADIENT_BUTTON_SX = {
   background: '#fff',
@@ -168,7 +202,12 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   const [manualCourier, setManualCourier] = useState('');
   const [manualTracking, setManualTracking] = useState('');
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [feeRates, setFeeRates] = useState({ gatewayFeeRate: 0, gstRate: 0 });
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    getFeeRates().then(setFeeRates);
+  }, []);
 
   const getShipmentActiveStep = (status) => {
     if (!status) return 0;
@@ -222,7 +261,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   // Before a Shipment record exists yet, fall back to the seller's own shippingPreference
   // (this is the seller's own Orders page, so it's always the same seller for every row) —
   // Order itself has no shippingMode/shipping_courier field, so those old fallbacks never matched.
-  const isSelfShipping = shipment?.shippingMode === 'self' || (!shipment && order.rawItem?.seller?.shippingPreference === 'self');
+  const isSelfShipping = shipment?.shippingMode === 'self' || (!shipment && (order.rawItem?.seller?.shippingPreference === 'self' || order.rawItem?.product?.seller?.shippingPreference === 'self'));
 
   const handleManualShip = async () => {
     if (!manualCourier || !manualTracking) {
@@ -319,8 +358,11 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
           <Grid item xs={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Order Amount</Typography>
-            <Typography variant="body1" fontWeight={700}>{formatCurrency(Number(order.amount) || 0)}</Typography>
-            {order.rawItem && Number(order.rawItem.unit_price) * Number(order.rawItem.quantity) - Number(order.amount) > 0.01 && (
+            <Typography variant="body1" fontWeight={700}>{formatCurrency(computeNetAmount(order.amount, feeRates))}</Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Gross {formatCurrency(Number(order.amount) || 0)}
+            </Typography>
+            {order.rawItem && (order.rawItem.Order || order.rawItem.order)?.coupon && Number(order.rawItem.unit_price) * Number(order.rawItem.quantity) - Number(order.amount) > 0.01 && (
               <Typography variant="caption" color="text.secondary" display="block">
                 {formatCurrency(Number(order.rawItem.unit_price) * Number(order.rawItem.quantity))} - {formatCurrency((Number(order.rawItem.unit_price) * Number(order.rawItem.quantity)) - Number(order.amount))} (Coupon)
               </Typography>
@@ -674,7 +716,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
             Update Status
           </Button>
           <Menu
-            anchorEl={statusMenuAnchor}
+            anchorEl={getZoomCorrectedAnchor(statusMenuAnchor)}
             open={Boolean(statusMenuAnchor)}
             onClose={() => setStatusMenuAnchor(null)}
             anchorOrigin={{
@@ -749,6 +791,11 @@ const Orders = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [feeRates, setFeeRates] = useState({ gatewayFeeRate: 0, gstRate: 0 });
+
+  useEffect(() => {
+    getFeeRates().then(setFeeRates);
+  }, []);
 
   const loadAnalytics = () => {
     setAnalyticsLoading(true);
@@ -972,61 +1019,63 @@ const Orders = () => {
                     </TableRow>
                   )
                   : orders.map((item) => {
-                    const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
-                    const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
-
-                    return (
-                      <TableRow key={item.id} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
-                          </Typography>
-                        </TableCell>
-                        <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {(item.Order || item.order)?.user?.name || '—'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
-                          {Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
-                              {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
-                        <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
-                        <TableCell>
-                          <Tooltip title="View Details">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedOrder({
-                                  itemId: item.id,
-                                  orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
-                                  customer: (item.Order || item.order)?.user?.name || '-',
-                                  product: item.product?.name || '-',
-                                  quantity: item.quantity,
-                                  amount: item.total_price,
-                                  status: displayStatus,
-                                  createdAt: item.created_at,
-                                  address: (item.Order || item.order)?.address,
-                                  rawItem: item
-                                });
-                                setDialogOpen(true);
-                              }}
-                              sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
-                            >
-                              <VisibilityOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
+                      const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
+                      const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
+                      
+                      return (
+                    <TableRow key={item.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                         {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {(item.Order || item.order)?.user?.name || '—'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>{formatCurrency(computeNetAmount(item.total_price, feeRates))}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
+                          Gross {formatCurrency(item.total_price)}
+                        </Typography>
+                        {(item.Order || item.order)?.coupon && Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
+                           <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
+                             {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
+                           </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
+                      <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
+                      <TableCell>
+                        <Tooltip title="View Details">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedOrder({
+                                itemId: item.id,
+                                orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
+                                customer: (item.Order || item.order)?.user?.name || '-',
+                                product: item.product?.name || '-',
+                                quantity: item.quantity,
+                                amount: item.total_price,
+                                status: displayStatus,
+                                createdAt: item.created_at,
+                                address: (item.Order || item.order)?.address,
+                                rawItem: item
+                              });
+                              setDialogOpen(true);
+                            }}
+                            sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
+                          >
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  )})
               }
             </TableBody>
           </Table>

@@ -369,7 +369,8 @@ const SellerLayout = () => {
     <Box
       sx={{
         display: 'flex',
-        minHeight: '100vh',
+        height: '100%',
+        width: '100%',
         bgcolor: 'background.default',
       }}
     >
@@ -403,7 +404,7 @@ const SellerLayout = () => {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          overflow: isProductFormPage ? 'visible' : 'hidden',
+          overflow: 'hidden',
         }}
       >
         <AppBar
@@ -763,8 +764,11 @@ const SellerLayout = () => {
           component="main"
           sx={{
             flex: 1,
-            overflow: isProductFormPage ? 'visible' : 'auto',
+            overflow: 'auto',
             p: { xs: 2, md: 3 },
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            '&::-webkit-scrollbar': { display: 'none' }
           }}
         >
           <Outlet />

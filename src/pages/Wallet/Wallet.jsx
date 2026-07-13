@@ -477,6 +477,7 @@ import { useTheme, alpha } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { showToast } from "../../features/ui/uiSlice";
 import api from "../../services/api";
+import { Box } from "@mui/material";
 
 const BASE = "/payout-requests";
 
