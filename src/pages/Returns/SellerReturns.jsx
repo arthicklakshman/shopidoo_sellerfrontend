@@ -199,7 +199,7 @@ const SellerReturns = () => {
     setErrorMsg('');
     try {
       await returnService.submitInspection(selectedReturn.id, {
-        result: inspectionResult,
+        result: 'Approve Refund',
         notes: inspectionNotes,
         inspection_images: inspectionImages,
         inspection_video: inspectionVideo
@@ -725,31 +725,7 @@ const SellerReturns = () => {
                 </Box>
               ) : ['inspection_pending', 'received_by_seller', 'returned_to_seller'].includes(selectedReturn.status) ? (
                 <Box>
-                  <Typography variant="overline" color="primary" fontWeight={800}>Submit Product Inspection Result</Typography>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Inspection Outcome"
-                    value={inspectionResult}
-                    onChange={(e) => setInspectionResult(e.target.value)}
-                    margin="normal"
-                    variant="filled"
-                    SelectProps={{
-                      MenuProps: {
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left'
-                        },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left'
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem value="Approve Refund">Approve Refund</MenuItem>
-                    <MenuItem value="Reject Refund">Reject Refund</MenuItem>
-                  </TextField>
+                  <Typography variant="overline" color="primary" fontWeight={800}>Submit Product Inspection Evidence</Typography>
                   <TextField
                     fullWidth
                     label="Inspection Notes"
@@ -861,7 +837,7 @@ const SellerReturns = () => {
                       '&:hover': { background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)' }
                     }}
                   >
-                    Submit Inspection Result
+                    Submit Inspection Evidence
                   </Button>
                 </Box>
               ) : (
