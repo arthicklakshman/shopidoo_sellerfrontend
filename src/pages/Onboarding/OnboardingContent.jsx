@@ -1,5 +1,4 @@
-
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import BasicInfo from '../../features/onboarding/steps/BasicInfo';
 import BusinessDetails from '../../features/onboarding/steps/BusinessDetails';
 import BankDetails from '../../features/onboarding/steps/BankDetails';
@@ -8,7 +7,6 @@ import StoreSetup from '../../features/onboarding/steps/StoreSetup';
 import ReviewSubmit from '../../features/onboarding/steps/ReviewSubmit';
 import RegistrationSuccess from './RegistrationSuccess';
 
-// 🌟 ADDED `onEditStep` to the props here
 const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
 
   const currentStep = Number(step); 
@@ -27,20 +25,28 @@ const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
       case 5:
         return <StoreSetup onNext={onNext} onBack={onBack} />
       case 6:
-        // 🌟 PASSED `onEditStep` down to the final review page
         return <ReviewSubmit onNext={onNext} onBack={onBack} onEditStep={onEditStep} />
       case 7:
         return <RegistrationSuccess />;
-
       default:
         return <Typography>Invalid Step</Typography>;
     }
   };
 
   return (
-   <Box sx={{ p: 4 }}>
-      {renderStep()}
-   </Box>
+    <Box 
+      sx={{ 
+        p: { xs: 0, sm: 3, md: 4 }, 
+        width: '100%', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        boxSizing: 'border-box'
+      }}
+    >
+      <Box sx={{ width: '100%', maxWidth: '1200px', mx: 'auto' }}>
+        {renderStep()}
+      </Box>
+    </Box>
   );
 };
 

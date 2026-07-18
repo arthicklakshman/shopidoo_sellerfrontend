@@ -1,5 +1,5 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
+import { Portal } from '@mui/material'; 
 import OnboardingHeader from './OnboardingHeader';
 import OnboardingStepper from './OnboardingStepper';
 import OnboardingContent from './OnboardingContent';
@@ -28,7 +28,6 @@ const SellerOnboarding = () => {
     }
   };
 
-  // 🌟 NEW: The function that handles the Edit button click!
   const handleEdit = (stepIndex) => {
     navigate(`/onboarding/${stepIndex}`);
   };
@@ -42,10 +41,14 @@ const SellerOnboarding = () => {
         step={currentStep}
         onNext={handleNext}
         onBack={handleBack}
-        onEditStep={handleEdit} // 🌟 NEW: Pass it to the content component
+        onEditStep={handleEdit}
       />
-      <WhatsApp supportNumber="919487082294" />
-      <Mobile supportNumber="919487082294" />
+      
+      {/* 🌟 2. Wrap your FABs in the Portal */}
+      <Portal>
+        <WhatsApp supportNumber="919487082294" />
+        <Mobile supportNumber="919487082294" />
+      </Portal>
     </>
   );
 };

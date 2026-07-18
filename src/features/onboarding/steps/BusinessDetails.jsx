@@ -104,20 +104,6 @@ const customInputStyles = {
   },
 };
 
-const CustomListIcon = () => (
-  <Box
-    sx={{
-      width: 6,
-      height: 6,
-      borderRadius: "50%",
-      backgroundColor: "#8b5cf6",
-      mt: 0.8,
-      mr: 1.5,
-      flexShrink: 0,
-    }}
-  />
-);
-
 export default function BusinessDetails({ onBack, onNext }) {
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem("onboarding_step_2");
@@ -150,10 +136,6 @@ export default function BusinessDetails({ onBack, onNext }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
     if (apiError) setApiError("");
-  };
-
-  const handleSwitchChange = (e) => {
-    // left intentionally empty or removed if we remove switch import later, but easier to just comment out/remove
   };
 
   const handleContinue = async () => {
@@ -197,10 +179,9 @@ export default function BusinessDetails({ onBack, onNext }) {
         return;
       }
 
-      // 🌟 USING THE SERVICE FILE
       await onboardingService.updateBusinessDetails(sellerId, {
         businessName: formData.businessName,
-        storeName: formData.displayStoreName, // Changed from storeName
+        storeName: formData.displayStoreName,
         gstNumber: formData.gstNumber,
         aadhaarNumber: formData.aadhaarNumber,
         panNumber: formData.panNumber,
@@ -213,8 +194,8 @@ export default function BusinessDetails({ onBack, onNext }) {
 
       onNext();
     } catch (err) {
-      // 🌟 ROBUST ERROR HANDLING
-      setApiError(err.response?.data?.message || "Server connection failed.");
+      console.error("Business details save error:", err);
+      setApiError(err.response?.data?.message || err.message || "Server connection failed.");
     } finally {
       setIsLoading(false);
     }
@@ -229,89 +210,89 @@ export default function BusinessDetails({ onBack, onNext }) {
         fontFamily: "sans-serif",
       }}
     >
+      {/* 🌟 FIX: Changed spacing={4} to responsive spacing={{ xs: 2, md: 4 }} */}
       <Grid
         container
-        spacing={4}
+        spacing={{ xs: 2, md: 4 }}
         justifyContent="center"
         maxWidth="1200px"
         mx="auto"
         alignItems="flex-start"
       >
         {/* Left Column: Info Cards */}
-<Grid
-  item
-  xs={12}
-  md={5}
-  sx={{ display: "flex", flexDirection: "column", gap: 3 }}
->
-  <Card
-    sx={{
-      borderRadius: "16px",
-      backgroundColor: "#f0fdfa", // Soft mint background
-      border: "1px solid #ccfbf1", // Subtle border
-      boxShadow: "none",
-    }}
-  >
-    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-      <Box sx={{ color: "#0B8457", mb: 2 }}> {/* Brand Teal Color */}
-        <DomainOutlinedIcon sx={{ fontSize: 32 }} />
-      </Box>
-      <Typography
-        variant="h6"
-        sx={{ fontWeight: 700, color: "#111827", mb: 3 }}
-      >
-        Business Information
-      </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {/* Helper function to use brand green for list items */}
-        {[
-          { title: "Store Name:", desc: "This is what customers will see on your storefront" },
-          { title: "Mandatory Documents:", desc: "GST number, GST certificate, and signature image are required." },
-          { title: "Documents Required:", desc: "PAN and [Government ID Redacted] needed for verification" }
-        ].map((item, idx) => (
-          <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" }}>
-            <Box sx={{ 
-                width: 6, height: 6, borderRadius: "50%", 
-                backgroundColor: "#0B8457", mt: 0.8, mr: 1.5, flexShrink: 0 
-            }} />
-            <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
-              <Box component="span" sx={{ fontWeight: 700, color: "#111827" }}>
-                {item.title}{" "}
+        <Grid
+          item
+          xs={12}
+          md={5}
+          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        >
+          <Card
+            sx={{
+              borderRadius: "16px",
+              backgroundColor: "#f0fdfa", 
+              border: "1px solid #ccfbf1", 
+              boxShadow: "none",
+            }}
+          >
+            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              <Box sx={{ color: "#0B8457", mb: 2 }}>
+                <DomainOutlinedIcon sx={{ fontSize: 32 }} />
               </Box>
-              {item.desc}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-    </CardContent>
-  </Card>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, color: "#111827", mb: 3 }}
+              >
+                Business Information
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {[
+                  { title: "Store Name:", desc: "This is what customers will see on your storefront" },
+                  { title: "Mandatory Documents:", desc: "GST number, GST certificate, and signature image are required." },
+                  { title: "Documents Required:", desc: "PAN and Aadhaar needed for verification" }
+                ].map((item, idx) => (
+                  <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" }}>
+                    <Box sx={{ 
+                        width: 6, height: 6, borderRadius: "50%", 
+                        backgroundColor: "#0B8457", mt: 0.8, mr: 1.5, flexShrink: 0 
+                    }} />
+                    <Typography sx={{ color: "#4b5563", fontSize: "14px" }}>
+                      <Box component="span" sx={{ fontWeight: 700, color: "#111827" }}>
+                        {item.title}{" "}
+                      </Box>
+                      {item.desc}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
 
-  <Card
-    sx={{
-      borderRadius: "16px",
-      border: "1px solid #e5e7eb",
-      boxShadow: "none",
-    }}
-  >
-    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-      <Box sx={{ color: "#0B8457", mb: 2 }}> {/* Brand Teal Color */}
-        <LocationOnOutlinedIcon sx={{ fontSize: 28 }} />
-      </Box>
-      <Typography
-        variant="subtitle1"
-        sx={{ fontWeight: 700, color: "#111827", mb: 2 }}
-      >
-        Address Tips
-      </Typography>
-      <Typography
-        sx={{ color: "#6b7280", fontSize: "13px", lineHeight: 1.5 }}
-      >
-        Provide your registered business address. This will be used for
-        legal documentation and may be displayed to customers.
-      </Typography>
-    </CardContent>
-  </Card>
-</Grid>
+          <Card
+            sx={{
+              borderRadius: "16px",
+              border: "1px solid #e5e7eb",
+              boxShadow: "none",
+            }}
+          >
+            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              <Box sx={{ color: "#0B8457", mb: 2 }}> 
+                <LocationOnOutlinedIcon sx={{ fontSize: 28 }} />
+              </Box>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 700, color: "#111827", mb: 2 }}
+              >
+                Address Tips
+              </Typography>
+              <Typography
+                sx={{ color: "#6b7280", fontSize: "13px", lineHeight: 1.5 }}
+              >
+                Provide your registered business address. This will be used for
+                legal documentation and may be displayed to customers.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
         {/* Right Column: Form Card */}
         <Grid item xs={12} md={7}>
@@ -343,10 +324,11 @@ export default function BusinessDetails({ onBack, onNext }) {
               sx={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 3,
-                maxHeight: "550px",
-                overflowY: "auto",
-                pr: 2,
+                gap: { xs: 2.5, md: 3 }, 
+                maxHeight: { xs: "none", md: "550px" }, 
+                overflowY: { xs: "visible", md: "auto" },
+                pr: { xs: 0, md: 2 }, 
+                
                 "&::-webkit-scrollbar": { width: "6px" },
                 "&::-webkit-scrollbar-track": { background: "transparent" },
                 "&::-webkit-scrollbar-thumb": {
@@ -483,7 +465,8 @@ export default function BusinessDetails({ onBack, onNext }) {
                 />
               </Box>
 
-              <Grid container spacing={2}>
+              {/* 🌟 FIX: Applied responsive spacing to this nested inner grid as well */}
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                 <Grid item xs={12} sm={6}>
                   <StyledInputLabel required>City</StyledInputLabel>
                   <TextField
@@ -521,7 +504,6 @@ export default function BusinessDetails({ onBack, onNext }) {
                 <Autocomplete
                   options={INDIAN_STATES}
                   value={formData.state || null}
-                  // Autocomplete uses a different onChange signature, so we map it to your existing handler
                   onChange={(event, newValue) => {
                     handleInputChange({
                       target: { name: "state", value: newValue || "" },
@@ -542,12 +524,14 @@ export default function BusinessDetails({ onBack, onNext }) {
               </Box>
             </Box>
 
-            <NavigationButtons
-              onBack={onBack}
-              onContinue={handleContinue}
-              isLoading={isLoading}
-              isLastStep={false}
-            />
+            <Box sx={{ mt: { xs: 3, md: 4 } }}>
+              <NavigationButtons
+                onBack={onBack}
+                onContinue={handleContinue}
+                isLoading={isLoading}
+                isLastStep={false}
+              />
+            </Box>
           </StepWrapper>
         </Grid>
       </Grid>

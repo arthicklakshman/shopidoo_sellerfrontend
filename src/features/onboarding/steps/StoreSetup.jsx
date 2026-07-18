@@ -23,16 +23,16 @@ import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import InsertPhotoOutlinedIcon from "@mui/icons-material/InsertPhotoOutlined";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined"; // 🌟 Added Preview Icon
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined"; 
 
-// 🌟 IMPORT SERVICE (Verify this path!)
+// 🌟 IMPORT SERVICE
 import onboardingService from "../../../features/onboarding/onboarding.service";
 
 // 🌟 REUSABLE COMPONENTS
 import StepWrapper from "../../../features/onboarding/components/StepWrapper";
 import NavigationButtons from "../../../features/onboarding/components/NavigationButtons";
 import GradientOutlineButton from "../../../components/shared/GradientButton/GradientOutlineButton";
-import ImagePreview from "./ImagePreview"; // 🌟 Added ImagePreview Component
+import ImagePreview from "./ImagePreview"; 
 
 // Import Validation & Base64 Helpers
 import { validateRequired } from "../../../utils/validation";
@@ -67,7 +67,6 @@ const StyledInputLabel = ({ children, required }) => (
   </Box>
 );
 
-// 🌟 Updated ImageUploadZone to handle Previews
 const ImageUploadZone = ({
   title,
   required,
@@ -100,7 +99,7 @@ const ImageUploadZone = ({
         border: "1.5px dashed",
         borderColor: error ? "#ef4444" : "#d1d5db",
         borderRadius: "12px",
-        p: { xs: 3, sm: 4 },
+        p: { xs: 2.5, sm: 4 }, // 🌟 FIX: Tighter padding on mobile
         textAlign: "center",
         backgroundColor: error ? "#fef2f2" : "#ffffff",
         display: "flex",
@@ -114,7 +113,6 @@ const ImageUploadZone = ({
         },
       }}
     >
-      {/* Hide input if file is uploaded */}
       {!fileData && (
         <input
           type="file"
@@ -128,13 +126,13 @@ const ImageUploadZone = ({
         <>
           <InsertPhotoOutlinedIcon sx={{ fontSize: 32, color: "#ea580c" }} />
           <Typography
-            sx={{ color: "#111827", fontSize: "14px", fontWeight: 600 }}
+            
+            sx={{ color: "#111827", fontSize: "14px", fontWeight: 600, wordBreak: 'break-all' }} 
           >
             {fileData.name}
           </Typography>
 
-          {/* 🌟 Preview & Remove Buttons */}
-          <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", gap: { xs: 1, sm: 2 }, mt: 1 }}> {/* 🌟 FIX: Responsive gap */}
             {fileData.data && (
               <Button
                 variant="text"
@@ -217,7 +215,6 @@ export default function StoreSetup({ onBack, onNext }) {
 
   const [dbCategories, setDbCategories] = useState([]);
 
-  // 🌟 State for Image Preview Modal
   const [previewState, setPreviewState] = useState({
     open: false,
     fileData: null,
@@ -315,11 +312,10 @@ export default function StoreSetup({ onBack, onNext }) {
     }
   };
 
-  // 🌟 Helper function to open preview
   const handlePreview = (fileObj) => {
     setPreviewState({
       open: true,
-      fileData: fileObj.data, // Contains the base64 string
+      fileData: fileObj.data, 
       fileName: fileObj.name,
     });
   };
@@ -375,7 +371,7 @@ export default function StoreSetup({ onBack, onNext }) {
 
       onNext();
     } catch (err) {
-      setApiError(err.response?.data?.message || "Server connection failed.");
+      setApiError(err.response?.data?.message || err.message || "Server connection failed.");
     } finally {
       setIsLoading(false);
     }
@@ -390,15 +386,15 @@ export default function StoreSetup({ onBack, onNext }) {
         fontFamily: "sans-serif",
       }}
     >
+
       <Grid
         container
-        spacing={4}
+        spacing={{ xs: 2, md: 4 }} 
         justifyContent="center"
         maxWidth="1200px"
         mx="auto"
         alignItems="flex-start"
       >
-        {/* Left Column: Info Cards */}
         <Grid
           item
           xs={12}
@@ -480,7 +476,6 @@ export default function StoreSetup({ onBack, onNext }) {
                   mb: 1.5,
                 }}
               >
-                {/* Updated icon color to Shopidoo brand teal */}
                 <LocalShippingOutlinedIcon
                   sx={{ color: "#0B8457", fontSize: 22 }}
                 />
@@ -500,7 +495,6 @@ export default function StoreSetup({ onBack, onNext }) {
           </Card>
         </Grid>
 
-        {/* Right Column: Setup Forms */}
         <Grid item xs={12} md={8}>
           <StepWrapper>
             {apiError && (
@@ -526,14 +520,12 @@ export default function StoreSetup({ onBack, onNext }) {
               Store Setup
             </Typography>
 
-           {/* 🌟 STATIC SCROLL WRAPPER START */}
             <Box
               sx={{
-                maxHeight: "550px",
-                overflowY: "auto",
-                pr: 2,
+                maxHeight: { xs: "none", md: "550px" }, 
+                overflowY: { xs: "visible", md: "auto" }, 
+                pr: { xs: 0, md: 2 }, 
                 mb: 3,
-                // Custom slim scrollbar for a clean UI
                 "&::-webkit-scrollbar": { width: "6px" },
                 "&::-webkit-scrollbar-track": { background: "transparent" },
                 "&::-webkit-scrollbar-thumb": {
@@ -561,7 +553,7 @@ export default function StoreSetup({ onBack, onNext }) {
                   mb: 4,
                 }}
               >
-                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <CardContent sx={{ p: { xs: 2, md: 4 } }}> 
                   <ImageUploadZone
                     title="Store Logo (Optional)"
                     required={false}
@@ -585,7 +577,6 @@ export default function StoreSetup({ onBack, onNext }) {
               <Box
                 sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
               >
-                {/* Updated Icon Color */}
                 <CategoryOutlinedIcon sx={{ color: "#0B8457", fontSize: 20 }} />
                 <Typography
                   sx={{ fontWeight: 600, color: "#111827", fontSize: "16px" }}
@@ -611,8 +602,9 @@ export default function StoreSetup({ onBack, onNext }) {
                   mb: 4,
                 }}
               >
-                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                  <Grid container spacing={2}>
+                <CardContent sx={{ p: { xs: 2, md: 4 } }}>
+                  {/* 🌟 FIX: Tightened nested grid spacing for mobile */}
+                  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                     {dbCategories.map((category) => (
                       <Grid item xs={12} sm={6} md={4} key={category.id}>
                         <FormControlLabel
@@ -627,7 +619,6 @@ export default function StoreSetup({ onBack, onNext }) {
                               size="small"
                               sx={{
                                 color: "#d1d5db",
-                                // Updated Checkbox Color
                                 "&.Mui-checked": { color: "#0B8457" },
                               }}
                             />
@@ -704,7 +695,6 @@ export default function StoreSetup({ onBack, onNext }) {
                         "& .MuiSwitch-switchBase.Mui-checked": {
                           color: "#ffffff",
                         },
-                        // Updated Switch Track Color
                         "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
                           { backgroundColor: "#0B8457", opacity: 1 },
                       }}
@@ -716,9 +706,10 @@ export default function StoreSetup({ onBack, onNext }) {
                       sx={{
                         fontSize: "14px",
                         color: "#6b7280",
-                        p: 1,
+                        p: 1.5, // 🌟 FIX: slightly more padding
                         backgroundColor: "#f9fafb",
                         borderRadius: "8px",
+                        wordBreak: "break-word", 
                       }}
                     >
                       {businessAddressText}
@@ -787,7 +778,6 @@ export default function StoreSetup({ onBack, onNext }) {
                         sx={{
                           mt: -0.5,
                           color: "#d1d5db",
-                          // Updated Radio Button Color
                           "&.Mui-checked": { color: "#0B8457" },
                         }}
                       />
@@ -814,7 +804,6 @@ export default function StoreSetup({ onBack, onNext }) {
                         sx={{
                           mt: -0.5,
                           color: "#d1d5db",
-                          // Updated Radio Button Color
                           "&.Mui-checked": { color: "#0B8457" },
                         }}
                       />
@@ -839,7 +828,6 @@ export default function StoreSetup({ onBack, onNext }) {
                 </CardContent>
               </Card>
             </Box>
-            {/* 🌟 STATIC SCROLL WRAPPER END */}
 
             <NavigationButtons
               onBack={onBack}
@@ -851,7 +839,6 @@ export default function StoreSetup({ onBack, onNext }) {
         </Grid>
       </Grid>
 
-      {/* 🌟 Reusable Modal Component */}
       <ImagePreview
         open={previewState.open}
         onClose={() => setPreviewState({ ...previewState, open: false })}

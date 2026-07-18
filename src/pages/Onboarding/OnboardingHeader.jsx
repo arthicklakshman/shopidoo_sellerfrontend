@@ -13,14 +13,14 @@ export default function OnboardingHeader({ step = 1 }) {
         alignItems: 'center', 
         justifyContent: 'space-between', 
         px: { xs: 2, md: 4, lg: 6 },
-        py: 2, 
+        py: { xs: 1.5, sm: 2 }, 
         backgroundColor: '#ffffff',
         borderBottom: '1px solid #e5e7eb',
         fontFamily: 'sans-serif'
       }}
     >
       {/* Left side: Logo and Title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}> 
         
         {/* Logo */}
         <Box 
@@ -28,12 +28,23 @@ export default function OnboardingHeader({ step = 1 }) {
           to="/login" 
           sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
         >
-          {/* 🌟 2. Use the imported variable name here instead of a hardcoded string */}
-          <Box component="img" src={shopidooLogo} sx={{ height: 50, width: 'auto' }} alt="Shopidoo" />
+          <Box 
+            component="img" 
+            src={shopidooLogo} 
+            sx={{ 
+              height: { xs: 32, sm: 50 }, 
+              width: 'auto' 
+            }} 
+            alt="Shopidoo" 
+          />
         </Box>
         
         {/* Subtitle */}
-        <Typography sx={{ color: '#6b7280', fontSize: '1.05rem', fontWeight: 400 }}>
+        <Typography sx={{ 
+          color: '#6b7280', 
+          fontSize: { xs: '0.85rem', sm: '1.05rem' }, 
+          fontWeight: 400 
+        }}>
           Seller Onboarding
         </Typography>
       </Box>

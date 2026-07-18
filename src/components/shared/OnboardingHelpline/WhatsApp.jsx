@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { Fab, Snackbar, Alert } from '@mui/material';
+import { Fab, Snackbar, Alert, useTheme, useMediaQuery } from '@mui/material'; // 🌟 Added hooks
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 const WhatsApp = ({ supportNumber = "919876543210" }) => {
   const [toastOpen, setToastOpen] = useState(false);
+  
+  // 🌟 Setup responsive checks
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); 
 
   const handleClick = () => {
-    // 1. Show the Shopidoo Toast
     setToastOpen(true);
-
-    // 2. Open WhatsApp chat directly to the number
     const waLink = `https://wa.me/${supportNumber}`;
-    
-    // Slight delay to allow the toast to render before redirecting
     setTimeout(() => {
       window.open(waLink, '_blank');
     }, 500);
@@ -26,13 +25,14 @@ const WhatsApp = ({ supportNumber = "919876543210" }) => {
   return (
     <>
       <Fab
+        size={isMobile ? "small" : "large"} // 🌟 Switches to small on mobile
         color="success"
         aria-label="whatsapp"
         onClick={handleClick}
         sx={{
           position: 'fixed',
-          bottom: 90, 
-          right: 24,
+          bottom: isMobile ? 64 : 90, // 🌟 Adjusted so it sits right above the smaller phone icon
+          right: isMobile ? 16 : 24,
           backgroundColor: '#25D366', 
           '&:hover': {
             backgroundColor: '#128C7E',

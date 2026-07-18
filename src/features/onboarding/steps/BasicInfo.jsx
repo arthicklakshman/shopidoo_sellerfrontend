@@ -47,11 +47,16 @@ const customInputStyles = {
 
 const VerifyButton = ({ onClick, isVerified }) => (
   <GradientButton
-    type="button" // 👈 Prevents accidental form submissions
+    type="button" 
     onClick={onClick}
     disabled={isVerified}
     sx={{
-      py: 0.6, px: 3, borderRadius: '6px', textTransform: 'none', fontSize: '0.875rem', minWidth: 'auto',
+      py: 0.6, 
+      px: { xs: 1.5, sm: 3 }, // 🌟 FIX: Shrinks horizontal padding on mobile
+      borderRadius: '6px', 
+      textTransform: 'none', 
+      fontSize: { xs: '0.75rem', sm: '0.875rem' }, // 🌟 FIX: Slightly smaller font on mobile
+      minWidth: 'auto',
       ...(isVerified && {
         background: '#ecfdf5', color: '#059669', boxShadow: 'none',
         '&:hover': { background: '#ecfdf5', boxShadow: 'none' },
@@ -100,7 +105,6 @@ export default function BasicInformation({ onNext, sellerId }) {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // 🌟 UNIFIED OTP STATE
   const [isMobileVerified, setIsMobileVerified] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [otpModal, setOtpModal] = useState({ isOpen: false, type: '', targetValue: '' });
@@ -111,7 +115,6 @@ export default function BasicInformation({ onNext, sellerId }) {
     localStorage.setItem('onboarding_step_1', JSON.stringify(formData));
   }, [formData]);
 
-  // 🌟 NEW: Dynamic DB verification checks on type
   useEffect(() => {
     const checkEmail = async () => {
       if (formData.email && formData.email.includes('@')) {
@@ -120,9 +123,12 @@ export default function BasicInformation({ onNext, sellerId }) {
           if (response?.data?.data?.exists) {
              const { email_verified, isRegistered } = response.data.data;
              setFormData(prev => ({ ...prev, isRegistered }));
-             if (email_verified) {
+             const hasToken = !!localStorage.getItem('sellerAccessToken');
+             if (sellerId && hasToken && email_verified) {
                setFormData(prev => ({ ...prev, email_verified: 1, verifiedEmailValue: formData.email }));
                setIsEmailVerified(true);
+             } else if (!sellerId || !hasToken) {
+               setIsEmailVerified(false);
              }
           } else {
              setFormData(prev => ({ ...prev, isRegistered: null }));
@@ -132,7 +138,7 @@ export default function BasicInformation({ onNext, sellerId }) {
     };
     const delayDebounceFn = setTimeout(() => { checkEmail(); }, 600);
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.email]);
+  }, [formData.email, sellerId]);
 
   useEffect(() => {
     const checkPhone = async () => {
@@ -142,9 +148,12 @@ export default function BasicInformation({ onNext, sellerId }) {
           if (response?.data?.data?.exists) {
              const { phone_verified, isRegistered } = response.data.data;
              setFormData(prev => ({ ...prev, isRegistered }));
-             if (phone_verified) {
+             const hasToken = !!localStorage.getItem('sellerAccessToken');
+             if (sellerId && hasToken && phone_verified) {
                setFormData(prev => ({ ...prev, phone_verified: 1, verifiedPhoneValue: formData.phone }));
                setIsMobileVerified(true);
+             } else if (!sellerId || !hasToken) {
+               setIsMobileVerified(false);
              }
           } else {
              setFormData(prev => ({ ...prev, isRegistered: null }));
@@ -154,7 +163,7 @@ export default function BasicInformation({ onNext, sellerId }) {
     };
     const delayDebounceFn = setTimeout(() => { checkPhone(); }, 600);
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.phone]);
+  }, [formData.phone, sellerId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -162,20 +171,17 @@ export default function BasicInformation({ onNext, sellerId }) {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
     if (apiError) setApiError('');
     
-    // Reset verification if they alter the field after verifying
     if (name === 'phone' && isMobileVerified) setIsMobileVerified(false);
     if (name === 'email' && isEmailVerified) setIsEmailVerified(false);
   };
 
-
-const handleSendOtp = async (type) => {
+  const handleSendOtp = async (type) => {
     setOtpError('');
     if (type === 'mobile') {
       const err = validateMobile(formData.phone);
       if (err) return setErrors((prev) => ({ ...prev, phone: err }));
       
       try {
-        // 🌟 Passing the 'register' type to ensure the correct MSG91 DLT Template triggers
         await onboardingService.sendMobileOtp(formData.phone, 'register');
         setOtpModal({ isOpen: true, type: 'mobile', targetValue: formData.phone });
       } catch (error) {
@@ -190,10 +196,7 @@ const handleSendOtp = async (type) => {
       if (err) return setErrors((prev) => ({ ...prev, email: err }));
       
       try {
-        // 🌟 Passing the 'register' type here as well (even though email currently ignores it, it's good practice)
         await onboardingService.sendEmailOtp(formData.email, 'register');
-        
-        // Only open the modal if the email successfully sent
         setOtpModal({ isOpen: true, type: 'email', targetValue: formData.email });
       } catch (error) {
         setErrors((prev) => ({ 
@@ -204,14 +207,12 @@ const handleSendOtp = async (type) => {
     }
   };
 
-  // 🌟 REAL BACKEND CALL: Verify OTP
   const handleVerifyOtp = async (otpValue) => {
     setOtpLoading(true);
     setOtpError('');
 
     try {
       if (otpModal.type === 'email' || otpModal.type === 'mobile') {
-        // 🌟 Call the real Node.js backend for both Email and Mobile!
         await onboardingService.verifyEmailOtp(otpModal.targetValue, otpValue);
         
         if (otpModal.type === 'email') {
@@ -226,7 +227,6 @@ const handleSendOtp = async (type) => {
         setOtpModal({ isOpen: false, type: '', targetValue: '' });
       }
     } catch (error) {
-      // If the backend says the code is wrong or expired, show the red error in the modal
       setOtpError(error.response?.data?.message || "Invalid or expired OTP.");
     } finally {
       setOtpLoading(false);
@@ -234,16 +234,14 @@ const handleSendOtp = async (type) => {
   };
 
   const handleResendOtp = async () => {
-    setOtpError(''); // Clear any previous errors
+    setOtpError(''); 
 
     try {
       if (otpModal.type === 'email') {
-        // 🌟 Resend via Email, ensuring the 'register' type is passed again
         await onboardingService.sendEmailOtp(otpModal.targetValue, 'register');
         console.log("OTP successfully resent to email:", otpModal.targetValue);
         
       } else if (otpModal.type === 'mobile') {
-        // 🌟 Hooked up the Mobile SMS Resend Logic using MSG91!
         await onboardingService.sendMobileOtp(otpModal.targetValue, 'register');
         console.log("OTP successfully resent to mobile:", otpModal.targetValue);
       }
@@ -261,21 +259,27 @@ const handleSendOtp = async (type) => {
       businessType: validateRequired(formData.businessType, 'Business Type')
     };
 
-    const currentPhoneVerified = isMobileVerified || (formData.phone_verified === 1 && formData.phone === formData.verifiedPhoneValue);
-    const currentEmailVerified = isEmailVerified || (formData.email_verified === 1 && formData.email === formData.verifiedEmailValue);
+    const hasToken = !!localStorage.getItem('sellerAccessToken');
+    const currentPhoneVerified = isMobileVerified || (sellerId && hasToken && formData.phone_verified === 1 && formData.phone === formData.verifiedPhoneValue);
+    const currentEmailVerified = isEmailVerified || (sellerId && hasToken && formData.email_verified === 1 && formData.email === formData.verifiedEmailValue);
 
-    // 🚨 NEW BLOCK: Enforce OTP Verification before allowing registration
-    if (!sellerId) { 
-      // Only force verification on initial registration, not on profile updates
-      if (!currentPhoneVerified && !newErrors.phone) {
-        newErrors.phone = 'You must verify your phone number to continue.';
-      }
-      if (!currentEmailVerified && !newErrors.email) {
-        newErrors.email = 'You must verify your email address to continue.';
+    if (!sellerId || !hasToken) { 
+      if (formData.isRegistered === false) {
+        if (!currentPhoneVerified && !currentEmailVerified) {
+          newErrors.phone = 'Please verify either your phone number or email via OTP to resume your onboarding.';
+        } else {
+          delete newErrors.phone;
+          delete newErrors.email;
+        }
+      } else {
+        if (!currentPhoneVerified && !newErrors.phone) {
+          newErrors.phone = 'You must verify your phone number to continue.';
+        }
+        if (!currentEmailVerified && !newErrors.email) {
+          newErrors.email = 'You must verify your email address to continue.';
+        }
       }
     } else {
-      // If updating, only force verification if they altered the original values
-      // (Since handleInputChange resets isMobileVerified to false when typing)
       if (!currentPhoneVerified && formData.phone !== JSON.parse(localStorage.getItem('onboarding_step_1'))?.phone) {
         newErrors.phone = 'You must verify your new phone number.';
       }
@@ -284,7 +288,7 @@ const handleSendOtp = async (type) => {
       }
     }
 
-    const isResumingOnboarding = !sellerId && currentPhoneVerified && currentEmailVerified && formData.isRegistered === false;
+    const isResumingOnboarding = (!sellerId || !hasToken) && (currentPhoneVerified || currentEmailVerified) && formData.isRegistered === false;
 
     if (!isResumingOnboarding && (!sellerId || formData.password)) {
         if (!formData.confirmPassword) {
@@ -304,7 +308,7 @@ const handleSendOtp = async (type) => {
 
     if (Object.keys(actualErrors).length > 0) {
       setErrors(actualErrors);
-      return; // Stops the function if anything is unverified or invalid
+      return; 
     }
 
     try {
@@ -314,8 +318,6 @@ const handleSendOtp = async (type) => {
       let response;
       const hasToken = !!localStorage.getItem('sellerAccessToken');
 
-      // If we have a sellerId AND a token, we can perform an update.
-      // Otherwise, we MUST treat it as a registration to get fresh tokens.
       if (sellerId && hasToken) {
         response = await onboardingService.updateBasicInfo(sellerId, {
           fullName: formData.fullName,
@@ -327,7 +329,6 @@ const handleSendOtp = async (type) => {
           ...(formData.password && { password: formData.password })
         });
       } else if (isResumingOnboarding) {
-        // New Feature: Bypass password and fetch token if they exist but haven't finished onboarding
         response = await onboardingService.resumeOnboarding({ email: formData.email, phone: formData.phone });
       } else {
         try {
@@ -341,7 +342,6 @@ const handleSendOtp = async (type) => {
             phone_verified: formData.phone_verified
           });
         } catch (regErr) {
-          // If the user already exists (409 Conflict), try to log them in with the password they provided
           if (regErr.response?.status === 409) {
             try {
               const loginResp = await api.post('/auth/login', { 
@@ -351,8 +351,8 @@ const handleSendOtp = async (type) => {
               });
               response = loginResp;
             } catch (loginErr) {
-              // If login also fails, throw the original registration error or a custom one
-              throw new Error("This email is already registered. Please check your password or use the Login page.");
+              const backendMsg = loginErr.response?.data?.message || regErr.response?.data?.message || "Your account is already registered with this email. Please check your password or use the Login page.";
+              throw new Error(backendMsg);
             }
           } else {
             throw regErr;
@@ -365,11 +365,9 @@ const handleSendOtp = async (type) => {
       const accessToken = respData?.accessToken || respData?.token;
       const refreshToken = respData?.refreshToken;
 
-      // If we got tokens (from registration or login), sync them
       if (userData && accessToken) {
         const currentSellerId = userData.id || userData.sellerId;
 
-        // Persist to LocalStorage
         localStorage.setItem("sellerId", currentSellerId);
         localStorage.setItem("sellerAccessToken", accessToken);
         localStorage.setItem("sellerRefreshToken", refreshToken || '');
@@ -378,7 +376,6 @@ const handleSendOtp = async (type) => {
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("user", JSON.stringify(userData));
 
-        // Sync Redux State
         if (dispatch) {
           dispatch(setSellerId(currentSellerId));
           dispatch(setCredentials({
@@ -387,16 +384,13 @@ const handleSendOtp = async (type) => {
           }));
         }
 
-        // 🌟 FETCH FULL PROFILE TO PREPOPULATE ONBOARDING STEPS
         try {
-          // We need to pass the newly obtained token in the header manually if the api client hasn't caught it yet
           const profileResponse = await onboardingService.getProfile({
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           
           const fullUser = profileResponse?.data?.data || profileResponse?.data;
           if (fullUser) {
-            // Map Step 2: Business Details
             const step2 = {
               businessName: fullUser.businessName || '',
               displayStoreName: fullUser.storeName || '',
@@ -411,16 +405,14 @@ const handleSendOtp = async (type) => {
             };
             localStorage.setItem("onboarding_step_2", JSON.stringify(step2));
 
-            // Map Step 3: Bank Details
             const step3 = {
               accountName: fullUser.accountName || '',
               accountNumber: fullUser.accountNumber || '',
-              confirmAccountNumber: fullUser.accountNumber || '', // Pre-fill confirmation if it exists
+              confirmAccountNumber: fullUser.accountNumber || '', 
               ifscCode: fullUser.ifscCode || ''
             };
             localStorage.setItem("onboarding_step_3", JSON.stringify(step3));
 
-            // Map Step 4: Documents (This component actually reads from onboarding_step_5)
             const step5 = {
               gstProof: fullUser.gstProofImage ? { name: 'Uploaded GST Proof' } : null,
               panCard: fullUser.panCardImage ? { name: 'Uploaded PAN Card' } : null,
@@ -441,7 +433,6 @@ const handleSendOtp = async (type) => {
               console.error(e);
             }
 
-            // Map Step 5: Store Setup (This component actually reads from onboarding_step_6)
             const step6 = {
               storeLogo: fullUser.storeLogo ? { name: 'Uploaded Store Logo' } : null,
               storeBanner: fullUser.storeBanner ? { name: 'Uploaded Store Banner' } : null,
@@ -458,13 +449,11 @@ const handleSendOtp = async (type) => {
         
         onNext(currentSellerId);
       } else {
-        // If it was just an update and no new tokens were returned, 
-        // we assume the existing session is still valid.
         onNext(sellerId);
       }
 
     } catch (err) {
-      setApiError(err.response?.data?.message || 'Server connection failed.');
+      setApiError(err.response?.data?.message || err.message || 'Server connection failed.');
     } finally {
       setIsLoading(false);
     }
@@ -472,7 +461,9 @@ const handleSendOtp = async (type) => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#fafafa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <Grid container spacing={4} justifyContent="center" maxWidth="1200px" mx="auto">
+      
+      {/* 🌟 FIX: Changed spacing={4} to responsive spacing={{ xs: 2, md: 4 }} */}
+      <Grid container spacing={{ xs: 2, md: 4 }} justifyContent="center" maxWidth="1200px" mx="auto">
 
         <Grid item xs={12} md={5}>
           <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', height: '100%' }}>
@@ -497,6 +488,19 @@ const handleSendOtp = async (type) => {
           <StepWrapper>
             <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 4 }}>Basic Information</Typography>
             {apiError && <Typography sx={{ color: '#ef4444', fontSize: '14px', fontWeight: 600, mb: 3 }}>{apiError}</Typography>}
+            {(!sellerId || !localStorage.getItem('sellerAccessToken')) && formData.isRegistered === false && (
+              <Box sx={{ p: 2, mb: 3, borderRadius: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                <HelpOutlineIcon sx={{ color: '#3b82f6', mt: 0.2, fontSize: 20 }} />
+                <Box>
+                  <Typography sx={{ color: '#1e40af', fontSize: '14px', fontWeight: 600 }}>
+                    Welcome back! In-Progress Onboarding Found
+                  </Typography>
+                  <Typography sx={{ color: '#3b82f6', fontSize: '13px', mt: 0.5 }}>
+                    To securely resume where you left off, please click <b>Verify</b> next to your phone number or email and enter your OTP.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               
@@ -510,10 +514,13 @@ const handleSendOtp = async (type) => {
                 <TextField fullWidth name="phone" value={formData.phone} onChange={handleInputChange} placeholder="10-digit Phone" variant="outlined" size="small" error={!!errors.phone} helperText={errors.phone} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
-                      {(isMobileVerified || (formData.phone_verified === 1 && formData.phone === formData.verifiedPhoneValue)) ? (
-                        <Typography sx={{ color: '#059669', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5, mr: 1 }}>
-                          <CheckCircleIcon sx={{ fontSize: 16 }} /> Number verified
+                      {(isMobileVerified || (sellerId && !!localStorage.getItem('sellerAccessToken') && formData.phone_verified === 1 && formData.phone === formData.verifiedPhoneValue)) ? (
+                        
+                        // 🌟 FIX: Shrunk the "Verified" text size so it fits inside the input on mobile
+                        <Typography sx={{ color: '#059669', fontSize: { xs: '11px', sm: '13px' }, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5, mr: { xs: 0, sm: 1 } }}>
+                          <CheckCircleIcon sx={{ fontSize: { xs: 14, sm: 16 } }} /> Verified
                         </Typography>
+
                       ) : (
                         <VerifyButton 
                           onClick={() => handleSendOtp('mobile')} 
@@ -530,10 +537,13 @@ const handleSendOtp = async (type) => {
                 <TextField fullWidth name="email" value={formData.email} onChange={handleInputChange} placeholder="your.email@example.com" variant="outlined" size="small" error={!!errors.email} helperText={errors.email} sx={{ ...customInputStyles, '& .MuiOutlinedInput-root': { pr: 0.5 } }} 
                   InputProps={{ endAdornment: ( 
                     <InputAdornment position="end">
-                      {(isEmailVerified || (formData.email_verified === 1 && formData.email === formData.verifiedEmailValue)) ? (
-                        <Typography sx={{ color: '#059669', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5, mr: 1 }}>
-                          <CheckCircleIcon sx={{ fontSize: 16 }} /> Email verified
+                      {(isEmailVerified || (sellerId && !!localStorage.getItem('sellerAccessToken') && formData.email_verified === 1 && formData.email === formData.verifiedEmailValue)) ? (
+                        
+                        // 🌟 FIX: Shrunk the "Verified" text size here too
+                        <Typography sx={{ color: '#059669', fontSize: { xs: '11px', sm: '13px' }, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5, mr: { xs: 0, sm: 1 } }}>
+                          <CheckCircleIcon sx={{ fontSize: { xs: 14, sm: 16 } }} /> Verified
                         </Typography>
+
                       ) : (
                         <VerifyButton 
                           onClick={() => handleSendOtp('email')} 
@@ -545,7 +555,7 @@ const handleSendOtp = async (type) => {
                 />
               </Box>
 
-              {!(isEmailVerified || (formData.email_verified === 1 && formData.email === formData.verifiedEmailValue)) || !(isMobileVerified || (formData.phone_verified === 1 && formData.phone === formData.verifiedPhoneValue)) || formData.isRegistered !== false ? (
+              {!((!sellerId || !localStorage.getItem('sellerAccessToken')) && formData.isRegistered === false) ? (
                 <>
                   <Box>
                     <StyledInputLabel required={!sellerId}>Password</StyledInputLabel>
@@ -593,6 +603,3 @@ const handleSendOtp = async (type) => {
     </Box>
   );
 }
-
-
-

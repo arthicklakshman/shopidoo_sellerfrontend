@@ -27,9 +27,6 @@ import NavigationButtons from "../../../features/onboarding/components/Navigatio
 import GradientOutlineButton from '../../../components/shared/GradientButton/GradientOutlineButton';
 import ImagePreview from './ImagePreview';
 
-
-
-
 // Validation & File Helpers
 import {
   validateRequired,
@@ -90,7 +87,6 @@ export default function BankDetails({ onBack, onNext }) {
     const savedData = localStorage.getItem("onboarding_step_3");
     const parsedData = savedData ? JSON.parse(savedData) : null;
 
-
     return {
       accountName: parsedData?.accountName || "",
       accountNumber: parsedData?.accountNumber || "",
@@ -100,14 +96,13 @@ export default function BankDetails({ onBack, onNext }) {
     };
   });
 
-      const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
   useEffect(() => {
-    // 🌟 Make sure we don't save Base64 strings to localStorage to avoid QuotaExceededError
     const safeData = {
       ...formData,
       bankProofImage: formData.bankProofImage ? { name: formData.bankProofImage.name } : null
@@ -187,7 +182,6 @@ export default function BankDetails({ onBack, onNext }) {
         return;
       }
 
-      // 🌟 USING THE SERVICE FILE
       await onboardingService.updateBankDetails(sellerId, {
         accountName: formData.accountName,
         accountNumber: formData.accountNumber,
@@ -197,7 +191,7 @@ export default function BankDetails({ onBack, onNext }) {
 
       onNext();
     } catch (err) {
-      setApiError(err.response?.data?.message || "Server connection failed.");
+      setApiError(err.response?.data?.message || err.message || "Server connection failed.");
     } finally {
       setIsLoading(false);
     }
@@ -212,9 +206,10 @@ export default function BankDetails({ onBack, onNext }) {
         fontFamily: "sans-serif",
       }}
     >
+      {/* 🌟 FIX: Applied responsive spacing to the Grid */}
       <Grid
         container
-        spacing={4}
+        spacing={{ xs: 2, md: 4 }}
         justifyContent="center"
         maxWidth="1200px"
         mx="auto"
@@ -235,7 +230,8 @@ export default function BankDetails({ onBack, onNext }) {
               boxShadow: "none",
             }}
           >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            {/* 🌟 FIX: Tighter padding on mobile */}
+            <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
               <Box
                 sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}
               >
@@ -327,7 +323,8 @@ export default function BankDetails({ onBack, onNext }) {
               boxShadow: "none",
             }}
           >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            {/* 🌟 FIX: Tighter padding on mobile */}
+            <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
               <Typography
                 variant="subtitle1"
                 sx={{ fontWeight: 700, color: "#111827", mb: 3 }}
@@ -446,7 +443,7 @@ export default function BankDetails({ onBack, onNext }) {
                     border: "1.5px dashed",
                     borderColor: errors.bankProofImage ? "#ef4444" : "#d1d5db",
                     borderRadius: "12px",
-                    p: 4,
+                    p: { xs: 2.5, sm: 4 }, 
                     textAlign: "center",
                     backgroundColor: errors.bankProofImage ? "#fef2f2" : "#fafafa",
                     display: "flex",
@@ -460,7 +457,6 @@ export default function BankDetails({ onBack, onNext }) {
                     },
                   }}
                 >
-                  {/* Hide input if file is uploaded to stop accidental clicks */}
                   {!formData.bankProofImage && (
                     <input
                       type="file"
@@ -478,18 +474,19 @@ export default function BankDetails({ onBack, onNext }) {
                           color: "#111827",
                           fontSize: "14px",
                           fontWeight: 600,
+                          wordBreak: "break-all", 
+                          textAlign: "center"
                         }}
                       >
                         {formData.documentName}
                       </Typography>
-                   
-                     {/* 🌟 NEW: Preview & Remove Buttons Group */}
-                      <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                    
+                      <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, mt: 1 }}> {/* 🌟 FIX: Responsive gap for buttons */}
                         <Button
-                          variant="text" // 👈 Changed from "outlined" to "text"
+                          variant="text" 
                           size="small"
                           startIcon={<VisibilityOutlinedIcon />}
-                          sx={{ color: '#059669', textTransform: 'none' }} // 👈 Removed borderColor
+                          sx={{ color: '#059669', textTransform: 'none' }} 
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation(); 
@@ -543,7 +540,7 @@ export default function BankDetails({ onBack, onNext }) {
                   backgroundColor: "#ecfdf5",
                   border: "1px solid #a7f3d0",
                   borderRadius: "8px",
-                  p: 2.5,
+                  p: { xs: 1.5, sm: 2.5 }, 
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 1.5,
@@ -571,12 +568,14 @@ export default function BankDetails({ onBack, onNext }) {
               </Box>
             </Box>
 
-            <NavigationButtons
-              onBack={onBack}
-              onContinue={handleContinue}
-              isLoading={isLoading}
-              isLastStep={false}
-            />
+            <Box sx={{ mt: { xs: 3, md: 4 } }}>
+              <NavigationButtons
+                onBack={onBack}
+                onContinue={handleContinue}
+                isLoading={isLoading}
+                isLastStep={false}
+              />
+            </Box>
           </StepWrapper>
         </Grid>
       </Grid>

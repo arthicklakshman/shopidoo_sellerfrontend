@@ -85,47 +85,64 @@ export default function OtpModal({ open, onClose, targetValue, type, onVerify, o
   };
 
   const otpString = otp.join('');
-
-  return (
+return (
     <Dialog 
       open={open} 
       onClose={onClose} 
       maxWidth="xs" 
       fullWidth
       PaperProps={{
-        sx: { borderRadius: '16px', p: 1, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }
+        sx: { 
+          borderRadius: '16px', 
+          p: { xs: 0, sm: 1 }, // 🌟 FIX: Removed extra outer padding on mobile
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+          margin: { xs: 2, sm: 4 } // 🌟 FIX: Ensures it doesn't touch screen edges on tiny devices
+        }
       }}
     >
       {/* Absolute Close Button matching your design */}
       <IconButton 
         onClick={onClose} 
-        sx={{ position: 'absolute', right: 12, top: 12, color: '#9ca3af' }}
+        sx={{ 
+          position: 'absolute', 
+          right: { xs: 8, sm: 12 }, // 🌟 FIX: Tighter to edge on mobile
+          top: { xs: 8, sm: 12 }, 
+          color: '#9ca3af' 
+        }}
       >
         <CloseIcon fontSize="small" />
       </IconButton>
 
-      <DialogContent sx={{ textAlign: 'center', p: 4 }}>
+      {/* 🌟 FIX: Reduced padding significantly on mobile (xs: 2 = 16px) */}
+      <DialogContent sx={{ textAlign: 'center', p: { xs: 3, sm: 4 }, px: { xs: 2, sm: 4 } }}>
         
         {/* Dynamic Top Icon */}
         <Box sx={{ 
-          width: 56, height: 56, borderRadius: '50%', backgroundColor: '#ecfdf5', 
+          width: { xs: 48, sm: 56 }, // 🌟 FIX: Slightly smaller icon background on mobile
+          height: { xs: 48, sm: 56 }, 
+          borderRadius: '50%', backgroundColor: '#ecfdf5', 
           color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', 
           mx: 'auto', mb: 2 
         }}>
           {type === 'email' ? <MailOutlineIcon /> : <SmartphoneOutlinedIcon />}
         </Box>
 
-        <Typography variant="h6" fontWeight="700" mb={1} color="#111827">
+        <Typography variant="h6" fontWeight="700" mb={1} color="#111827" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Verify Your {type === 'email' ? 'Email' : 'Mobile'}
         </Typography>
-        <Typography variant="body2" color="#6b7280" mb={3} sx={{ lineHeight: 1.6 }}>
+        <Typography variant="body2" color="#6b7280" mb={3} sx={{ lineHeight: 1.6, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
           We sent a 6-digit verification code to <br />
           <strong style={{ color: '#111827' }}>{targetValue}</strong>
         </Typography>
 
         {/* The 6-Box OTP Input */}
         <Box 
-          sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 1.5 }, mb: 2 }} 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: { xs: 0.75, sm: 1.5 }, // 🌟 FIX: Tighter gaps (6px) on mobile so boxes fit
+            mb: 2 
+          }} 
           onPaste={handlePaste}
         >
           {otp.map((digit, index) => (
@@ -138,10 +155,16 @@ export default function OtpModal({ open, onClose, targetValue, type, onVerify, o
               autoComplete="off"
               inputProps={{
                 maxLength: 2,
-                style: { textAlign: 'center', fontSize: '1.25rem', fontWeight: '600', padding: '14px 0' }
+                // 🌟 FIX: Moved styles to 'sx' below to allow responsive scaling
               }}
               sx={{ 
-                width: '45px',
+                width: { xs: '38px', sm: '48px' }, // 🌟 FIX: Boxes shrink to 38px on mobile
+                '& .MuiInputBase-input': { 
+                  textAlign: 'center', 
+                  fontSize: { xs: '1.1rem', sm: '1.25rem' }, // 🌟 FIX: Font size scales
+                  fontWeight: '600', 
+                  padding: { xs: '10px 0', sm: '14px 0' } // 🌟 FIX: Inner padding scales
+                },
                 '& .MuiOutlinedInput-root': { 
                   borderRadius: '10px', 
                   backgroundColor: '#ffffff',
@@ -154,22 +177,26 @@ export default function OtpModal({ open, onClose, targetValue, type, onVerify, o
           ))}
         </Box>
         
-        {/* Error Message Space (kept matching your screenshot height) */}
+        {/* Error Message Space */}
         <Box sx={{ minHeight: '24px', mb: 2 }}>
           {error && (
-            <Typography color="#ef4444" variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+            <Typography color="#ef4444" variant="caption" sx={{ fontWeight: 600, display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
               {error}
             </Typography>
           )}
         </Box>
 
-        {/* 🌟 Custom Gradient Button */}
+        {/* Custom Gradient Button */}
         <GradientButton 
           fullWidth 
           onClick={() => onVerify(otpString)}
           disabled={isLoading || otpString.length < 6}
           sx={{ 
-            py: 1.5, mb: 3, fontSize: '0.9rem', fontWeight: 700, borderRadius: '8px',
+            py: { xs: 1.25, sm: 1.5 }, // 🌟 FIX: Button slightly slimmer on mobile
+            mb: 3, 
+            fontSize: '0.9rem', 
+            fontWeight: 700, 
+            borderRadius: '8px',
             background: 'linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)',
             boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
             '&.Mui-disabled': { background: '#e5e7eb', color: '#9ca3af', boxShadow: 'none' }
@@ -180,7 +207,7 @@ export default function OtpModal({ open, onClose, targetValue, type, onVerify, o
 
         {/* Footer Area */}
         <Box>
-          <Typography variant="body2" color="#6b7280" sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+          <Typography variant="body2" color="#6b7280" sx={{ display: 'flex', justifyContent: 'center', gap: 0.5, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
             Didn't receive the code? 
             {canResend ? (
               <span 

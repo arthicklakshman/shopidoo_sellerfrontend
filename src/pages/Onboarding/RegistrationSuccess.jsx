@@ -27,7 +27,7 @@ import GradientButton from '../../components/shared/GradientButton/GradientButto
 
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { logoutSeller } from '../../features/auth/authSlice';
+import { logoutSeller, fetchMe } from '../../features/auth/authSlice';
 
 const USER_FRONTEND_URL = import.meta.env.VITE_USER_FRONTEND_URL || 'http://localhost:5173/';
 
@@ -74,7 +74,12 @@ export default function RegistrationSuccess() {
 
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
+
+  useEffect(() => {
+    dispatch(fetchMe());
+  }, [dispatch]);
 
   const handleReturnToShop = () => {
     window.location.assign(USER_FRONTEND_URL);
@@ -231,8 +236,33 @@ export default function RegistrationSuccess() {
             </Typography>
           </Box>
 
+          {/* Approved Banner if admin gave approval */}
+          {user?.seller_status === 'approved' ? (
+            <Box sx={{
+              backgroundColor: '#ecfdf5',
+              border: '2px solid #10b981',
+              borderRadius: '12px',
+              p: 3,
+              textAlign: 'center',
+              mb: 4
+            }}>
+              <Typography variant="h6" sx={{ color: '#047857', fontWeight: 800, mb: 1 }}>
+                🎉 Your Account has been Approved!
+              </Typography>
+              <Typography sx={{ color: '#065f46', fontSize: '14px', mb: 2.5 }}>
+                Congratulations! You now have full seller access and can start listing your products.
+              </Typography>
+              <GradientButton
+                onClick={() => navigate('/dashboard')}
+                sx={{ width: { xs: '100%', sm: '320px' } }}
+              >
+                Go to Seller Dashboard 🚀
+              </GradientButton>
+            </Box>
+          ) : null}
+
           {/* Go Back to Shop Button */}
-          <Box display="flex" justifyContent="center">
+          <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center">
             <GradientButton
               onClick={handleReturnToShop}
               startIcon={<StorefrontIcon />}
@@ -247,6 +277,24 @@ export default function RegistrationSuccess() {
             >
               Go Back to Shop
             </GradientButton>
+
+            <Button
+              onClick={() => {
+                dispatch(logoutSeller());
+                navigate('/login');
+              }}
+              startIcon={<LogoutIcon />}
+              sx={{
+                color: '#6b7280',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '14px',
+                mb: 2,
+                '&:hover': { color: '#111827', background: 'transparent' }
+              }}
+            >
+              Sign Out & Go to Seller Login
+            </Button>
           </Box>
           <Typography sx={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', mb: 4 }}>
             We'll notify you via email as soon as your account status changes.
@@ -255,22 +303,44 @@ export default function RegistrationSuccess() {
           <Divider sx={{ mb: 3, borderColor: '#f3f4f6' }} />
 
           {/* Support Footer */}
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography sx={{ color: '#6b7280', fontSize: '13px', mb: 2 }}>
-              Questions? Need help?
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
-             <Button size="small" startIcon={<PhoneInTalkOutlinedIcon fontSize="small" />} sx={{ color: '#e11d48', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-               Call Support
-           </Button>
-             <Button size="small" startIcon={<ChatBubbleOutlineIcon fontSize="small" />} sx={{ color: '#16a34a', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-               WhatsApp Us
-             </Button>
-             <Button size="small" startIcon={<MailOutlinedIcon fontSize="small" />} sx={{ color: '#8b5cf6', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
-               Email Help
-               </Button>
-            </Box>
-          </Box>
+<Box sx={{ textAlign: 'center' }}>
+  <Typography sx={{ 
+    color: '#6b7280', 
+    fontSize: { xs: '12px', sm: '13px' }, 
+    mb: { xs: 1.5, sm: 2 } 
+  }}>
+    Questions? Need help?
+  </Typography>
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    flexDirection: { xs: 'column', sm: 'row' }, 
+    gap: { xs: 1.5, sm: 3 } 
+  }}>
+    <Button 
+      size="small" 
+      startIcon={<PhoneInTalkOutlinedIcon fontSize="small" />} 
+      sx={{ color: '#e11d48', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}
+    >
+      Call Support
+    </Button>
+    <Button 
+      size="small" 
+      startIcon={<ChatBubbleOutlineIcon fontSize="small" />} 
+      sx={{ color: '#16a34a', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}
+    >
+      WhatsApp Us
+    </Button>
+    <Button 
+      size="small" 
+      startIcon={<MailOutlinedIcon fontSize="small" />} 
+      sx={{ color: '#8b5cf6', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}
+    >
+      Email Help
+    </Button>
+  </Box>
+</Box>
 
         </CardContent>
       </Card>

@@ -20,9 +20,12 @@ import GradientOutlineButton from '../../../components/shared/GradientButton/Gra
 const InfoField = ({ label, value, verified = false }) => (
   <Box sx={{ mb: 2 }}>
     <Typography sx={{ color: '#9ca3af', fontSize: '13px', mb: 0.5 }}>{label}</Typography>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-      <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 500 }}>{value || 'Not provided'}</Typography>
-      {verified && <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 18 }} />}
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+      {/* 🌟 FIX: Added wordBreak so long emails or addresses don't stretch the card on mobile */}
+      <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 500, wordBreak: 'break-word' }}>
+        {value || 'Not provided'}
+      </Typography>
+      {verified && <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 18, mt: 0.2 }} />}
     </Box>
   </Box>
 );
@@ -41,19 +44,22 @@ const DocumentItem = ({ label, isUploaded }) => (
 );
 
 const SectionCard = ({ step, title, onEdit, children }) => (
-  <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', mb: 4 }}>
-    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {/* 🌟 FIXED: Updated Avatar colors to match your theme */}
-          <Avatar sx={{ bgcolor: '#e0f7f6', color: '#0B8457', width: 32, height: 32, fontSize: '14px', fontWeight: 'bold' }}>
+  <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', mb: { xs: 3, md: 4 } }}>
+    {/* 🌟 FIX: Tighter padding on mobile */}
+    <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2.5, md: 4 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
+          <Avatar sx={{ bgcolor: '#e0f7f6', color: '#0B8457', width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 }, fontSize: { xs: '12px', sm: '14px' }, fontWeight: 'bold' }}>
             {step}
           </Avatar>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827' }}>{title}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827', fontSize: { xs: '16px', sm: '20px' } }}>
+            {title}
+          </Typography>
         </Box>
         <Button 
-          startIcon={<EditOutlinedIcon />} 
+          startIcon={<EditOutlinedIcon fontSize="small" />} 
           onClick={onEdit} 
+          size="small"
           sx={{ color: '#111827', textTransform: 'none', fontWeight: 600, '&:hover': { backgroundColor: '#f3f4f6' } }}
         >
           Edit
@@ -102,7 +108,6 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 
       if (!sellerId) throw new Error("Seller ID missing. Please restart onboarding.");
 
-      // 🌟 USING THE SERVICE FILE FOR FINAL COMPLETION
       await onboardingService.completeOnboarding(sellerId);
 
       // Clean up everything from Local Storage on success
@@ -126,46 +131,57 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     {
       step: "1", title: "Basic Information", stepIndex: 1,
       fields: [
-        { label: "Full Name", value: data.step1.fullName },
-        { label: "Email", value: data.step1.email, verified: true },
-        { label: "Phone", value: data.step1.phone, verified: true },
-        { label: "Business Type", value: data.step1.businessType ? data.step1.businessType.replace('_', ' ').toUpperCase() : '' },
-      ]
+        { label: "Full Name", value: data.step1?.fullName },
+        { label: "Email", value: data.step1?.email, verified: true },
+        { label: "Phone", value: data.step1?.phone, verified: true },
+        { label: "Business Type", value: data.step1?.businessType ? data.step1.businessType.replace('_', ' ').toUpperCase() : '' },
+      ].filter(Boolean)
     },
     {
       step: "2", title: "Business Details", stepIndex: 2,
       fields: [
-        { label: "Business Name", value: data.step2.businessName },
-        { label: "Store Name", value: data.step2.displayStoreName },
-        { label: "GST Number", value: data.step2.hasGst ? data.step2.gstNumber : "Not applicable" },
-        { label: "PAN Number", value: data.step2.panNumber },
-        { label: "Business Address", value: `${data.step2.addressLine1}, ${data.step2.city || ''}, ${data.step2.state || ''} - ${data.step2.pincode || ''}`, fullWidth: true },
-      ]
+        { label: "Business Name", value: data.step2?.businessName },
+        { label: "Store Name", value: data.step2?.displayStoreName },
+        { label: "GST Number", value: data.step2?.gstNumber || "Not applicable" },
+        { label: "Aadhaar Number", value: data.step2?.aadhaarNumber },
+        { label: "PAN Number", value: data.step2?.panNumber },
+        { label: "Business Address", value: `${data.step2?.addressLine1 || ''}${data.step2?.addressLine2 ? `, ${data.step2.addressLine2}` : ''}, ${data.step2?.city || ''}, ${data.step2?.state || ''} - ${data.step2?.pincode || ''}`.replace(/^[,\s]+|[,\s]+$/g, ''), fullWidth: true },
+      ].filter(Boolean)
     },
     {
       step: "3", title: "Bank Details", stepIndex: 3,
       fields: [
-        { label: "Account Holder Name", value: data.step3.accountName },
-        { label: "Account Number", value: data.step3.accountNumber },
-        { label: "IFSC Code", value: data.step3.ifscCode },
-        { label: "Bank Document", value: data.step3.documentName },
-      ]
+        { label: "Account Holder Name", value: data.step3?.accountName },
+        { label: "Account Number", value: data.step3?.accountNumber },
+        { label: "IFSC Code", value: data.step3?.ifscCode },
+        // Only show optional Bank Document if uploaded/provided
+        (data.step3?.documentName || data.step3?.bankProofImage) ? { label: "Bank Document", isDocument: true, isUploaded: true } : null,
+      ].filter(Boolean)
     },
     {
       step: "4", title: "Documents", stepIndex: 4,
       fields: [
-        { label: "PAN Card", isDocument: true, isUploaded: !!data.step5.panCard },
-        { label: "Aadhaar Front", isDocument: true, isUploaded: !!data.step5.aadhaarFront },
-        { label: "Aadhaar Back", isDocument: true, isUploaded: !!data.step5.aadhaarBack },
-        { label: "Signature", isDocument: true, isUploaded: !!data.step5.signature },
-      ]
+        // Mandatory Documents (always show status)
+        { label: "GST Proof Image", isDocument: true, isUploaded: !!(data.step5?.gstProof) },
+        { label: "Signature", isDocument: true, isUploaded: !!(data.step5?.signature) },
+        // Optional Documents (ONLY show if uploaded, never show as missing)
+        data.step5?.panCard ? { label: "PAN Card", isDocument: true, isUploaded: true } : null,
+        data.step5?.aadhaarFront ? { label: "Aadhaar Front", isDocument: true, isUploaded: true } : null,
+        data.step5?.aadhaarBack ? { label: "Aadhaar Back", isDocument: true, isUploaded: true } : null,
+        data.step5?.businessProof ? { label: "Business Proof", isDocument: true, isUploaded: true } : null,
+        data.step5?.bankProof ? { label: "Bank Proof", isDocument: true, isUploaded: true } : null,
+      ].filter(Boolean)
     },
     {
       step: "5", title: "Store Setup", stepIndex: 5,
       fields: [
-        { label: "Product Categories", value: data.step6.selectedCategories?.join(', '), fullWidth: true },
-        { label: "Shipping Preference", value: data.step6.shippingPreference === 'platform' ? 'Platform Logistics' : 'Self Shipping', fullWidth: true },
-      ]
+        { label: "Product Categories", value: data.step6?.selectedCategories?.join(', '), fullWidth: true },
+        { label: "Shipping Preference", value: data.step6?.shippingPreference === 'platform' ? 'Platform Logistics' : 'Self Shipping', fullWidth: true },
+        { label: "Pickup Address", value: data.step6?.sameAsBusinessAddress ? "Same as business address" : (data.step6?.pickupAddress || "Not provided"), fullWidth: true },
+        // Optional Store Branding images (ONLY show if uploaded)
+        data.step6?.storeLogo ? { label: "Store Logo", isDocument: true, isUploaded: true } : null,
+        data.step6?.storeBanner ? { label: "Store Banner", isDocument: true, isUploaded: true } : null,
+      ].filter(Boolean)
     }
   ];
 
@@ -173,9 +189,14 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#fafafa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <Box sx={{ maxWidth: '900px', mx: 'auto' }}>
         
-        <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827', mb: 1 }}>Review Your Application</Typography>
-          <Typography sx={{ color: '#6b7280', fontSize: '15px' }}>Please review all information before submitting</Typography>
+        <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 5 } }}>
+        
+          <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827', mb: 1, fontSize: { xs: '24px', sm: '32px' } }}>
+            Review Your Application
+          </Typography>
+          <Typography sx={{ color: '#6b7280', fontSize: { xs: '14px', sm: '15px' } }}>
+            Please review all information before submitting
+          </Typography>
         </Box>
 
         {apiError && (
@@ -205,50 +226,56 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
           </SectionCard>
         ))}
 
-        <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: 4 }}>
+        <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', backgroundColor: '#ffffff', boxShadow: 'none', mb: { xs: 3, md: 4 } }}>
           <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Checkbox checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-  <Box component="span" sx={{ color: '#4b5563' }}>I accept the </Box>
-  <Box
-    component="span"
-    onClick={() => window.open('/terms-and-conditions', '_blank')}
-    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
-  >
-    Terms & Conditions
-  </Box>
-  <Box component="span" sx={{ color: '#4b5563' }}> — By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
-</Typography>
+              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <Box component="span" sx={{ color: '#4b5563' }}>I accept the </Box>
+                <Box
+                  component="span"
+                  onClick={() => window.open('/terms-and-conditions', '_blank')}
+                  sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+                >
+                  Terms & Conditions
+                </Box>
+                <Box component="span" sx={{ color: '#4b5563' }}> — By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
+              </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
               <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-  <Box component="span" sx={{ color: '#4b5563' }}>I agree to </Box>
-  <Box
-    component="span"
-    onClick={() => window.open('/seller-policies', '_blank')}
-    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
-  >
-    Seller Policies
-  </Box>
-  <Box component="span" sx={{ color: '#4b5563' }}> — This includes product listing guidelines, return policies, and commission structure.</Box>
-</Typography>
+              <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <Box component="span" sx={{ color: '#4b5563' }}>I agree to </Box>
+                <Box
+                  component="span"
+                  onClick={() => window.open('/seller-policies', '_blank')}
+                  sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
+                >
+                  Seller Policies
+                </Box>
+                <Box component="span" sx={{ color: '#4b5563' }}> — This includes product listing guidelines, return policies, and commission structure.</Box>
+              </Typography>
             </Box>
           </CardContent>
         </Card>
 
-        {/* 🌟 FIXED: Replaced standard buttons with your custom Gradient components */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+       
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column-reverse', sm: 'row' }, 
+          justifyContent: 'space-between', 
+          gap: { xs: 1.5, sm: 2 } 
+        }}>
           <GradientOutlineButton 
             onClick={onBack} 
             disabled={isSubmitting} 
             sx={{ 
               flex: 1, 
-              maxWidth: '300px', 
-              py: 1.5, 
+              width: '100%',
+              maxWidth: { xs: '100%', sm: '300px' }, 
+              py: { xs: 1.25, sm: 1.5 }, 
               fontSize: '16px',
-              textTransform: 'none' // Keeps it matching original design
+              textTransform: 'none'
             }}
           >
             &larr; Back
@@ -260,11 +287,12 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
             startIcon={!isSubmitting && <ShieldOutlinedIcon />}
             sx={{
               flex: 2,
-              py: 1.5,
+              width: '100%',
+              py: { xs: 1.25, sm: 1.5 },
               fontSize: '16px',
-              textTransform: 'none', // Keeps it matching original design
+              textTransform: 'none',
               ...(isSubmitEnabled && {
-                boxShadow: '0 4px 14px 0 rgba(11, 132, 87, 0.39)' // Updated glow to match green theme
+                boxShadow: '0 4px 14px 0 rgba(11, 132, 87, 0.39)' 
               })
             }}
           >

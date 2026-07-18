@@ -37,6 +37,14 @@ const PrivateRoute = ({ children }) => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
   
+  if (!user?.isRegistered) {
+    return <Navigate to="/onboarding/1" replace />;
+  }
+
+  if (user?.seller_status !== 'approved') {
+    return <Navigate to="/onboarding/success" replace />;
+  }
+
   return children;
 };
 
@@ -44,8 +52,7 @@ const GuestRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth || {});
   const location = useLocation();
   
-  // 🌟 REVISED: Only redirect if we are on Login/Register and ALREADY registered.
-  // This completely stays out of the way of the onboarding flow.
+
   const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
   
   if (isAuthenticated && isAuthPath) {
@@ -81,7 +88,7 @@ const AppRouter = () => (
           element={<RegistrationSuccess />}
           />
 
-          {/* 🌟 ADDED: Handle the base /onboarding URL by redirecting to Step 1 */}
+          
           <Route 
             path="/onboarding" 
             element={<Navigate to="/onboarding/1" replace />} 
@@ -116,7 +123,7 @@ const AppRouter = () => (
           <Route path="/cms" element={<SellerCMS />} />
         </Route>
 
-        {/* ✅ Public routes - no auth needed */}
+       
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/seller-policies" element={<SellerPolicies />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
