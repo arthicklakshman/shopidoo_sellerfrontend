@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Fab, Snackbar, Alert } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
 
@@ -11,7 +12,7 @@ const Mobile = ({ supportNumber = "919876543210" }) => {
 
     // 2. Trigger the mobile dialer
     const telLink = `tel:+${supportNumber}`;
-    
+
     // Slight delay to allow the toast to render
     setTimeout(() => {
       window.location.href = telLink;
@@ -25,28 +26,33 @@ const Mobile = ({ supportNumber = "919876543210" }) => {
 
   return (
     <>
-      <Fab
-        color="primary"
-        aria-label="call"
-        onClick={handleClick}
-        sx={{
-          position: 'fixed',
-          bottom: 24, // Bottom-most icon
-          right: 24,
-          backgroundColor: '#1976d2', // Blue matching the design
-          '&:hover': {
-            backgroundColor: '#115293',
-          },
-          zIndex: 1000,
-        }}
-      >
-        <PhoneIcon style={{ color: 'white' }} />
-      </Fab>
+      {createPortal(
+        <Fab
+          color="primary"
+          aria-label="call"
+          onClick={handleClick}
+          sx={{
+            position: 'fixed',
+            bottom: 24, // Bottom-most icon
+            right: 24,
+            backgroundColor: '#1976d2', // Blue matching the design
+            '&:hover': {
+              backgroundColor: '#115293',
+            },
+            zIndex: 1000,
+            transform: 'scale(0.8)',
+            transformOrigin: 'bottom right',
+          }}
+        >
+          <PhoneIcon style={{ color: 'white' }} />
+        </Fab>,
+        document.body
+      )}
 
       {/* Replace this Snackbar with your global Shopidoo Toast if you have one */}
-      <Snackbar 
-        open={toastOpen} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={4000}
         onClose={handleCloseToast}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >

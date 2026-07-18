@@ -12,12 +12,14 @@ export default defineConfig({
     },
   },
   resolve: { alias: { '@': '/src' } },
-  optimizeDeps: {
-    include: [
-      '@mui/material',
-      '@mui/icons-material',
-      '@emotion/react',
-      '@emotion/styled',
-    ],
-  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor_react: ['react', 'react-dom', 'react-router-dom'],
+          vendor_mui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled']
+        }
+      }
+    }
+  }
 });

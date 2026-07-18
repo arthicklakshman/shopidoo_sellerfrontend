@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Fab, Snackbar, Alert } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
@@ -25,23 +26,28 @@ const WhatsApp = ({ supportNumber = "919876543210" }) => {
 
   return (
     <>
-      <Fab
-        color="success"
-        aria-label="whatsapp"
-        onClick={handleClick}
-        sx={{
-          position: 'fixed',
-          bottom: 90, 
-          right: 24,
-          backgroundColor: '#25D366', 
-          '&:hover': {
-            backgroundColor: '#128C7E',
-          },
-          zIndex: 1000,
-        }}
-      >
-        <WhatsAppIcon style={{ color: 'white' }} />
-      </Fab>
+      {createPortal(
+        <Fab
+          color="success"
+          aria-label="whatsapp"
+          onClick={handleClick}
+          sx={{
+            position: 'fixed',
+            bottom: 90, 
+            right: 24,
+            backgroundColor: '#25D366', 
+            '&:hover': {
+              backgroundColor: '#128C7E',
+            },
+            zIndex: 1000,
+            transform: 'scale(0.8)',
+            transformOrigin: 'bottom right',
+          }}
+        >
+          <WhatsAppIcon style={{ color: 'white' }} />
+        </Fab>,
+        document.body
+      )}
 
       <Snackbar 
         open={toastOpen} 
