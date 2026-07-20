@@ -216,10 +216,11 @@ export default function Documents({ onBack, onNext }) {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#fafafa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <Grid container spacing={4} justifyContent="center" maxWidth="1200px" mx="auto" alignItems="flex-start">
+      <Box sx={{ maxWidth: '1200px', mx: 'auto', width: '100%' }}>
+        <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
         
         {/* Left Column: Info Cards */}
-<Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+<Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', gap: 3 }}>
   <Card sx={{ borderRadius: '16px', backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1', boxShadow: 'none' }}>
     <CardContent sx={{ p: { xs: 3, md: 4 } }}>
       <Box sx={{ color: '#0B8457', mb: 3 }}>
@@ -288,8 +289,8 @@ export default function Documents({ onBack, onNext }) {
             {/* 🌟 STATIC SCROLL WRAPPER START */}
             <Box 
               sx={{ 
-                maxHeight: '550px', 
-                overflowY: 'auto', 
+                maxHeight: { xs: 'none', md: '550px' }, 
+                overflowY: { xs: 'visible', md: 'auto' }, 
                 pr: 2, 
                 mb: 3,
                 // Custom slim scrollbar for a clean UI
@@ -345,6 +346,7 @@ export default function Documents({ onBack, onNext }) {
           </StepWrapper>
         </Grid>
       </Grid>
+      </Box>
 
       {/* 🌟 Reusable Modal Component */}
       <ImagePreview 

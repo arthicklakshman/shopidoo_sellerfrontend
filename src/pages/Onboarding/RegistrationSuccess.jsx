@@ -259,7 +259,7 @@ export default function RegistrationSuccess() {
             <Typography sx={{ color: '#6b7280', fontSize: '13px', mb: 2 }}>
               Questions? Need help?
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
              <Button size="small" startIcon={<PhoneInTalkOutlinedIcon fontSize="small" />} sx={{ color: '#e11d48', textTransform: 'none', fontWeight: 500, p: 0, '&:hover': { background: 'transparent', textDecoration: 'underline' } }}>
                Call Support
            </Button>

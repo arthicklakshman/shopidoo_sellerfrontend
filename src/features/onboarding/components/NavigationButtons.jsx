@@ -9,13 +9,14 @@ import GradientOutlineButton from '../../../components/shared/GradientButton/Gra
 
 const NavigationButtons = ({ onBack, onContinue, isLastStep, isLoading }) => {
   return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 6 }}>
+    <Box sx={{ display: "flex", flexDirection: { xs: 'column-reverse', sm: 'row' }, justifyContent: "space-between", gap: { xs: 2, sm: 0 }, mt: 6 }}>
       {/* Back Button - Left exactly as is */}
       {onBack ? (
         <GradientOutlineButton
           disabled={isLoading}
           onClick={onBack}
           sx={{
+            width: { xs: '100%', sm: 'auto' },
             borderRadius: '8px', // Overrides the default 6px
             px: 4,
             py: 1,
@@ -34,6 +35,7 @@ const NavigationButtons = ({ onBack, onContinue, isLastStep, isLoading }) => {
         disabled={isLoading}
         onClick={onContinue}
         sx={{
+          width: { xs: '100%', sm: 'auto' },
           background: "linear-gradient(90deg, #0FB9B1 0%, #0B8457 100%)", // ✅ Gradient applied
           color: "#000000", // ✅ Changed to black to match your theme
           textTransform: "none",

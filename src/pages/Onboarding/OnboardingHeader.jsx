@@ -33,7 +33,7 @@ export default function OnboardingHeader({ step = 1 }) {
         </Box>
         
         {/* Subtitle */}
-        <Typography sx={{ color: '#6b7280', fontSize: '1.05rem', fontWeight: 400 }}>
+        <Typography sx={{ color: '#6b7280', fontSize: '1.05rem', fontWeight: 400, display: { xs: 'none', sm: 'block' } }}>
           Seller Onboarding
         </Typography>
       </Box>

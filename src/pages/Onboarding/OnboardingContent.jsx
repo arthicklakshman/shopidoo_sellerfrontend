@@ -38,7 +38,7 @@ const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
   };
 
   return (
-   <Box sx={{ p: 4 }}>
+   <Box>
       {renderStep()}
    </Box>
   );

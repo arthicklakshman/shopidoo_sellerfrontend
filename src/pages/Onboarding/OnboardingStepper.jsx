@@ -34,12 +34,16 @@ const CustomConnector = styled(StepConnector)(({ theme }) => ({
 }));
 
 // ✅ Custom Step Icon (UPDATED TO GREEN THEME)
-const CustomStepIconRoot = styled('div')(({ ownerState }) => ({
+const CustomStepIconRoot = styled('div')(({ ownerState, theme }) => ({
   backgroundColor: '#f3f4f6',
   zIndex: 1,
   color: '#4b5563',
-  width: 40,
-  height: 40,
+  width: 32,
+  height: 32,
+  [theme.breakpoints.up('sm')]: {
+    width: 40,
+    height: 40,
+  },
   display: 'flex',
   borderRadius: '50%',
   justifyContent: 'center',
@@ -81,7 +85,7 @@ export default function OnboardingStepper({ currentStep = 1 }) {
     : 100;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto', p: 3, fontFamily: 'sans-serif', background: 'linear-gradient(135deg, #f0fdfa 0%, #b2eed8 100%)', borderRadius: 3, my: 3, }}>
+    <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: '800px' }, mx: 'auto', p: { xs: 1.5, md: 3 }, fontFamily: 'sans-serif', background: 'linear-gradient(135deg, #f0fdfa 0%, #b2eed8 100%)', borderRadius: 3, my: 3, }}>
       
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1.5 }}>
@@ -127,6 +131,7 @@ export default function OnboardingStepper({ currentStep = 1 }) {
                   color: '#6b7280',
                   fontSize: '13px',
                   fontWeight: 400,
+                  display: { xs: 'none', sm: 'block' },
                 },
                 '& .MuiStepLabel-label.Mui-active': {
                   color: '#4b5563',

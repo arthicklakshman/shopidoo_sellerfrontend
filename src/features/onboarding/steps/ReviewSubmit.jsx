@@ -239,13 +239,13 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
         </Card>
 
         {/* 🌟 FIXED: Replaced standard buttons with your custom Gradient components */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column-reverse', sm: 'row' }, justifyContent: 'space-between', gap: 2 }}>
           <GradientOutlineButton 
             onClick={onBack} 
             disabled={isSubmitting} 
             sx={{ 
               flex: 1, 
-              maxWidth: '300px', 
+              maxWidth: { xs: '100%', sm: '300px' }, 
               py: 1.5, 
               fontSize: '16px',
               textTransform: 'none' // Keeps it matching original design
@@ -260,6 +260,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
             startIcon={!isSubmitting && <ShieldOutlinedIcon />}
             sx={{
               flex: 2,
+              width: { xs: '100%', sm: 'auto' },
               py: 1.5,
               fontSize: '16px',
               textTransform: 'none', // Keeps it matching original design

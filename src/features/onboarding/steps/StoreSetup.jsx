@@ -390,20 +390,19 @@ export default function StoreSetup({ onBack, onNext }) {
         fontFamily: "sans-serif",
       }}
     >
-      <Grid
-        container
-        spacing={4}
-        justifyContent="center"
-        maxWidth="1200px"
-        mx="auto"
-        alignItems="flex-start"
-      >
+      <Box sx={{ maxWidth: '1200px', mx: 'auto', width: '100%' }}>
+        <Grid
+          container
+          spacing={4}
+          justifyContent="center"
+          alignItems="flex-start"
+        >
         {/* Left Column: Info Cards */}
         <Grid
           item
           xs={12}
           md={4}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+          sx={{ display: { xs: "none", md: "flex" }, flexDirection: "column", gap: 3 }}
         >
           <Card
             sx={{
@@ -529,8 +528,8 @@ export default function StoreSetup({ onBack, onNext }) {
            {/* 🌟 STATIC SCROLL WRAPPER START */}
             <Box
               sx={{
-                maxHeight: "550px",
-                overflowY: "auto",
+                maxHeight: { xs: "none", md: "550px" },
+                overflowY: { xs: "visible", md: "auto" },
                 pr: 2,
                 mb: 3,
                 // Custom slim scrollbar for a clean UI
@@ -850,6 +849,7 @@ export default function StoreSetup({ onBack, onNext }) {
           </StepWrapper>
         </Grid>
       </Grid>
+      </Box>
 
       {/* 🌟 Reusable Modal Component */}
       <ImagePreview

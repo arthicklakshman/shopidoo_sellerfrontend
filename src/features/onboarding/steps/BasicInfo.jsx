@@ -472,9 +472,10 @@ const handleSendOtp = async (type) => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: '#fafafa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <Grid container spacing={4} justifyContent="center" maxWidth="1200px" mx="auto">
+      <Box sx={{ maxWidth: '1200px', mx: 'auto', width: '100%' }}>
+        <Grid container spacing={4} justifyContent="center">
 
-        <Grid item xs={12} md={5}>
+        <Grid item xs={12} md={5} sx={{ display: { xs: 'none', md: 'block' } }}>
           <Card sx={{ borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', height: '100%' }}>
             <CardContent sx={{ p: { xs: 3, md: 4 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 3 }}>Quick & Secure Registration</Typography>
@@ -578,6 +579,7 @@ const handleSendOtp = async (type) => {
           </StepWrapper>
         </Grid>
       </Grid>
+      </Box>
 
       <OtpModal
         open={otpModal.isOpen}
