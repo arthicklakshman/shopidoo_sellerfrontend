@@ -345,18 +345,18 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
       </DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Customer Name</Typography>
             <Typography variant="body1">{order.customer || '-'}</Typography>
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Product</Typography>
             <Typography variant="body1">{order.product || '-'}</Typography>
           </Grid>
         </Grid>
         <Divider sx={{ mb: 2.5 }} />
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Order Amount</Typography>
             <Typography variant="body1" fontWeight={700}>{formatCurrency(computeNetAmount(order.amount, feeRates))}</Typography>
             <Typography variant="caption" color="text.secondary" display="block">
@@ -368,7 +368,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
               </Typography>
             )}
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Quantity</Typography>
             <Typography variant="body1">{order.quantity ?? '-'}</Typography>
           </Grid>
@@ -418,14 +418,14 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                 </Box>
 
                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={6}>
+                  <Grid item xs={12} sm={6}>
                     <Typography variant="body2" color="text.secondary" fontWeight={600}>Shipment Status</Typography>
                     <Typography variant="body1" sx={{ textTransform: 'capitalize', fontWeight: 600 }}>
                       {shipment.status}
                     </Typography>
                   </Grid>
                   {(shipment.estimatedDeliveryDate || shipment.estimated_delivery_date) && (
-                    <Grid item xs={6}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary" fontWeight={600}>Estimated Delivery</Typography>
                       <Typography variant="body1" fontWeight={600} color="primary.main">
                         {formatDate(shipment.estimatedDeliveryDate || shipment.estimated_delivery_date)}
@@ -434,25 +434,25 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                   )}
                   {!isSelfShipping && (
                     <>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Invoice</Typography>
                         <Typography variant="body1" fontWeight={600}>
                           {shipment.invoiceUrl || shipment.combinedDocumentUrl ? 'Generated' : 'Not Generated'}
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Label</Typography>
                         <Typography variant="body1" fontWeight={600}>
                           {shipment.shippingLabelUrl || shipment.combinedDocumentUrl ? 'Generated' : 'Not Generated'}
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Pickup Status</Typography>
                         <Typography variant="body1" fontWeight={600}>
                           {shipment.pickupBooked ? 'Scheduled' : 'Not Scheduled'}
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Documents</Typography>
                         <Typography variant="body1" fontWeight={600}>
                           {shipment.combinedDocumentUrl ? 'Single Combined PDF Available' : 'Not Available'}
@@ -535,7 +535,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                   <Box sx={{ mt: 2, mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: '#fff' }}>
                     <Typography variant="body2" fontWeight={600} mb={1.5}>Ship Manually</Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <FormControl fullWidth size="small">
                           <Select
                             value={manualCourier}
@@ -566,7 +566,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
                           size="small"
@@ -896,8 +896,8 @@ const Orders = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
-        <FormControl size="small">
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+        <FormControl size="small" sx={{ width: { xs: '100%', md: 'auto' } }}>
           <Select
             value={statusFilter}
             onChange={(e) => {
@@ -916,7 +916,7 @@ const Orders = () => {
           </Select>
         </FormControl>
 
-        <FormControl size="small">
+        <FormControl size="small" sx={{ width: { xs: '100%', md: 'auto' } }}>
           <Select
             value={sortFilter}
             onChange={(e) => {
@@ -931,7 +931,7 @@ const Orders = () => {
             <MenuItem value="orderIdDesc">Order ID Decrement</MenuItem>
           </Select>
         </FormControl>
-        <FormControl size="small">
+        <FormControl size="small" sx={{ width: { xs: '100%', md: 'auto' } }}>
           <Select
             value={yearFilter}
             onChange={(e) => {
@@ -949,7 +949,7 @@ const Orders = () => {
           </Select>
         </FormControl>
 
-        <FormControl size="small" disabled={!yearFilter}>
+        <FormControl size="small" disabled={!yearFilter} sx={{ width: { xs: '100%', md: 'auto' } }}>
           <Select
             value={monthFilter}
             onChange={(e) => {
@@ -994,8 +994,8 @@ const Orders = () => {
         />
       </Box>
       <Card>
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 900 }}>
             <TableHead>
               <TableRow>
                 {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'View'].map((h) => (

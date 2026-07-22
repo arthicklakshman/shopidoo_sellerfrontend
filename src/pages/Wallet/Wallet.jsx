@@ -818,10 +818,8 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions 
 
   const handleConfirm = () => {
     setError("");
-    const num = Number(amount);
-    if (!amount || isNaN(num) || num <= 0) { setError("Please enter a valid amount"); return; }
+    const num = available;
     if (available <= 0) { setError("You have no available balance to withdraw."); return; }
-    if (num > available) { setError(`Insufficient balance. Max available: ₹${available.toLocaleString("en-IN")}`); return; }
     if (!storeName.trim()) { setError("Please enter your store name"); return; }
     if (!bankAcc.trim()) { setError("Please enter your bank account number"); return; }
     onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
@@ -897,33 +895,12 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions 
           </button>
         </div>
 
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Amount (₹) *</label>
-        <div style={{ position: "relative", marginBottom: 8 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: theme.palette.text.secondary, fontWeight: 700, pointerEvents: "none" }}>₹</span>
-          <input
-            type="number" placeholder="0.00" value={amount}
-            onChange={e => setAmount(e.target.value)}
-            onFocus={focus} onBlur={blur}
-            style={{ ...inputStyle, paddingLeft: 32, fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: "1rem" }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          {[25, 50, 75, 100].map(pct => {
-            const val = Math.floor(available * pct / 100);
-            return (
-              <button key={pct} onClick={() => setAmount(String(val))} style={{
-                flex: 1, padding: "5px 0", borderRadius: 8,
-                border: `1.5px solid ${theme.palette.divider}`, background: theme.palette.background.paper,
-                fontSize: "0.72rem", fontWeight: 700, color: theme.palette.text.primary, cursor: "pointer",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#0b8457"; e.currentTarget.style.color = "#0b8457"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = theme.palette.divider; e.currentTarget.style.color = theme.palette.text.primary; }}
-              >
-                {pct}%
-              </button>
-            );
-          })}
+        <div style={{
+          background: alpha(theme.palette.info.main, 0.1), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`, borderRadius: 10,
+          padding: "10px 14px", marginBottom: 18, fontSize: "0.78rem", color: theme.palette.info.dark, display: "flex", gap: 8
+        }}>
+          <span>💡</span>
+          <span>You are requesting a payout for your entire available balance. Partial withdrawals are not supported.</span>
         </div>
 
         <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Store Name *</label>
@@ -1063,6 +1040,17 @@ export default function Wallet() {
       dispatch(showToast({ message: err.response?.data?.message || "Request failed", severity: "error" }));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDownloadInvoice = async (id) => {
+    try {
+      const res = await api.get(`${BASE}/${id}/invoice`);
+      if (res.data && res.data.url) {
+        window.open(res.data.url, "_blank");
+      }
+    } catch (err) {
+      dispatch(showToast({ message: "Failed to download invoice", severity: "error" }));
     }
   };
 
@@ -1246,7 +1234,7 @@ export default function Wallet() {
                 <thead>
                   <tr>
                     <th>#</th><th>Amount</th><th>Store</th><th>Bank Account</th>
-                    <th>Status</th><th>Transaction ID</th><th>Requested On</th><th>Processed On</th>
+                    <th>Status</th><th>Transaction ID</th><th>Requested On</th><th>Processed On</th><th>Invoice</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1271,6 +1259,22 @@ export default function Wallet() {
                             ? <span style={{ color: theme.palette.text.disabled }}>—</span>
                             : formatDate(item.processedAt || item.processed_at)
                           }
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => handleDownloadInvoice(item.id)}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: 4,
+                              border: `1px solid ${theme.palette.divider}`,
+                              background: theme.palette.background.default,
+                              cursor: "pointer",
+                              fontSize: "0.75rem",
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            ⬇️ Download
+                          </button>
                         </td>
                       </tr>
                     );

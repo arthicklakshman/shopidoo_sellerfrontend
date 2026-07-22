@@ -365,9 +365,9 @@ const SellerReturns = () => {
       <TableContainer component={Paper} sx={{
         borderRadius: 3,
         boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
-        overflow: 'hidden'
+        overflowX: 'auto'
       }}>
-        <Table>
+        <Table sx={{ minWidth: 1000 }}>
           <TableHead sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'grey.50' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
@@ -495,13 +495,13 @@ const SellerReturns = () => {
               <Box sx={{ mb: 2 }}>
                 <Typography variant="overline" color="text.secondary" fontWeight={700}>Return Request Information</Typography>
                 <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                  <Grid item xs={6}>
+                  <Grid item xs={12} sm={6}>
                     <Typography variant="caption" color="text.secondary" display="block">Type</Typography>
                     <Typography variant="body2" fontWeight={700} color="primary" sx={{ textTransform: 'uppercase' }}>
                       {selectedReturn.return_type || 'refund'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={12} sm={6}>
                     <Typography variant="caption" color="text.secondary" display="block">Current Status</Typography>
                     <Typography variant="body2" fontWeight={700}>{selectedReturn.status.toUpperCase().replace(/_/g, ' ')}</Typography>
                   </Grid>
@@ -530,11 +530,11 @@ const SellerReturns = () => {
                             />
                           </Box>
                           <Grid container spacing={1}>
-                            <Grid item xs={6}>
+                            <Grid item xs={12} sm={6}>
                               <Typography variant="caption" color="text.secondary" display="block">Started</Typography>
                               <Typography variant="caption" fontWeight={600}>{formatDate(log.startedAt || log.started_at)}</Typography>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid item xs={12} sm={6}>
                               <Typography variant="caption" color="text.secondary" display="block">Due Date</Typography>
                               <Typography variant="caption" fontWeight={700} color={log.status === 'overdue' ? 'error.main' : 'text.primary'}>
                                 {formatDate(log.dueAt || log.due_at)}
@@ -646,11 +646,11 @@ const SellerReturns = () => {
                     Customer Courier Shipment Details
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="caption" color="text.secondary" display="block">Courier Name</Typography>
                       <Typography variant="body2" fontWeight={700}>{selectedReturn.return_courier_name}</Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="caption" color="text.secondary" display="block">Tracking Number</Typography>
                       <Typography variant="body2" fontWeight={700}>{selectedReturn.return_tracking_number}</Typography>
                     </Grid>
@@ -693,15 +693,15 @@ const SellerReturns = () => {
                     Return Shipment Details
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={4}>
+                    <Grid item xs={12} sm={4}>
                       <Typography variant="caption" color="text.secondary" display="block">Courier Name</Typography>
                       <Typography variant="body2" fontWeight={700}>{selectedReturn.returnShipment.courierName}</Typography>
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid item xs={12} sm={4}>
                       <Typography variant="caption" color="text.secondary" display="block">Reverse AWB</Typography>
                       <Typography variant="body2" fontWeight={700}>{selectedReturn.returnShipment.reverseAwbCode}</Typography>
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid item xs={12} sm={4}>
                       <Typography variant="caption" color="text.secondary" display="block">Return Status</Typography>
                       <Typography variant="body2" fontWeight={700}>{selectedReturn.status.toUpperCase().replace(/_/g, ' ')}</Typography>
                     </Grid>
@@ -741,7 +741,7 @@ const SellerReturns = () => {
                       Inspection Evidence (Photos & Video)
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Button
                           variant="outlined"
                           component="label"
@@ -767,7 +767,7 @@ const SellerReturns = () => {
                           />
                         </Button>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={12} sm={6}>
                         <Button
                           variant="outlined"
                           component="label"

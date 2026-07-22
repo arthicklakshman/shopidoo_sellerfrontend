@@ -1489,7 +1489,7 @@ const renderAttributeField = (attribute) => {
 
                                   {group.sizes.length > 0 ? (
                                     <TableContainer sx={{ overflowX: 'auto' }}>
-                                      <Table size="small">
+                                      <Table size="small" sx={{ minWidth: 600 }}>
                                         <TableHead>
                                           <TableRow>
                                             <TableCell sx={{ minWidth: 120 }}>{sizeLabel}</TableCell>
@@ -1570,8 +1570,8 @@ const renderAttributeField = (attribute) => {
                         </Box>
 
                         {variants.length > 0 ? (
-                          <TableContainer>
-                            <Table size="small">
+                          <TableContainer sx={{ overflowX: 'auto' }}>
+                            <Table size="small" sx={{ minWidth: 600 }}>
                               <TableHead>
                                 <TableRow>
                                   <TableCell>Variant</TableCell>
@@ -1719,8 +1719,8 @@ const renderAttributeField = (attribute) => {
                         </Button>
                       </Box>
                       {shippingRules.length > 0 && (
-                        <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                          <Table size="small">
+                        <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflowX: 'auto' }}>
+                          <Table size="small" sx={{ minWidth: 600 }}>
                             <TableHead sx={{ bgcolor: 'background.default' }}>
                               <TableRow>
                                 <TableCell>State</TableCell>

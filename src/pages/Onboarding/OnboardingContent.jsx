@@ -11,11 +11,11 @@ import RegistrationSuccess from './RegistrationSuccess';
 // 🌟 ADDED `onEditStep` to the props here
 const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
 
-  const currentStep = Number(step); 
+  const currentStep = Number(step);
   const sellerId = localStorage.getItem('sellerId');
 
   const renderStep = () => {
-    switch (currentStep) {  
+    switch (currentStep) {
       case 1:
         return <BasicInfo onNext={onNext} onBack={onBack} sellerId={sellerId} />;
       case 2:
@@ -38,9 +38,9 @@ const OnboardingContent = ({ step, onNext, onBack, onEditStep }) => {
   };
 
   return (
-   <Box>
+    <Box>
       {renderStep()}
-   </Box>
+    </Box>
   );
 };
 

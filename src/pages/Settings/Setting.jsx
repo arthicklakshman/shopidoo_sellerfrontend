@@ -51,10 +51,15 @@ const Settings = () => {
           p: 1,
           borderRadius: 3,
           bgcolor: "action.hover",
-          width: "fit-content",
+          width: { xs: "100%", md: "fit-content" },
+          overflowX: "auto",
           border: 1,
           borderColor: 'divider',
           boxShadow: 'none',
+          /* Hide scrollbar for a cleaner look on mobile tabs */
+          '&::-webkit-scrollbar': { display: 'none' },
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none',
         }}
       >
         {tabs.map((item, index) => (
@@ -63,6 +68,8 @@ const Settings = () => {
             onClick={() => setTab(index)}
             startIcon={item.icon}
             sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
               borderRadius: 3,
               textTransform: "none",
               px: 2,

@@ -33,14 +33,14 @@ const Mobile = ({ supportNumber = "919876543210" }) => {
           onClick={handleClick}
           sx={{
             position: 'fixed',
-            bottom: 24, // Bottom-most icon
-            right: 24,
+            bottom: { xs: 16, md: 24 }, // Bottom-most icon
+            right: { xs: 4, md: 24 },
             backgroundColor: '#1976d2', // Blue matching the design
             '&:hover': {
               backgroundColor: '#115293',
             },
             zIndex: 1000,
-            transform: 'scale(0.8)',
+            transform: { xs: 'scale(0.65)', md: 'scale(0.8)' },
             transformOrigin: 'bottom right',
           }}
         >

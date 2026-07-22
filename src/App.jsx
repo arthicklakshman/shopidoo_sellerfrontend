@@ -21,11 +21,13 @@ const App = () => {
         <GlobalStyles
           styles={{
             'html, body': {
-              overflow: 'hidden',
               width: '100%',
               height: '100%',
               margin: 0,
               padding: 0,
+            },
+            body: {
+              overflow: 'hidden',
             },
             'input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear': {
               display: 'none',
@@ -34,6 +36,7 @@ const App = () => {
             '#root': {
               width: '100%',
               height: '100%',
+              overflow: 'hidden',
             },
             '#app-scroll-container::-webkit-scrollbar': {
               display: 'none',
@@ -49,10 +52,10 @@ const App = () => {
         <Box
           id="app-scroll-container"
           sx={{
-            transform: `scale(${APP_SCALE})`,
+            transform: { xs: 'none', md: `scale(${APP_SCALE})` },
             transformOrigin: 'top left',
-            width: `${100 / APP_SCALE}%`,
-            height: `${100 / APP_SCALE}vh`,
+            width: { xs: '100%', md: `${100 / APP_SCALE}%` },
+            height: { xs: '100vh', md: `${100 / APP_SCALE}vh` },
             overflowY: 'auto',
             overflowX: 'hidden',
           }}

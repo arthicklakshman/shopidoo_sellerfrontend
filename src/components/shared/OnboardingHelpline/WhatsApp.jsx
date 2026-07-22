@@ -33,14 +33,14 @@ const WhatsApp = ({ supportNumber = "919876543210" }) => {
           onClick={handleClick}
           sx={{
             position: 'fixed',
-            bottom: 90, 
-            right: 24,
+            bottom: { xs: 80, md: 90 }, 
+            right: { xs: 4, md: 24 },
             backgroundColor: '#25D366', 
             '&:hover': {
               backgroundColor: '#128C7E',
             },
             zIndex: 1000,
-            transform: 'scale(0.8)',
+            transform: { xs: 'scale(0.65)', md: 'scale(0.8)' },
             transformOrigin: 'bottom right',
           }}
         >

@@ -12,6 +12,7 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 // Icons
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -35,13 +36,13 @@ import GradientButton from '../../components/shared/GradientButton/GradientButto
 // Styled Components
 // ----------------------------------------------------------------------
 const StyledInputLabel = ({ children }) => (
-  <InputLabel sx={{ color: '#111827', fontSize: '14px', mb: 1, fontWeight: 400 }}>
+  <InputLabel sx={{ color: 'text.primary', fontSize: '14px', mb: 1, fontWeight: 400 }}>
     {children}
   </InputLabel>
 );
 
-const getCustomInputStyles = (isEditing) => ({
-  backgroundColor: '#f3f4f6',
+const getCustomInputStyles = (isEditing, theme) => ({
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f3f4f6',
   borderRadius: '8px',
   mb: 3,
   '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
@@ -54,20 +55,20 @@ const getCustomInputStyles = (isEditing) => ({
   '& .MuiOutlinedInput-input': {
     padding: '10px 14px',
     fontSize: '14px',
-    color: '#111827',
+    color: 'text.primary',
   },
   
   // 🌟 FIX: Force disabled text to be grey consistently across all fields
   '& .MuiOutlinedInput-input.Mui-disabled': {
-    WebkitTextFillColor: '#9ca3af', // Soft grey matching the email
-    color: '#9ca3af',
+    WebkitTextFillColor: theme.palette.mode === 'dark' ? '#6b7280' : '#9ca3af',
+    color: theme.palette.mode === 'dark' ? '#6b7280' : '#9ca3af',
   },
   
   // Hides native browser eye icons
   '& .MuiOutlinedInput-input::-ms-reveal': { display: 'none' },
   '& .MuiOutlinedInput-input::-ms-clear': { display: 'none' }
 });
-const VerifyButton = ({ onClick, isVerified, disabled }) => (
+const VerifyButton = ({ onClick, isVerified, disabled, theme }) => (
   <GradientButton
     type="button"
     onClick={onClick}
@@ -78,12 +79,21 @@ const VerifyButton = ({ onClick, isVerified, disabled }) => (
       boxShadow: 'none',
       ...(isVerified ? {
         // Style when Successfully Verified
-        background: '#ecfdf5', color: '#059669', boxShadow: 'none',
-        '&:hover': { background: '#ecfdf5', boxShadow: 'none' },
-        '&.Mui-disabled': { background: '#ecfdf5', color: '#059669', WebkitTextFillColor: '#059669' } 
+        background: theme.palette.mode === 'dark' ? 'rgba(5, 150, 105, 0.2)' : '#ecfdf5', 
+        color: theme.palette.mode === 'dark' ? '#34d399' : '#059669', boxShadow: 'none',
+        '&:hover': { background: theme.palette.mode === 'dark' ? 'rgba(5, 150, 105, 0.3)' : '#ecfdf5', boxShadow: 'none' },
+        '&.Mui-disabled': { 
+          background: theme.palette.mode === 'dark' ? 'rgba(5, 150, 105, 0.2)' : '#ecfdf5', 
+          color: theme.palette.mode === 'dark' ? '#34d399' : '#059669', 
+          WebkitTextFillColor: theme.palette.mode === 'dark' ? '#34d399' : '#059669' 
+        } 
       } : {
         // 🌟 Style when Locked (!isEditing)
-        '&.Mui-disabled': { background: '#e5e7eb', color: '#9ca3af', WebkitTextFillColor: '#9ca3af' }
+        '&.Mui-disabled': { 
+          background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#e5e7eb', 
+          color: theme.palette.mode === 'dark' ? '#6b7280' : '#9ca3af', 
+          WebkitTextFillColor: theme.palette.mode === 'dark' ? '#6b7280' : '#9ca3af' 
+        }
       })
     }}
   >
@@ -99,6 +109,7 @@ const VerifyButton = ({ onClick, isVerified, disabled }) => (
 // ----------------------------------------------------------------------
 export default function Security() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useSelector(state => state.auth);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -249,8 +260,10 @@ export default function Security() {
   return (
     <Card sx={{ 
       borderRadius: '12px', 
-      border: '1px solid #e5e7eb', 
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      border: '1px solid',
+      borderColor: 'divider',
+      boxShadow: 'none',
+      bgcolor: 'background.paper',
       maxWidth: '1000px',
       fontFamily: 'sans-serif'
     }}>
@@ -258,7 +271,7 @@ export default function Security() {
 
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.125rem' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.125rem' }}>
             Password & Security
           </Typography>
 
@@ -267,7 +280,7 @@ export default function Security() {
 
         {/* --- 🌟 FIX 2: CONTACT VERIFICATION SECTION MOVED TO TOP --- */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#111827', mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 2 }}>
             Identity Verification
           </Typography>
 
@@ -278,13 +291,14 @@ export default function Security() {
             disabled
             variant="outlined"
             size="small"
-            sx={getCustomInputStyles(false)}
+            sx={getCustomInputStyles(false, theme)}
             InputProps={{ endAdornment: ( 
               <InputAdornment position="end">
                 <VerifyButton 
                   onClick={() => handleVerifyClick('email', user?.email || user?.emailId)} 
                   isVerified={isEmailVerified} 
-                  disabled={!isEditing} // 🌟 FIX: Locked until "Edit" is clicked
+                  disabled={!isEditing}
+                  theme={theme}
                 />
               </InputAdornment> 
             )}} 
@@ -297,24 +311,25 @@ export default function Security() {
             disabled
             variant="outlined"
             size="small"
-            sx={{ ...getCustomInputStyles(false), mb: 0 }}
+            sx={{ ...getCustomInputStyles(false, theme), mb: 0 }}
             InputProps={{ endAdornment: ( 
               <InputAdornment position="end">
                 <VerifyButton 
                   onClick={() => handleVerifyClick('mobile', user?.mobileNumber || user?.phone)} 
                   isVerified={isMobileVerified} 
-                  disabled={!isEditing} // 🌟 FIX: Locked until "Edit" is clicked
+                  disabled={!isEditing}
+                  theme={theme}
                 />
               </InputAdornment> 
             )}} 
           />
         </Box>
 
-        <Divider sx={{ my: 4, borderColor: '#e5e7eb' }} />
+        <Divider sx={{ my: 4, borderColor: 'divider' }} />
 
         {/* --- 🌟 FIX 2: PASSWORD SECTION (Conditionally Rendered) --- */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#111827', mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 2 }}>
             Change Password
           </Typography>
 
@@ -322,9 +337,9 @@ export default function Security() {
             /* Locked/Read-Only State */
             <Box>
               <StyledInputLabel>New Password</StyledInputLabel>
-              <TextField fullWidth type="password" value="" disabled size="small" sx={getCustomInputStyles(false)} />
+              <TextField fullWidth type="password" value="" disabled size="small" sx={getCustomInputStyles(false, theme)} />
               <StyledInputLabel>Confirm New Password</StyledInputLabel>
-              <TextField fullWidth type="password" value="" disabled size="small" sx={{ ...getCustomInputStyles(false), mb: 0 }} />
+              <TextField fullWidth type="password" value="" disabled size="small" sx={{ ...getCustomInputStyles(false, theme), mb: 0 }} />
             </Box>
           ) : (isEmailVerified && isMobileVerified) ? (
             /* Unlocked State (Ready to type) */
@@ -342,12 +357,12 @@ export default function Security() {
                 onChange={handleChange}
                 variant="outlined"
                 size="small"
-                sx={getCustomInputStyles(true)}
+                sx={getCustomInputStyles(true, theme)}
                 error={!!errors.newPassword}
                 helperText={errors.newPassword}
                 InputProps={{ endAdornment: ( 
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: '#9ca3af', mr: 0.5 }}> 
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: 'text.secondary', mr: 0.5 }}> 
                       {showPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />} 
                     </IconButton>
                   </InputAdornment> 
@@ -363,12 +378,12 @@ export default function Security() {
                 onChange={handleChange}
                 variant="outlined"
                 size="small"
-                sx={{ ...getCustomInputStyles(true), mb: 0 }}
+                sx={{ ...getCustomInputStyles(true, theme), mb: 0 }}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
                 InputProps={{ endAdornment: ( 
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end" sx={{ color: '#9ca3af', mr: 0.5 }}> 
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end" sx={{ color: 'text.secondary', mr: 0.5 }}> 
                       {showConfirmPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />} 
                     </IconButton>
                   </InputAdornment> 
@@ -377,28 +392,28 @@ export default function Security() {
             </Box>
           ) : (
             /* Editing but NOT Verified */
-            <Box sx={{ p: 3, backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db', textAlign: 'center' }}>
-               <Typography variant="body2" sx={{ color: '#6b7280' }}>
+            <Box sx={{ p: 3, backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9fafb', borderRadius: '8px', border: '1px dashed', borderColor: 'divider', textAlign: 'center' }}>
+               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                  For your security, please verify both your <strong>Email</strong> and <strong>Mobile Number</strong> above to unlock password changes.
                </Typography>
             </Box>
           )}
         </Box>
 
-        <Divider sx={{ my: 4, borderColor: '#e5e7eb' }} />
+        <Divider sx={{ my: 4, borderColor: 'divider' }} />
 
         {/* --- TWO FACTOR SECTION --- */}
         <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#111827', mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', mb: 2 }}>
             Two-Factor Authentication
           </Typography>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box sx={{ pr: 2 }}>
-              <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500, mb: 0.5 }}>
+              <Typography sx={{ color: 'text.primary', fontSize: '14px', fontWeight: 500, mb: 0.5 }}>
                 Enable two-factor authentication for added security
               </Typography>
-              <Typography sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '13px' }}>
                 You'll need to enter a code from your phone in addition to your password
               </Typography>
             </Box>

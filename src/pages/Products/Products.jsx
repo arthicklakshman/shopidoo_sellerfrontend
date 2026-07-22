@@ -1175,7 +1175,7 @@ const Products = () => {
 
         {fetchError && <Alert severity="error" sx={{ mx: 3, mb: 2 }}>{fetchError}</Alert>}
 
-        <TableContainer sx={{ px: { xs: 1, md: 2 }, pb: 2 }}>
+        <TableContainer sx={{ overflowX: 'auto', px: { xs: 1, md: 2 }, pb: 2 }}>
           <Table sx={{ minWidth: 920 }}>
             <TableHead>
               <TableRow>

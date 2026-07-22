@@ -378,8 +378,8 @@ const Coupons = () => {
       ))}
     </Grid>
 
-    <TableContainer component={Paper}>
-      <Table>
+    <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+      <Table sx={{ minWidth: 900 }}>
         <TableHead>
           <TableRow>
             <TableCell>Code</TableCell>

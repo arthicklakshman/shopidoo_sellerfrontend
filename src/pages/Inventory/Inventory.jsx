@@ -8,6 +8,7 @@ import {
   Grid,
   Chip,
   Table,
+  TableContainer,
   TableHead,
   TableRow,
   TableCell,
@@ -370,7 +371,8 @@ const Inventory = () => {
           </Button>
         </Box>
 
-        <Table>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 800 }}>
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Name</TableCell>
@@ -389,6 +391,7 @@ const Inventory = () => {
             ])}
           </TableBody>
         </Table>
+        </TableContainer>
       </Paper>
 
       {/* LOW STOCK */}

@@ -129,9 +129,7 @@ const SellerLayout = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (notificationAnchor) {
-      setNotificationAnchor(null);
-    }
+    setMobileOpen(false);
   }, [location.pathname]);
 
 
@@ -288,8 +286,14 @@ const SellerLayout = () => {
             <ListItem key={path} disablePadding>
               <ListItemButton
                 onClick={() => {
-                  navigate(path);
-                  if (isMobile) setMobileOpen(false);
+                  if (isMobile) {
+                    setMobileOpen(false);
+                    setTimeout(() => {
+                      navigate(path);
+                    }, 250);
+                  } else {
+                    navigate(path);
+                  }
                 }}
                 sx={{
                   mx: 1,
@@ -382,11 +386,13 @@ const SellerLayout = () => {
         }}
       >
         <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
+          variant="temporary"
+          open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           ModalProps={{ keepMounted: true }}
+          disableScrollLock
           sx={{
+            display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
               width: DRAWER_WIDTH,
               boxSizing: 'border-box',
@@ -394,6 +400,22 @@ const SellerLayout = () => {
               borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
+        >
+          <DrawerContent />
+        </Drawer>
+        
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': {
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              bgcolor: 'background.paper',
+              borderRight: `1px solid ${theme.palette.divider}`,
+            },
+          }}
+          open
         >
           <DrawerContent />
         </Drawer>
@@ -460,7 +482,6 @@ const SellerLayout = () => {
             </Tooltip>
 
             <Menu
-              key={location.pathname}
               anchorEl={notificationAnchor}
               open={Boolean(notificationAnchor)}
               onClose={handleCloseNotifications}

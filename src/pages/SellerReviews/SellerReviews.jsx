@@ -306,8 +306,8 @@ const SellerReviews = () => {
       </Stack>
 
       <Card>
-        <TableContainer>
-          <Table size="small">
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow>
                 {['Customer', 'Product', 'Rating', 'Title', 'Comment', 'Date', 'Actions'].map(h => (
