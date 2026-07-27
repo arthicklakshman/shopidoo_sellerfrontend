@@ -1199,7 +1199,6 @@ const Products = () => {
                 ))
                 : products.map((product) => {
                   const commission = commissionMap[product.id] ?? 0;
-                  const totalPrice = Number(product.price) + commission;
 
                   return (
                     <TableRow
@@ -1248,14 +1247,14 @@ const Products = () => {
                         )}
                       </TableCell>
 
-                      {/* ── Price (base + commission) ── */}
+                      {/* ── Price (platform fee is deducted from settlement, not added here) ── */}
                       <TableCell sx={tableBodyCellSx}>
                         <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
-                          {formatCurrency(totalPrice)}
+                          {formatCurrency(Number(product.price))}
                         </Typography>
                         {commission > 0 && (
                           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.25 }}>
-                            ₹{Number(product.price).toLocaleString('en-IN')} + ₹{commission} platform fees
+                            Platform fee ₹{commission} (deducted from settlement)
                           </Typography>
                         )}
                       </TableCell>

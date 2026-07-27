@@ -4,18 +4,26 @@ import { fetchSettingsOnce } from "../../../utils/settingsCache";
 
 /**
  * ---- Fee calculation utility ----
- * Pure math, unchanged. Takes whatever rates are passed in.
+ * Pure math. Takes whatever rates are passed in.
+ * commission: flat platform fee (₹) for this order amount, taken from the seller's payout.
+ * productGstRate: the product's own GST % (chosen in the product form) - used only to derive
+ * the TCS taxable base, not applied as a tax on the order itself.
+ * tcsRate: TCS % (from admin Settings > TCS Rate), defaults to 1% if not provided.
  */
-export function calculateSettlement(orderAmount, razorpayFeeRate, gstRate) {
+export function calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission = 0, productGstRate = 0, tcsRate = 1) {
   const razorpayFee = orderAmount * (razorpayFeeRate / 100);
   const razorpayGst = razorpayFee * (gstRate / 100);
-  const totalDeductions = razorpayFee + razorpayGst;
+  const taxableBase = orderAmount - orderAmount * (productGstRate / 100);
+  const tcs = taxableBase * (tcsRate / 100);
+  const totalDeductions = razorpayFee + razorpayGst + commission + tcs;
   const netPayout = orderAmount - totalDeductions;
 
   return {
     orderAmount: round2(orderAmount),
     razorpayFee: round2(razorpayFee),
     razorpayGst: round2(razorpayGst),
+    commission: round2(commission),
+    tcs: round2(tcs),
     totalDeductions: round2(totalDeductions),
     netPayout: round2(netPayout),
   };
@@ -42,7 +50,7 @@ function formatINR(n) {
  * below if the names differ.
  */
 function useGatewaySettings() {
-  const [rates, setRates] = useState({ razorpayFeeRate: null, gstRate: null });
+  const [rates, setRates] = useState({ razorpayFeeRate: null, gstRate: null, tcsRate: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -53,7 +61,8 @@ function useGatewaySettings() {
         if (!mounted) return;
         const razorpayFeeRate = Number(raw?.gatewayFee ?? 0);
         const gstRate = Number(raw?.gst ?? 0);
-        setRates({ razorpayFeeRate, gstRate });
+        const tcsRate = Number(raw?.tcsRate ?? 1);
+        setRates({ razorpayFeeRate, gstRate, tcsRate });
       })
       .catch(() => {
         if (mounted) setError(true);
@@ -76,9 +85,9 @@ function useGatewaySettings() {
  * admin Settings > Payment Gateway Fee (%) and GST Rate (%). Change them
  * there and every seller's Wallet + Product Form updates automatically.
  */
-export default function SettlementBreakdown({ orderAmount, orderId }) {
+export default function SettlementBreakdown({ orderAmount, orderId, commission = 0, productGstRate = 0 }) {
   const theme = useTheme();
-  const { razorpayFeeRate, gstRate, loading, error } = useGatewaySettings();
+  const { razorpayFeeRate, gstRate, tcsRate, loading, error } = useGatewaySettings();
 
   if (loading) {
     return (
@@ -98,12 +107,14 @@ export default function SettlementBreakdown({ orderAmount, orderId }) {
     );
   }
 
-  const s = calculateSettlement(orderAmount, razorpayFeeRate, gstRate);
+  const s = calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission, productGstRate, tcsRate);
 
   const rows = [
     { label: "Order amount", value: s.orderAmount, isDeduction: false },
     { label: `Razorpay gateway fee (${razorpayFeeRate}%)`, value: s.razorpayFee, isDeduction: true },
     { label: `GST on gateway fee (${gstRate}%)`, value: s.razorpayGst, isDeduction: true },
+    { label: "Platform Fee", value: s.commission, isDeduction: true },
+    { label: `TCS (${tcsRate}%)`, value: s.tcs, isDeduction: true },
   ];
 
   return (

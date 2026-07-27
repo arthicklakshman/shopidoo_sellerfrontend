@@ -1205,7 +1205,7 @@ const renderAttributeField = (attribute) => {
                     </Grid>
                     {form.price && Number(form.price) > 0 && (
   <Grid item xs={12}>
-    <SettlementBreakdown orderAmount={Number(form.price)} />
+    <SettlementBreakdown orderAmount={Number(form.price)} commission={commission ?? 0} productGstRate={Number(form.gst_rate) || 0} />
   </Grid>
 )}
 
@@ -1822,14 +1822,11 @@ const renderAttributeField = (attribute) => {
                       <Typography variant="body2" color="text.secondary">
                         Product ₹{Number(form.price || 0).toLocaleString('en-IN')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Platform Fee ₹{commission ?? 0}
-                      </Typography>
                       <Typography variant="body2" color={deliverySummary.deliveryCharge === 0 ? 'success.main' : 'text.secondary'}>
                         Delivery {deliverySummary.deliveryCharge === 0 ? 'Free' : `₹${deliverySummary.deliveryCharge.toLocaleString('en-IN')}`}
                       </Typography>
                       <Typography variant="subtitle2" fontWeight={700}>
-                        Total ₹{(deliverySummary.total + (commission ?? 0)).toLocaleString('en-IN')}
+                        Total ₹{deliverySummary.total.toLocaleString('en-IN')}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">{deliverySummary.label}</Typography>
                     </Box>
