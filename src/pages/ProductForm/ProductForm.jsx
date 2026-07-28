@@ -1143,7 +1143,7 @@ const renderAttributeField = (attribute) => {
 
       <Box component="form" onSubmit={handleSubmit} sx={formFocusStyles}>
         <Grid container spacing={3}>
-          {/* Left â€” main fields inside a custom static scroll wrapper */}
+          {/* Left - main fields inside a custom static scroll wrapper */}
           <Grid item xs={12} md={8}>
             <Box
               sx={{
@@ -1231,7 +1231,7 @@ const renderAttributeField = (attribute) => {
                         onChange={handleChange('sku')}
                         fullWidth
                         placeholder="e.g. SHOE-BLU-42"
-                        helperText="Optional â€” leave blank to skip"
+                        helperText="Optional - leave blank to skip"
                       />
                     </Grid>
 
@@ -2076,7 +2076,7 @@ const renderAttributeField = (attribute) => {
             </Box>
           </Grid>
 
-          {/* Right â€” submit */}
+          {/* Right - submit */}
           <Grid
             item
             xs={12}

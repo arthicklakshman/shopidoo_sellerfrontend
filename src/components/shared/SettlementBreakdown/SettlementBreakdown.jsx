@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Box, Card, Typography, Divider, useTheme, CircularProgress } from "@mui/material";
+import { Box, Card, Typography, Divider, useTheme, CircularProgress, IconButton, Collapse } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { fetchSettingsOnce } from "../../../utils/settingsCache";
 
 /**
@@ -11,21 +12,27 @@ import { fetchSettingsOnce } from "../../../utils/settingsCache";
  * tcsRate: TCS % (from admin Settings > TCS Rate), defaults to 1% if not provided.
  */
 export function calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission = 0, productGstRate = 0, tcsRate = 1) {
-  const razorpayFee = orderAmount * (razorpayFeeRate / 100);
-  const razorpayGst = razorpayFee * (gstRate / 100);
+  // Round each deduction BEFORE summing, so "Net payout" always equals
+  // orderAmount minus exactly the rounded figures shown on screen.
+  const razorpayFee = round2(orderAmount * (razorpayFeeRate / 100));
+  const razorpayGst = round2(razorpayFee * (gstRate / 100));
+  const productGstDeduction = round2(orderAmount * (productGstRate / 100));
   const taxableBase = orderAmount - orderAmount * (productGstRate / 100);
-  const tcs = taxableBase * (tcsRate / 100);
-  const totalDeductions = razorpayFee + razorpayGst + commission + tcs;
-  const netPayout = orderAmount - totalDeductions;
+  const tcs = round2(taxableBase * (tcsRate / 100));
+  const roundedCommission = round2(commission);
+  const totalDeductions = round2(razorpayFee + razorpayGst + roundedCommission + tcs);
+  const netPayout = round2(orderAmount - totalDeductions);
 
   return {
     orderAmount: round2(orderAmount),
-    razorpayFee: round2(razorpayFee),
-    razorpayGst: round2(razorpayGst),
-    commission: round2(commission),
-    tcs: round2(tcs),
-    totalDeductions: round2(totalDeductions),
-    netPayout: round2(netPayout),
+    razorpayFee,
+    razorpayGst,
+    commission: roundedCommission,
+    productGstDeduction,
+    taxableBase: round2(taxableBase),
+    tcs,
+    totalDeductions,
+    netPayout,
   };
 }
 
@@ -88,6 +95,7 @@ function useGatewaySettings() {
 export default function SettlementBreakdown({ orderAmount, orderId, commission = 0, productGstRate = 0 }) {
   const theme = useTheme();
   const { razorpayFeeRate, gstRate, tcsRate, loading, error } = useGatewaySettings();
+  const [tcsExpanded, setTcsExpanded] = useState(false);
 
   if (loading) {
     return (
@@ -114,7 +122,6 @@ export default function SettlementBreakdown({ orderAmount, orderId, commission =
     { label: `Razorpay gateway fee (${razorpayFeeRate}%)`, value: s.razorpayFee, isDeduction: true },
     { label: `GST on gateway fee (${gstRate}%)`, value: s.razorpayGst, isDeduction: true },
     { label: "Platform Fee", value: s.commission, isDeduction: true },
-    { label: `TCS (${tcsRate}%)`, value: s.tcs, isDeduction: true },
   ];
 
   return (
@@ -139,6 +146,50 @@ export default function SettlementBreakdown({ orderAmount, orderId, commission =
             </Typography>
           </Box>
         ))}
+
+        <Box>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+              <Typography variant="body2" color="text.secondary">{`TCS (${tcsRate}%)`}</Typography>
+              <IconButton
+                size="small"
+                onClick={() => setTcsExpanded((v) => !v)}
+                aria-label="Show how TCS is calculated"
+                sx={{ p: 0.25 }}
+              >
+                <ExpandMoreIcon
+                  fontSize="small"
+                  sx={{ transform: tcsExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
+                />
+              </IconButton>
+            </Box>
+            <Typography variant="body2" fontWeight={500} color={theme.palette.error.main}>
+              -{formatINR(s.tcs)}
+            </Typography>
+          </Box>
+
+          <Collapse in={tcsExpanded}>
+            <Box sx={{ mt: 1, p: 1.25, borderRadius: 2, bgcolor: "action.hover", display: "flex", flexDirection: "column", gap: 0.5 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">Order amount</Typography>
+                <Typography variant="caption">{formatINR(s.orderAmount)}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">Less: Product GST ({productGstRate}%)</Typography>
+                <Typography variant="caption">-{formatINR(s.productGstDeduction)}</Typography>
+              </Box>
+              <Divider sx={{ my: 0.25 }} />
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">Taxable base</Typography>
+                <Typography variant="caption" fontWeight={600}>{formatINR(s.taxableBase)}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">TCS = Taxable base × {tcsRate}%</Typography>
+                <Typography variant="caption" fontWeight={600}>{formatINR(s.tcs)}</Typography>
+              </Box>
+            </Box>
+          </Collapse>
+        </Box>
       </Box>
 
       <Divider sx={{ my: 1.5 }} />

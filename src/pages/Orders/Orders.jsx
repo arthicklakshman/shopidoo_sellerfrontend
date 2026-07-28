@@ -263,6 +263,23 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   // Order itself has no shippingMode/shipping_courier field, so those old fallbacks never matched.
   const isSelfShipping = shipment?.shippingMode === 'self' || (!shipment && (order.rawItem?.seller?.shippingPreference === 'self' || order.rawItem?.product?.seller?.shippingPreference === 'self'));
 
+  // ── Amount breakdown (seller-facing only) ──────────────────────────────────
+  const rawOrderData = order.rawItem?.Order || order.rawItem?.order;
+  const productPriceGross = order.rawItem
+    ? Number(order.rawItem.unit_price || 0) * Number(order.rawItem.quantity || 0)
+    : Number(order.amount) || 0;
+  // Only surface coupons the seller themself created — admin-wide coupons aren't
+  // this seller's discount to explain.
+  const sellerCoupon = rawOrderData?.coupon?.created_by === 'seller' ? rawOrderData.coupon : null;
+  const couponDiscount = sellerCoupon ? Math.max(0, productPriceGross - Number(order.amount || 0)) : 0;
+  // Shown for every order, labelled by who actually handles delivery — self-ship
+  // sellers front this cost themselves and get it reimbursed via the wallet 1:1.
+  const shippingCharge = Number(rawOrderData?.shipping_charge || 0);
+  const shippingChargeLabel = isSelfShipping ? 'Self Shipment' : 'Platform Logistics';
+  const totalAmountPaid = rawOrderData?.total_amount != null
+    ? Number(rawOrderData.total_amount)
+    : (productPriceGross + shippingCharge - couponDiscount);
+
   const handleManualShip = async () => {
     if (!manualCourier || !manualTracking) {
       dispatch(showToast({ message: 'Courier and Tracking Code are required', severity: 'error' }));
@@ -356,17 +373,36 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
         </Grid>
         <Divider sx={{ mb: 2.5 }} />
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Order Amount</Typography>
-            <Typography variant="body1" fontWeight={700}>{formatCurrency(computeNetAmount(order.amount, feeRates))}</Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
-              Gross {formatCurrency(Number(order.amount) || 0)}
-            </Typography>
-            {order.rawItem && (order.rawItem.Order || order.rawItem.order)?.coupon && Number(order.rawItem.unit_price) * Number(order.rawItem.quantity) - Number(order.amount) > 0.01 && (
-              <Typography variant="caption" color="text.secondary" display="block">
-                {formatCurrency(Number(order.rawItem.unit_price) * Number(order.rawItem.quantity))} - {formatCurrency((Number(order.rawItem.unit_price) * Number(order.rawItem.quantity)) - Number(order.amount))} (Coupon)
-              </Typography>
-            )}
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Amount Breakdown</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Product Price</Typography>
+                <Typography variant="body2">{formatCurrency(productPriceGross)}</Typography>
+              </Box>
+              {sellerCoupon && couponDiscount > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Coupon Discount ({sellerCoupon.code})</Typography>
+                  <Typography variant="body2" color={theme.palette.error.main}>-{formatCurrency(couponDiscount)}</Typography>
+                </Box>
+              )}
+              {shippingCharge > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Shipment Charge ({shippingChargeLabel})</Typography>
+                  <Typography variant="body2">{formatCurrency(shippingCharge)}</Typography>
+                </Box>
+              )}
+              <Divider sx={{ my: 0.5 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" fontWeight={700}>Total Amount Paid by Customer</Typography>
+                <Typography variant="body1" fontWeight={700}>{formatCurrency(totalAmountPaid)}</Typography>
+              </Box>
+              {isSelfShipping && shippingCharge > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  Self-ship order — the {formatCurrency(shippingCharge)} shipping charge is credited to your wallet along with the settlement.
+                </Typography>
+              )}
+            </Box>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Quantity</Typography>
@@ -1037,9 +1073,9 @@ const Orders = () => {
                       </TableCell>
                       <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={600}>{formatCurrency(computeNetAmount(item.total_price, feeRates))}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
                         <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
-                          Gross {formatCurrency(item.total_price)}
+                          Net payout {formatCurrency(item.net_payout ?? computeNetAmount(item.total_price, feeRates))}
                         </Typography>
                         {(item.Order || item.order)?.coupon && Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
                            <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>

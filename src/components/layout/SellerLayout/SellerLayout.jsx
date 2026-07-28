@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -87,6 +87,10 @@ const SellerLayout = () => {
 
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  // Navigating in the same tick as closing the Menu can race with its exit
+  // transition/Popper repositioning, leaving a detached menu paper stuck on
+  // screen. Deferring the navigate() to the Menu's onExited avoids that.
+  const pendingNavigationRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchMe());
@@ -488,6 +492,14 @@ const SellerLayout = () => {
               keepMounted={false}
               disableScrollLock={true}
               marginThreshold={0}
+              TransitionProps={{
+                onExited: () => {
+                  if (pendingNavigationRef.current) {
+                    navigate(pendingNavigationRef.current);
+                    pendingNavigationRef.current = null;
+                  }
+                },
+              }}
               anchorOrigin={{
                 vertical: 'bottom',
                 horizontal: 'right',
@@ -625,8 +637,8 @@ const SellerLayout = () => {
 
               <Box
                 onClick={() => {
+                  pendingNavigationRef.current = '/notifications';
                   handleCloseNotifications();
-                  navigate('/notifications');
                 }}
                 sx={{
                   py: 1.5,
