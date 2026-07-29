@@ -161,6 +161,10 @@ function getOrderData(data, isSeller) {
       paymentStatus: order.payment?.status || order.payment_status || 'pending',
       shippingAmount: parseFloat(order.shipping_charge ?? order.shipping_amount ?? 0),
       coupon: order.coupon || null,
+      // Order-level discount is the authoritative source — seller-coupon discounts get
+      // baked into each item's total_price server-side, but admin-coupon discounts don't,
+      // so we can't rely on (unitPrice*qty - total_price) alone to detect a coupon.
+      discountAmount: parseFloat(order.discount_amount ?? 0) || 0,
     };
   }
   return {
@@ -174,6 +178,7 @@ function getOrderData(data, isSeller) {
     paymentStatus: data.payment || 'pending',
     shippingAmount: parseFloat(data.shippingAmount ?? data.shipping_amount ?? 0),
     coupon: data.coupon || null,
+    discountAmount: parseFloat(data.discountAmount ?? data.discount_amount ?? 0) || 0,
   };
 }
 
@@ -190,7 +195,16 @@ function taxRateLabel(taxRate, sameState) {
   return `IGST ${fmtPct(taxRate)}%`;
 }
 
-function getLineItems(data, isSeller, { sameState = false, hasCoupon = false } = {}) {
+// Mirrors taxRateLabel — CGST/SGST each carry half the tax amount, on their own line.
+function taxAmountLabel(taxAmount, sameState) {
+  if (sameState) {
+    const half = parseFloat((taxAmount / 2).toFixed(2));
+    return `${fmtRs(half)}\n${fmtRs(half)}`;
+  }
+  return fmtRs(taxAmount);
+}
+
+function getLineItems(data, isSeller, { sameState = false, discountAmount = 0 } = {}) {
   // Net Amount / Tax Amount are a straight percentage split of the selling price
   // (e.g. Rs.200 @ 5% GST → Tax Rs.10, Net Rs.190) — not backed out of the paid total.
   const calc = (amount, taxRate) => {
@@ -199,7 +213,7 @@ function getLineItems(data, isSeller, { sameState = false, hasCoupon = false } =
     return { net, tax };
   };
 
-  const buildItem = (item) => {
+  const describeItem = (item) => {
     const total = parseFloat(item.display_amount ?? item.dataValues?.display_amount ?? item.total_price ?? 0);
     const qty = item.quantity || 1;
     // Sequelize wraps in dataValues — check both levels
@@ -209,28 +223,43 @@ function getLineItems(data, isSeller, { sameState = false, hasCoupon = false } =
     // Selling price set by the seller on the product, snapshotted on the order item.
     const unitPrice = parseFloat((parseFloat(item.unit_price ?? item.dataValues?.unit_price ?? (total / qty)) || 0).toFixed(2));
     const gross = parseFloat((unitPrice * qty).toFixed(2));
-    const discount = hasCoupon ? Math.max(0, parseFloat((gross - total).toFixed(2))) : 0;
-    const { net, tax } = calc(gross, taxRate);
-    return {
-      name: prod.name || item.product?.name || 'Product',
-      hsn: String(hsn).trim(),
-      unitPrice,
-      discount,
-      qty,
-      net,
-      taxRate,
-      taxRateLabel: taxRateLabel(taxRate, sameState),
-      taxAmount: tax,
-      // Total Amount column = what the user actually paid for this line (post-discount).
-      total,
-    };
+    return { item, total, qty, prod, taxRate, hsn, unitPrice, gross };
   };
 
-  if (isSeller) {
-    return [buildItem(data)];
-  }
+  const rawItems = isSeller ? [data] : (data.rawItems || []);
+  const described = rawItems.map(describeItem);
+  const totalGross = described.reduce((s, d) => s + d.gross, 0);
 
-  return (data.rawItems || []).map(buildItem);
+  // Coupon discount lives on the order, not always on the item (seller-coupon discounts
+  // get baked into total_price server-side, admin-coupon ones don't) — so it's prorated
+  // here by each item's share of the order's gross value, remainder going to the last item.
+  let remainingDiscount = parseFloat((discountAmount || 0).toFixed(2));
+
+  return described.map((d, i) => {
+    const isLast = i === described.length - 1;
+    let discount = 0;
+    if (remainingDiscount > 0 && totalGross > 0) {
+      discount = isLast ? remainingDiscount : parseFloat(((d.gross / totalGross) * discountAmount).toFixed(2));
+      discount = Math.min(discount, remainingDiscount);
+      remainingDiscount = parseFloat((remainingDiscount - discount).toFixed(2));
+    }
+    const lineTotal = parseFloat((d.gross - discount).toFixed(2));
+    const { net, tax } = calc(d.gross, d.taxRate);
+    return {
+      name: d.prod.name || d.item.product?.name || 'Product',
+      hsn: String(d.hsn).trim(),
+      unitPrice: d.unitPrice,
+      discount,
+      qty: d.qty,
+      net,
+      taxRate: d.taxRate,
+      taxRateLabel: taxRateLabel(d.taxRate, sameState),
+      taxAmount: tax,
+      taxAmountLabel: taxAmountLabel(tax, sameState),
+      // Total Amount column = what the user actually paid for this line (post-discount).
+      total: lineTotal,
+    };
+  });
 }
 
 // ─── PDF sections ─────────────────────────────────────────────────────────────
@@ -338,7 +367,7 @@ function drawItemsTable(doc, y, items, shippingAmount = 0) {
     item.qty,
     fmtRs(item.net),
     item.taxRateLabel,
-    fmtRs(item.taxAmount),
+    item.taxAmountLabel,
     fmtRs(item.total),
   ]);
 
@@ -352,7 +381,7 @@ function drawItemsTable(doc, y, items, shippingAmount = 0) {
       'Net\nAmount', 'Tax\nRate', 'Tax\nAmount', 'Total\nAmount']],
     body: rows,
     foot: [
-      ['', '', '', '', '', '', 'Shipment:', '', { content: fmtRs(shippingAmount), styles: { halign: 'center' } }],
+      ['', 'Shipment:', '', '', '', '', '', '', { content: fmtRs(shippingAmount), styles: { halign: 'center' } }],
       ['', '', '', '', '', '', 'TOTAL:',
         { content: fmtRs(totalTax), styles: { halign: 'right' } },
         { content: fmtRs(grandTotal), styles: { halign: 'center' } }],
@@ -494,7 +523,7 @@ export async function generateInvoice(data, isSeller = false) {
   const orderData = getOrderData(data, isSeller);
   const sameState = !!(seller.state && orderData.state) &&
     seller.state.trim().toLowerCase() === orderData.state.trim().toLowerCase();
-  const items = getLineItems(data, isSeller, { sameState, hasCoupon: !!orderData.coupon });
+  const items = getLineItems(data, isSeller, { sameState, discountAmount: orderData.discountAmount });
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
