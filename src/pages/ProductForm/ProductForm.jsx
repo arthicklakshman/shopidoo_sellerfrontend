@@ -404,7 +404,9 @@ const ProductForm = () => {
   };
 
   const productRules = IMAGE_RULES.product;
-  const productSizeReq = `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`;
+  const productSizeReq = productRules.minSize && productRules.minSize > 0
+    ? `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`
+    : `Max ${formatBytes(productRules.maxSize)}`;
   const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px (1:1 Ratio)`;
 
   // â”€â”€ Hooks must all be at top level, before any early returns â”€â”€
@@ -1116,7 +1118,7 @@ const renderAttributeField = (attribute) => {
     }
   };
 
-  // â”€â”€ Early return AFTER all hooks â”€â”€
+  // ── Early return AFTER all hooks ──
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
@@ -1175,7 +1177,38 @@ const renderAttributeField = (attribute) => {
                   />
 
                   <Grid container spacing={2}>
-                    {/* â”€â”€ Selling Price + commission hint â”€â”€ */}
+                    {/* ── GST & HSN Fields ── */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="HSN Code"
+                        value={form.hsn_code}
+                        onChange={handleChange('hsn_code')}
+                        fullWidth required
+                        placeholder="e.g. 6404"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel>GST Rate (%)</InputLabel>
+                         <Select
+                           value={form.gst_rate}
+                           label="GST Rate (%)"
+                           onChange={handleChange('gst_rate')}
+                           MenuProps={menuPropsDownward}
+                         >
+                          <MenuItem value="">Select GST Rate</MenuItem>
+                          <MenuItem value={0}>0%</MenuItem>
+                          <MenuItem value={3}>3%</MenuItem>
+                          <MenuItem value={5}>5%</MenuItem>
+                          <MenuItem value={12}>12%</MenuItem>
+                          <MenuItem value={18}>18%</MenuItem>
+                          <MenuItem value={28}>28%</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* ── Selling Price + commission hint ── */}
                     <Grid item xs={12} sm={6}>
                       <TextField
                         label="Selling Price (₹)"
@@ -1251,7 +1284,7 @@ const renderAttributeField = (attribute) => {
                       </FormControl>
                     </Grid>
 
-                    {/* â”€â”€ Category Selection â”€â”€ */}
+                    {/* ── Category Selection ── */}
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth required>
                         <InputLabel id="cat-label">Category</InputLabel>
@@ -1322,37 +1355,6 @@ const renderAttributeField = (attribute) => {
                         </FormControl>
                       </Grid>
                     )}
-
-                    {/* GST Fields */}
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label="HSN Code"
-                        value={form.hsn_code}
-                        onChange={handleChange('hsn_code')}
-                        fullWidth required
-                        placeholder="e.g. 6404"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth required>
-                        <InputLabel>GST Rate (%)</InputLabel>
-                         <Select
-                           value={form.gst_rate}
-                           label="GST Rate (%)"
-                           onChange={handleChange('gst_rate')}
-                           MenuProps={menuPropsDownward}
-                         >
-                          <MenuItem value="">Select GST Rate</MenuItem>
-                          <MenuItem value={0}>0%</MenuItem>
-                          <MenuItem value={3}>3%</MenuItem>
-                          <MenuItem value={5}>5%</MenuItem>
-                          <MenuItem value={12}>12%</MenuItem>
-                          <MenuItem value={18}>18%</MenuItem>
-                          <MenuItem value={28}>28%</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
 
                     {/* Weight and Dimensions */}
                     <Grid item xs={12} sm={6}>
