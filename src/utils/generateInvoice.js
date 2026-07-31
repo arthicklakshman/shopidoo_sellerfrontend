@@ -4,9 +4,9 @@ import SHOPIDOO_LOGO from '../assets/Shopidoo_logo.png';
 // ─── Shopidoo constants ───────────────────────────────────────────────────────
 const SHOPIDOO = {
   name: 'Shopidoo',
-  city: 'Nagercoil',
-  gst: '33AABCS1234E1ZK',
-  pan: 'AABCS1234E',
+  city: 'Nagercoil, Tamil Nadu',
+  gst: '33FRZPP8892N1Z7',
+  pan: 'FRZPP8892N',
 };
 
 // ─── Layout / colour tokens ──────────────────────────────────────────────────
@@ -47,6 +47,17 @@ function txt(doc, text, x, y, { color = BLACK, align = 'left', size = 8 } = {}) 
 
 function wrap(doc, text, maxWidth) {
   return doc.splitTextToSize(String(text ?? ''), maxWidth);
+}
+
+// Bold grey label followed by the value on the same line — value never wraps below the label.
+function labelValueLine(doc, label, value, x, y) {
+  sf(doc, 'bold', 7.5);
+  doc.setTextColor(...GREY_TX);
+  doc.text(label, x, y);
+  const labelW = doc.getTextWidth(label) + 1.5;
+  sf(doc, 'normal', 8);
+  doc.setTextColor(...DARK);
+  doc.text(String(value ?? ''), x + labelW, y);
 }
 
 function fmtDate(val) {
@@ -130,6 +141,7 @@ function getSellerProfile(data, isSeller) {
     address: addrString(s.address || s.gst_address) || structuredAddr,
     pan: s.panNumber || s.pan_number || s.pan || '',
     gst: s.gstNumber || s.gst_number || s.gst || '',
+    state: s.state || s.gst_state || '',
     signatureUrl: s.signatureImage || s.signature_url || s.signatureUrl || null,
   };
 }
@@ -137,14 +149,22 @@ function getSellerProfile(data, isSeller) {
 function getOrderData(data, isSeller) {
   if (isSeller) {
     const order = data?.Order || data?.order || {};
+    const addr = order.address || data.address;
     return {
       orderNumber: order.order_number || `ORD${String(data.id || '').padStart(5, '0')}`,
       orderDate: data.created_at || order.created_at,
       invoiceDate: data.created_at || order.created_at,
       customer: order.user?.name || 'Customer',
-      address: addrString(order.address || data.address),
+      address: addrString(addr),
+      state: (addr && typeof addr === 'object') ? (addr.state || '') : '',
       paymentMethod: order.payment?.payment_method || order.payment_method || '',
       paymentStatus: order.payment?.status || order.payment_status || 'pending',
+      shippingAmount: parseFloat(order.shipping_charge ?? order.shipping_amount ?? 0),
+      coupon: order.coupon || null,
+      // Order-level discount is the authoritative source — seller-coupon discounts get
+      // baked into each item's total_price server-side, but admin-coupon discounts don't,
+      // so we can't rely on (unitPrice*qty - total_price) alone to detect a coupon.
+      discountAmount: parseFloat(order.discount_amount ?? 0) || 0,
     };
   }
   return {
@@ -153,56 +173,91 @@ function getOrderData(data, isSeller) {
     invoiceDate: data.createdAt || data.created_at,
     customer: data.customer || '',
     address: addrString(data.address),
+    state: (data.address && typeof data.address === 'object') ? (data.address.state || '') : (data.state || ''),
     paymentMethod: data.paymentMethod || '',
     paymentStatus: data.payment || 'pending',
+    shippingAmount: parseFloat(data.shippingAmount ?? data.shipping_amount ?? 0),
+    coupon: data.coupon || null,
+    discountAmount: parseFloat(data.discountAmount ?? data.discount_amount ?? 0) || 0,
   };
 }
 
-function getLineItems(data, isSeller) {
-  const calc = (totalPrice, taxRate) => {
-    const tax = parseFloat((totalPrice - totalPrice / (1 + taxRate / 100)).toFixed(2));
-    const net = parseFloat((totalPrice - tax).toFixed(2));
+// Same state → tax splits into CGST + SGST halves; different state → single IGST line.
+function fmtPct(n) {
+  return (Math.round(n * 100) / 100).toString();
+}
+
+function taxRateLabel(taxRate, sameState) {
+  if (sameState) {
+    const half = taxRate / 2;
+    return `CGST ${fmtPct(half)}%\nSGST ${fmtPct(half)}%`;
+  }
+  return `IGST ${fmtPct(taxRate)}%`;
+}
+
+// Mirrors taxRateLabel — CGST/SGST each carry half the tax amount, on their own line.
+function taxAmountLabel(taxAmount, sameState) {
+  if (sameState) {
+    const half = parseFloat((taxAmount / 2).toFixed(2));
+    return `${fmtRs(half)}\n${fmtRs(half)}`;
+  }
+  return fmtRs(taxAmount);
+}
+
+function getLineItems(data, isSeller, { sameState = false, discountAmount = 0 } = {}) {
+  // Net Amount / Tax Amount are a straight percentage split of the selling price
+  // (e.g. Rs.200 @ 5% GST → Tax Rs.10, Net Rs.190) — not backed out of the paid total.
+  const calc = (amount, taxRate) => {
+    const tax = parseFloat((amount * taxRate / 100).toFixed(2));
+    const net = parseFloat((amount - tax).toFixed(2));
     return { net, tax };
   };
 
-  if (isSeller) {
-    const total = parseFloat(data.display_amount ?? data.dataValues?.display_amount ?? data.total_price ?? 0);
-    const qty = data.quantity || 1;
-    // Sequelize wraps in dataValues — check both levels
-    const prod = data.product?.dataValues || data.product || {};
-    const taxRate = parseFloat(prod.gst_rate ?? prod.tax_rate ?? 18);
-    const { net, tax } = calc(total, taxRate);
-    const hsn = prod.hsn_code || prod.hsn || '';
-    return [{
-      name: prod.name || data.product?.name || 'Product',
-      hsn: String(hsn).trim(),
-      unitPrice: parseFloat((total / qty).toFixed(2)),
-      discount: 0,
-      qty,
-      net,
-      taxRate,
-      taxAmount: tax,
-      total,
-    }];
-  }
-
-  return (data.rawItems || []).map(item => {
+  const describeItem = (item) => {
     const total = parseFloat(item.display_amount ?? item.dataValues?.display_amount ?? item.total_price ?? 0);
     const qty = item.quantity || 1;
+    // Sequelize wraps in dataValues — check both levels
     const prod = item.product?.dataValues || item.product || {};
     const taxRate = parseFloat(prod.gst_rate ?? prod.tax_rate ?? 18);
-    const { net, tax } = calc(total, taxRate);
     const hsn = prod.hsn_code || prod.hsn || '';
+    // Selling price set by the seller on the product, snapshotted on the order item.
+    const unitPrice = parseFloat((parseFloat(item.unit_price ?? item.dataValues?.unit_price ?? (total / qty)) || 0).toFixed(2));
+    const gross = parseFloat((unitPrice * qty).toFixed(2));
+    return { item, total, qty, prod, taxRate, hsn, unitPrice, gross };
+  };
+
+  const rawItems = isSeller ? [data] : (data.rawItems || []);
+  const described = rawItems.map(describeItem);
+  const totalGross = described.reduce((s, d) => s + d.gross, 0);
+
+  // Coupon discount lives on the order, not always on the item (seller-coupon discounts
+  // get baked into total_price server-side, admin-coupon ones don't) — so it's prorated
+  // here by each item's share of the order's gross value, remainder going to the last item.
+  let remainingDiscount = parseFloat((discountAmount || 0).toFixed(2));
+
+  return described.map((d, i) => {
+    const isLast = i === described.length - 1;
+    let discount = 0;
+    if (remainingDiscount > 0 && totalGross > 0) {
+      discount = isLast ? remainingDiscount : parseFloat(((d.gross / totalGross) * discountAmount).toFixed(2));
+      discount = Math.min(discount, remainingDiscount);
+      remainingDiscount = parseFloat((remainingDiscount - discount).toFixed(2));
+    }
+    const lineTotal = parseFloat((d.gross - discount).toFixed(2));
+    const { net, tax } = calc(d.gross, d.taxRate);
     return {
-      name: prod.name || item.product?.name || 'Product',
-      hsn: String(hsn).trim(),
-      unitPrice: parseFloat((total / qty).toFixed(2)),
-      discount: 0,
-      qty,
+      name: d.prod.name || d.item.product?.name || 'Product',
+      hsn: String(d.hsn).trim(),
+      unitPrice: d.unitPrice,
+      discount,
+      qty: d.qty,
       net,
-      taxRate,
+      taxRate: d.taxRate,
+      taxRateLabel: taxRateLabel(d.taxRate, sameState),
       taxAmount: tax,
-      total,
+      taxAmountLabel: taxAmountLabel(tax, sameState),
+      // Total Amount column = what the user actually paid for this line (post-discount).
+      total: lineTotal,
     };
   });
 }
@@ -282,38 +337,27 @@ function drawBoxes(doc, startY, seller, od) {
 
   // ── ROW 3: BOX 5 Order Details | BOX 6 Invoice + Payment ──────────────────
   const row3Y = row2Y + bH + gap;
-  const smH = 26;
+  const smH = 30;
 
   box(doc, lX, row3Y, COL_W, smH);
   txt(doc, 'Order Details', lX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
-  sf(doc, 'bold', 7.5);
-  txt(doc, 'Order Number :', lX + 3, row3Y + 12, { color: GREY_TX, size: 7.5 });
-  sf(doc, 'normal', 8);
-  txt(doc, od.orderNumber, lX + 3, row3Y + 18, { color: DARK, size: 8 });
-  sf(doc, 'bold', 7.5);
-  txt(doc, 'Order Date :', lX + COL_W / 2, row3Y + 12, { color: GREY_TX, size: 7.5 });
-  sf(doc, 'normal', 8);
-  txt(doc, fmtDate(od.orderDate), lX + COL_W / 2, row3Y + 18, { color: DARK, size: 8 });
+  labelValueLine(doc, 'Order Number :', od.orderNumber, lX + 3, row3Y + 12);
+  labelValueLine(doc, 'Order Date :', fmtDate(od.orderDate), lX + 3, row3Y + 18);
 
   box(doc, rX, row3Y, COL_W, smH);
   txt(doc, 'Invoice Details', rX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
-  sf(doc, 'bold', 7.5);
-  txt(doc, 'Invoice Number :', rX + 3, row3Y + 12, { color: GREY_TX, size: 7.5 });
-  sf(doc, 'normal', 8);
-  txt(doc, `INV-${od.orderNumber}`, rX + 3, row3Y + 18, { color: DARK, size: 8 });
-  sf(doc, 'bold', 7.5);
-  txt(doc, 'Invoice Date :', rX + COL_W / 2 - 4, row3Y + 12, { color: GREY_TX, size: 7.5 });
-  sf(doc, 'normal', 8);
-  txt(doc, fmtDate(od.invoiceDate), rX + COL_W / 2 - 4, row3Y + 18, { color: DARK, size: 8 });
+  labelValueLine(doc, 'Invoice Number :', `INV-${od.orderNumber}`, rX + 3, row3Y + 12);
+  labelValueLine(doc, 'Invoice Date :', fmtDate(od.invoiceDate), rX + 3, row3Y + 18);
 
-  hline(doc, rX + 2, row3Y + 21, rX + COL_W - 2);
-  sf(doc, 'bold', 7.5);
-  txt(doc, `Payment Mode : ${fmtPayment(od.paymentMethod)}`, rX + 3, row3Y + 25, { color: DARK, size: 7.5 });
+  hline(doc, rX + 2, row3Y + 22, rX + COL_W - 2);
+  labelValueLine(doc, 'Payment Mode :', fmtPayment(od.paymentMethod), rX + 3, row3Y + 27);
 
   return row3Y + smH + gap;
 }
 
-function drawItemsTable(doc, y, items) {
+function drawItemsTable(doc, y, items, shippingAmount = 0) {
+  // Total Amount per line is the product price only (post-coupon). Shipment is
+  // order-level, so it gets its own summary row below the items instead of a column.
   const rows = items.map((item, i) => [
     i + 1,
     // HSN shown on second line under product name
@@ -322,21 +366,26 @@ function drawItemsTable(doc, y, items) {
     fmtRs(item.discount),
     item.qty,
     fmtRs(item.net),
-    `${item.taxRate}%`,
-    'GST',
-    fmtRs(item.taxAmount),
+    item.taxRateLabel,
+    item.taxAmountLabel,
     fmtRs(item.total),
   ]);
 
   const totalTax = items.reduce((s, i) => s + i.taxAmount, 0);
-  const grandTotal = items.reduce((s, i) => s + i.total, 0);
+  const productTotal = items.reduce((s, i) => s + i.total, 0);
+  const grandTotal = parseFloat((productTotal + shippingAmount).toFixed(2));
 
   autoTable(doc, {
     startY: y,
     head: [['Sl.\nNo', 'Description', 'Unit\nPrice', 'Discount', 'Qty',
-      'Net\nAmount', 'Tax\nRate', 'Tax\nType', 'Tax\nAmount', 'Total\nAmount']],
+      'Net\nAmount', 'Tax\nRate', 'Tax\nAmount', 'Total\nAmount']],
     body: rows,
-    foot: [['', '', '', '', '', '', '', 'TOTAL:', fmtRs(totalTax), fmtRs(grandTotal)]],
+    foot: [
+      ['', 'Shipment:', '', '', '', '', '', '', { content: fmtRs(shippingAmount), styles: { halign: 'center' } }],
+      ['', '', '', '', '', '', 'TOTAL:',
+        { content: fmtRs(totalTax), styles: { halign: 'right' } },
+        { content: fmtRs(grandTotal), styles: { halign: 'center' } }],
+    ],
     theme: 'grid',
     styles: {
       fontSize: 7.5,
@@ -367,15 +416,14 @@ function drawItemsTable(doc, y, items) {
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 8 },
-      1: { cellWidth: 44 },
+      1: { cellWidth: 43 },
       2: { halign: 'right', cellWidth: 19 },
       3: { halign: 'right', cellWidth: 16 },
-      4: { halign: 'center', cellWidth: 10 },
+      4: { halign: 'center', cellWidth: 12 },
       5: { halign: 'right', cellWidth: 20 },
-      6: { halign: 'center', cellWidth: 12 },
-      7: { halign: 'center', cellWidth: 11 },
-      8: { halign: 'right', cellWidth: 18 },
-      9: { halign: 'right', cellWidth: 28 },
+      6: { halign: 'center', cellWidth: 20 },
+      7: { halign: 'right', cellWidth: 18 },
+      8: { halign: 'center', cellWidth: 30 },
     },
     margin: { left: MARGIN, right: MARGIN },
   });
@@ -383,8 +431,8 @@ function drawItemsTable(doc, y, items) {
   return doc.lastAutoTable.finalY + 4;
 }
 
-async function drawFooter(doc, y, items, seller) {
-  const grandTotal = items.reduce((s, i) => s + i.total, 0);
+async function drawFooter(doc, y, items, seller, shippingAmount = 0) {
+  const grandTotal = items.reduce((s, i) => s + i.total, 0) + shippingAmount;
 
   // Amount in words
   const wH = 13;
@@ -473,14 +521,16 @@ export async function generateInvoice(data, isSeller = false) {
 
   const seller = getSellerProfile(data, isSeller);
   const orderData = getOrderData(data, isSeller);
-  const items = getLineItems(data, isSeller);
+  const sameState = !!(seller.state && orderData.state) &&
+    seller.state.trim().toLowerCase() === orderData.state.trim().toLowerCase();
+  const items = getLineItems(data, isSeller, { sameState, discountAmount: orderData.discountAmount });
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   let y = drawHeader(doc);
   y = drawBoxes(doc, y, seller, orderData);
-  y = drawItemsTable(doc, y, items);
-  y = await drawFooter(doc, y, items, seller);
+  y = drawItemsTable(doc, y, items, orderData.shippingAmount);
+  y = await drawFooter(doc, y, items, seller, orderData.shippingAmount);
   drawNotice(doc, y);
 
   doc.save(`INV-${orderData.orderNumber}.pdf`);

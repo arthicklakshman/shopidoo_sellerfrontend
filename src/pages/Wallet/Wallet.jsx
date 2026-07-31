@@ -1047,7 +1047,19 @@ export default function Wallet() {
     try {
       const res = await api.get(`${BASE}/${id}/invoice`);
       if (res.data && res.data.url) {
-        window.open(res.data.url, "_blank");
+        // Fetch the PDF as a blob and trigger a real file save (same as the
+        // order invoice's jsPDF doc.save()) instead of opening it in a new tab.
+        const fileRes = await fetch(res.data.url, { credentials: "include" });
+        if (!fileRes.ok) throw new Error("Invoice fetch failed");
+        const blob = await fileRes.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `Payout-Invoice-${id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
       }
     } catch (err) {
       dispatch(showToast({ message: "Failed to download invoice", severity: "error" }));

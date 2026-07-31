@@ -736,6 +736,8 @@ import { getErrorMessage } from '../../utils/getErrorMessage';
 import EmptyState from '../../components/common/EmptyState/EmptyState';
 import api from '../../services/api';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
+import { getAssetUrl } from '../../utils/getAssetUrl';
+
 
 const PRODUCT_STATUSES = ['pending', 'approved', 'blocked'];
 
@@ -1214,7 +1216,7 @@ const Products = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
                           <Avatar
                             variant="rounded"
-                            src={product.images?.[0]?.image_url}
+                            src={getAssetUrl(product.images?.[0]?.image_url)}
                             imgProps={{ style: { objectFit: 'contain' } }}
                             sx={{
                               width: 40,
