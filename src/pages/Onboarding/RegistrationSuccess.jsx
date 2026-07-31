@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import {
   Box,
   Typography,
@@ -27,7 +28,7 @@ import GradientButton from '../../components/shared/GradientButton/GradientButto
 
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { logoutSeller } from '../../features/auth/authSlice';
+import { logoutSeller, fetchMe } from '../../features/auth/authSlice';
 
 const USER_FRONTEND_URL = import.meta.env.VITE_USER_FRONTEND_URL || 'http://localhost:5173/';
 
@@ -74,7 +75,18 @@ export default function RegistrationSuccess() {
 
 
   const navigate = useNavigate();
-  const { user } = useSelector((s) => s.auth);
+const dispatch = useDispatch();
+const { user } = useSelector((s) => s.auth);
+
+useEffect(() => {
+  dispatch(fetchMe());
+}, [dispatch]);
+
+useEffect(() => {
+  if (user?.seller_status === 'approved') {
+    navigate('/dashboard', { replace: true });
+  }
+}, [user, navigate]);
 
   const handleReturnToShop = () => {
     window.location.assign(USER_FRONTEND_URL);

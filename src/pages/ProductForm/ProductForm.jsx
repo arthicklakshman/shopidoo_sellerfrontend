@@ -412,9 +412,17 @@ const ProductForm = () => {
 
   const mrpWarning = useMemo(() => {
     const selling = parseFloat(form.price) || 0;
-    const mrp = parseFloat(form.compare_price) || 0;
     const comm = commission ?? 0;
-    if (mrp > 0 && mrp <= selling + comm) {
+
+    // Only skip validation if the field is genuinely empty (not 0)
+    if (form.compare_price === '' || form.compare_price === null || form.compare_price === undefined) {
+      return null;
+    }
+
+    const mrp = parseFloat(form.compare_price);
+    if (isNaN(mrp)) return null;
+
+    if (mrp <= selling + comm) {
       return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + platform fees ₹${comm})`;
     }
     return null;
@@ -1013,6 +1021,14 @@ const renderAttributeField = (attribute) => {
     if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform fees.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
+
+    if (form.compare_price !== '' && form.compare_price !== null && form.compare_price !== undefined) {
+      const mrpNum = parseFloat(form.compare_price);
+      if (isNaN(mrpNum) || mrpNum <= 0) {
+        setError('MRP / Compare Price must be greater than 0.');
+        return;
+      }
+    }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
 
     if ((images.length + newFiles.length + totalColorFiles) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
@@ -1030,6 +1046,10 @@ const renderAttributeField = (attribute) => {
     }
     if (!form.hsn_code?.trim()) { setError('Please enter an HSN Code.'); return; }
     if (!form.gst_rate) { setError('Please select a GST Rate.'); return; }
+    if (!form.weight || parseFloat(form.weight) <= 0) { setError('Please enter a valid weight greater than 0.'); return; }
+    if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
+    if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
+    if (!form.height || parseFloat(form.height) <= 0) { setError('Please enter a valid height greater than 0.'); return; }
     if (shippingPreference === 'self') {
       if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
         setError('Please enter a delivery charge for fixed delivery.');

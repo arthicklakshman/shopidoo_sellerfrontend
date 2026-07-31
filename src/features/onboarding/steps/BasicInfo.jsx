@@ -27,6 +27,7 @@ import NavigationButtons from '../components/NavigationButtons';
 import GradientButton from '../../../components/shared/GradientButton/GradientButton';
 import OtpModal from '../../../components/shared/OtpModal/OtpModal';
 import onboardingOne from '../../../assets/onboarding_one.jpg';
+import { authService } from '../../../services/auth.service';
 
 const StyledInputLabel = ({ children, required }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -344,12 +345,12 @@ const handleSendOtp = async (type) => {
           // If the user already exists (409 Conflict), try to log them in with the password they provided
           if (regErr.response?.status === 409) {
             try {
-              const loginResp = await api.post('/auth/login', { 
-                email: formData.email, 
-                password: formData.password,
-                role: 'seller'
-              });
-              response = loginResp;
+              const loginResp = await authService.login({ 
+              email: formData.email, 
+              password: formData.password,
+              role: 'seller'
+             });
+             response = loginResp;
             } catch (loginErr) {
               // If login also fails, throw the original registration error or a custom one
               throw new Error("This email is already registered. Please check your password or use the Login page.");

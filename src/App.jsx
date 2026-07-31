@@ -1,17 +1,26 @@
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { ThemeProvider, CssBaseline, GlobalStyles, Box } from '@mui/material';
-import { useSelector } from 'react-redux';
+import {   useDispatch,useSelector } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { lightTheme, darkTheme } from './theme/theme';
 import AppRouter from './router/index';
+import { fetchMe } from './features/auth/authSlice';
 
 // Change this single value to control the zoom-out level.
 // 0.8 = 80% size (what you had with zoom: 0.8)
 const APP_SCALE = 0.8;
 
 const App = () => {
-  const { themeMode } = useSelector((s) => s.ui);
+const dispatch = useDispatch();
+const { themeMode } = useSelector((s) => s.ui);
+const { isAuthenticated } = useSelector((s) => s.auth);
+
+useEffect(() => {
+  if (isAuthenticated) {
+    dispatch(fetchMe());
+  }
+}, []);
   const theme = useMemo(() => (themeMode === 'dark' ? darkTheme : lightTheme), [themeMode]);
 
   return (
