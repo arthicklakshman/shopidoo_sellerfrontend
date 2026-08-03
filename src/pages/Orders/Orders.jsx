@@ -180,14 +180,14 @@ const StatusBadge = ({ label, colorMap }) => {
 const getNextStatuses = (currentStatus, isSelf = false) => {
   if (!currentStatus) return [];
   const s = currentStatus.toLowerCase();
-  if(s==="pending") return ["confirmed"];
-  if(s==="confirmed") return ["packed"];
-  if(s==="packed") return isSelf ? [] : ["ready_to_ship"];
-  if(s==="processing") return ["shipped"];
-  if(s==="ready_to_ship") return []; // Platform shipments stop manual updates here
-  if(s==="shipped") return isSelf ? ["in_transit"] : [];
-  if(s==="in_transit") return isSelf ? ["delivered"] : [];
-  if(s==="return_requested") return [];
+  if (s === "pending") return ["confirmed"];
+  if (s === "confirmed") return ["packed"];
+  if (s === "packed") return isSelf ? [] : ["ready_to_ship"];
+  if (s === "processing") return ["shipped"];
+  if (s === "ready_to_ship") return []; // Platform shipments stop manual updates here
+  if (s === "shipped") return isSelf ? ["in_transit"] : [];
+  if (s === "in_transit") return isSelf ? ["delivered"] : [];
+  if (s === "return_requested") return [];
   return [];
 };
 
@@ -1055,63 +1055,64 @@ const Orders = () => {
                     </TableRow>
                   )
                   : orders.map((item) => {
-                      const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
-                      const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
-                      
-                      return (
-                    <TableRow key={item.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                         {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
-                        </Typography>
-                      </TableCell>
-                      <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {(item.Order || item.order)?.user?.name || '—'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
-                        <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
-                          Net payout {formatCurrency(item.net_payout ?? computeNetAmount(item.total_price, feeRates))}
-                        </Typography>
-                        {(item.Order || item.order)?.coupon && Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
-                           <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
-                             {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
-                           </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
-                      <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
-                      <TableCell>
-                        <Tooltip title="View Details">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedOrder({
-                                itemId: item.id,
-                                orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
-                                customer: (item.Order || item.order)?.user?.name || '-',
-                                product: item.product?.name || '-',
-                                quantity: item.quantity,
-                                amount: item.total_price,
-                                status: displayStatus,
-                                createdAt: item.created_at,
-                                address: (item.Order || item.order)?.address,
-                                rawItem: item
-                              });
-                              setDialogOpen(true);
-                            }}
-                            sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
-                          >
-                            <VisibilityOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  )})
+                    const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
+                    const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
+
+                    return (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>
+                            {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
+                          </Typography>
+                        </TableCell>
+                        <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>{item.product?.name}</Typography></TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {(item.Order || item.order)?.user?.name || '—'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell><Typography variant="body2">{item.quantity}</Typography></TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>{formatCurrency(item.total_price)}</Typography>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
+                            Net payout {formatCurrency(item.net_payout ?? computeNetAmount(item.total_price, feeRates))}
+                          </Typography>
+                          {(item.Order || item.order)?.coupon && Number(item.unit_price) * Number(item.quantity) - Number(item.total_price) > 0.01 && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap' }}>
+                              {formatCurrency(Number(item.unit_price) * Number(item.quantity))} - {formatCurrency((Number(item.unit_price) * Number(item.quantity)) - Number(item.total_price))} (Coupon)
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell><Typography variant="body2">{formatDate(item.created_at)}</Typography></TableCell>
+                        <TableCell><OrderStatusChip status={displayStatus} /></TableCell>
+                        <TableCell>
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedOrder({
+                                  itemId: item.id,
+                                  orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
+                                  customer: (item.Order || item.order)?.user?.name || '-',
+                                  product: item.product?.name || '-',
+                                  quantity: item.quantity,
+                                  amount: item.total_price,
+                                  status: displayStatus,
+                                  createdAt: item.created_at,
+                                  address: (item.Order || item.order)?.address,
+                                  rawItem: item
+                                });
+                                setDialogOpen(true);
+                              }}
+                              sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
+                            >
+                              <VisibilityOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
               }
             </TableBody>
           </Table>

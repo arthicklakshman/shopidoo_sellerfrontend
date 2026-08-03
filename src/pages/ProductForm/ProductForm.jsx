@@ -394,6 +394,7 @@ const ProductForm = () => {
   const [loading, setLoading] = useState(isEdit);
   const [error, setError] = useState('');
   const [imageErrs, setImageErrs] = useState([]);
+  const [nameError, setNameError] = useState('');
 
   // Dynamic helper strings for UI rendering
   const formatBytes = (bytes) => {
@@ -534,7 +535,18 @@ const ProductForm = () => {
     }
   }, [colorGroups, variants, isFashionVariantCategory]);
 
-  const handleChange = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const handleChange = (key) => (e) => {
+    let value = e.target.value;
+    if (key === 'name') {
+      if (/[^a-zA-Z\s]/.test(value)) {
+        setNameError('Only letters and spaces are allowed. Numbers and special characters are not allowed.');
+        value = value.replace(/[^a-zA-Z\s]/g, '');
+      } else {
+        setNameError('');
+      }
+    }
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleAttributeChange = (attributeId) => (e) => {
     setAttributeValues(prev => ({ ...prev, [String(attributeId)]: e.target.value }));
@@ -1013,6 +1025,8 @@ const renderAttributeField = (attribute) => {
     }
 
     if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform fees.'); return; }
+    if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
+    if (/[^a-zA-Z\s]/.test(form.name.trim())) { setError('Product name can only contain letters and spaces.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
@@ -1163,7 +1177,12 @@ const renderAttributeField = (attribute) => {
                     value={form.name}
                     onChange={handleChange('name')}
                     fullWidth required
-                    placeholder="e.g. Running Shoes - Blue"
+                    placeholder="e.g. Running Shoes"
+                    error={!!nameError}
+                    helperText={nameError || "Only letters and spaces are allowed"}
+                    FormHelperTextProps={{
+                      sx: { color: nameError ? 'error.main' : 'text.secondary', fontWeight: nameError ? 600 : 400 }
+                    }}
                     sx={{ mb: 2 }}
                   />
 

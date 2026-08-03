@@ -410,8 +410,15 @@ const SellerReturns = () => {
                 </TableCell>
 
                 <TableCell>
-                  <Typography variant="body2" fontWeight={700}>
-                    {formatCurrency(req.order?.total_amount || req.orderItem?.total_price || req.product?.price || 0)}
+                  <Typography variant="body2" fontWeight={700} color="primary.main">
+                    {formatCurrency(
+                      typeof req.seller_wallet_amount === 'object'
+                        ? req.seller_wallet_amount.netAmount
+                        : (req.seller_wallet_amount || req.net_payout || req.orderItem?.total_price || req.order?.total_amount || 0)
+                    )}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Net Wallet (Gross: {formatCurrency(req.gross_amount || req.orderItem?.total_price || req.order?.total_amount || 0)})
                   </Typography>
                 </TableCell>
 
