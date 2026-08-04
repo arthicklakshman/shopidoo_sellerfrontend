@@ -77,6 +77,10 @@ const emptyForm = {
   length: '',
   breadth: '',
   height: '',
+  product_weight: '',
+  product_length: '',
+  product_breadth: '',
+  product_height: '',
   custom_category: '',
   gst_rate: '',
   warranty_type: '',
@@ -404,20 +408,24 @@ const ProductForm = () => {
     return `${Math.round(bytes / 1024)} KB`;
   };
 
-  const productRules = IMAGE_RULES.product;
   const productSizeReq = productRules.minSize && productRules.minSize > 0
     ? `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`
     : `Max ${formatBytes(productRules.maxSize)}`;
   const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px (1:1 Ratio)`;
 
-  // â”€â”€ Hooks must all be at top level, before any early returns â”€â”€
+  // ── Hooks must all be at top level, before any early returns ──
   const { commission } = useCommissionHint(form.price);
-
   const mrpWarning = useMemo(() => {
     const selling = parseFloat(form.price) || 0;
-    const mrp = parseFloat(form.compare_price) || 0;
+    if (form.compare_price === '' || form.compare_price === null || form.compare_price === undefined) {
+      return null;
+    }
+
+    const mrp = parseFloat(form.compare_price);
+    if (isNaN(mrp)) return null;
+
     const comm = commission ?? 0;
-    if (mrp > 0 && mrp <= selling + comm) {
+    if (mrp <= selling + comm) {
       return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + platform fees ₹${comm})`;
     }
     return null;
@@ -477,6 +485,10 @@ const ProductForm = () => {
             length: p.length || '',
             breadth: p.breadth || '',
             height: p.height || '',
+            product_weight: p.product_weight || '',
+            product_length: p.product_length || '',
+            product_breadth: p.product_breadth || '',
+            product_height: p.product_height || '',
             hsn_code: p.hsn_code || '',
             gst_rate: p.gst_rate != null ? String(p.gst_rate) : '',
             custom_category: p.custom_category || '',
@@ -522,6 +534,12 @@ const ProductForm = () => {
       .then(({ data }) => setCategoryAttributes(data.data || []))
       .catch(() => setCategoryAttributes([]));
   }, [form.category_id, form.subcategory_id]);
+
+  useEffect(() => {
+    if (isFashionVariantCategory) return; // fashion uses colorGroups instead
+    generateVariants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantAttributeValues, categoryAttributes, isFashionVariantCategory]);
 
   useEffect(() => {
     let total = 0;
@@ -716,7 +734,7 @@ const renderAttributeField = (attribute) => {
         />
       );
     }
-    return (
+   return (
       <FormControl fullWidth>
         <InputLabel>{label} (Variant)</InputLabel>
          <Select
@@ -733,6 +751,11 @@ const renderAttributeField = (attribute) => {
             </MenuItem>
           ))}
         </Select>
+        {isWeightAttribute(attribute.name) || isVolumeAttribute(attribute.name) ? (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            Product's net weight/volume (e.g. 250g, 100ml) — not the same as shipping package weight below.
+          </Typography>
+        ) : null}
       </FormControl>
     );
   }
@@ -1024,7 +1047,7 @@ const renderAttributeField = (attribute) => {
       return;
     }
 
-    if (mrpWarning) { setError('MRP must be greater than Selling Price + Platform fees.'); return; }
+    if (mrpWarning) { setError(mrpWarning); return; }
     if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
     if (/[^a-zA-Z\s]/.test(form.name.trim())) { setError('Product name can only contain letters and spaces.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
@@ -1045,7 +1068,15 @@ const renderAttributeField = (attribute) => {
       return;
     }
     if (!form.hsn_code?.trim()) { setError('Please enter an HSN Code.'); return; }
-    if (!form.gst_rate) { setError('Please select a GST Rate.'); return; }
+    if (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) { setError('Please select a GST Rate.'); return; }
+    if (!form.weight || parseFloat(form.weight) <= 0) { setError('Please enter a valid weight greater than 0.'); return; }
+    if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
+    if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
+    if (!form.height || parseFloat(form.height) <= 0) { setError('Please enter a valid height greater than 0.'); return; }
+    if (!form.product_weight || parseFloat(form.product_weight) <= 0) { setError('Please enter a valid product weight greater than 0.'); return; }
+    if (!form.product_length || parseFloat(form.product_length) <= 0) { setError('Please enter a valid product length greater than 0.'); return; }
+    if (!form.product_breadth || parseFloat(form.product_breadth) <= 0) { setError('Please enter a valid product breadth greater than 0.'); return; }
+    if (!form.product_height || parseFloat(form.product_height) <= 0) { setError('Please enter a valid product height greater than 0.'); return; }
     if (shippingPreference === 'self') {
       if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
         setError('Please enter a delivery charge for fixed delivery.');
@@ -1075,6 +1106,10 @@ const renderAttributeField = (attribute) => {
         length: form.length ? parseFloat(form.length) : null,
         breadth: form.breadth ? parseFloat(form.breadth) : null,
         height: form.height ? parseFloat(form.height) : null,
+        product_weight: form.product_weight ? parseFloat(form.product_weight) : null,
+        product_length: form.product_length ? parseFloat(form.product_length) : null,
+        product_breadth: form.product_breadth ? parseFloat(form.product_breadth) : null,
+        product_height: form.product_height ? parseFloat(form.product_height) : null,
         delivery_type: shippingPreference === 'platform' ? 'free' : form.delivery_type,
         delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
         free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
@@ -1082,7 +1117,7 @@ const renderAttributeField = (attribute) => {
         shipping_rules: shippingPreference === 'platform' ? [] : shippingRules.filter(r => r.state),
         specifications: buildSpecifications(),
         hsn_code: form.hsn_code?.trim() || null,
-        gst_rate: form.gst_rate || null,
+        gst_rate: (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate,
         custom_category: form.custom_category?.trim() || null,
         warranty_type: form.warranty_type || null,
         warranty_duration: form.warranty_duration ? parseInt(form.warranty_duration) : null,
@@ -1095,7 +1130,7 @@ const renderAttributeField = (attribute) => {
           stock_quantity: parseInt(v.stock_quantity) || 0,
           custom_category: form.custom_category?.trim() || null,
           hsn_code: form.hsn_code?.trim() || null,
-          gst_rate: form.gst_rate || null,
+          gst_rate: (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate,
         })) : undefined,
       };
 
@@ -1132,6 +1167,10 @@ const renderAttributeField = (attribute) => {
     }
   };
 
+<<<<<<< HEAD
+=======
+  // â”€â”€ Early return AFTER all hooks â”€â”€
+>>>>>>> 6c9cd54 (aug 4 update)
   // ── Early return AFTER all hooks ──
   if (loading) {
     return (
@@ -1348,7 +1387,8 @@ const renderAttributeField = (attribute) => {
                       </Grid>
                     )}
 
-                    {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
+                    
+              {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
                       <Grid item xs={12} sm={6}>
                         <FormControl fullWidth>
                           <InputLabel id="subcat-label">Subcategory</InputLabel>
@@ -1374,27 +1414,72 @@ const renderAttributeField = (attribute) => {
                         </FormControl>
                       </Grid>
                     )}
+                  </Grid>
+                </CardContent>
+              </Card>
 
-                    {/* Weight and Dimensions */}
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Product Dimensions (Actual Size)</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    The real size of the product itself — helps buyers judge fit . Separate from the shipping package weight/dimensions above.
+                  </Typography>
+                  <Grid container spacing={2}>
+                   <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Product Weight (kg)"
+                        type="number"
+                        value={form.product_weight}
+                        onChange={handleChange('product_weight')}
+                        fullWidth
+                        required
+                        placeholder="e.g. 12.5"
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Product Size (L x B x H in cm) *
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <TextField size="small" placeholder="L" type="number" required value={form.product_length} onChange={handleChange('product_length')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="B" type="number" required value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="H" type="number" required value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} />
+                      </Box>
+                    </Grid> 
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Shipping Weight & Dimensions</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    The packed weight and size used to calculate courier/shipping charges — not the product's own size above.
+                  </Typography>
+                  <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <TextField
-                        label="Weight (kg)"
+                        label="Weight (kg) (For Shipment after package)"
                         type="number"
                         value={form.weight}
                         onChange={handleChange('weight')}
                         fullWidth
+                        required
                         placeholder="e.g. 0.5"
                         inputProps={{ min: 0, step: 0.001 }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Dimensions (L x B x H in cm)
+                        Dimensions (L x B x H in cm) (For Shipment after package) *
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <TextField size="small" placeholder="L" type="number" value={form.length} onChange={handleChange('length')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="B" type="number" value={form.breadth} onChange={handleChange('breadth')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="H" type="number" value={form.height} onChange={handleChange('height')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="L" type="number" required value={form.length} onChange={handleChange('length')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="B" type="number" required value={form.breadth} onChange={handleChange('breadth')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="H" type="number" required value={form.height} onChange={handleChange('height')} inputProps={{ min: 0 }} />
                       </Box>
                     </Grid>
                   </Grid>
@@ -1408,7 +1493,7 @@ const renderAttributeField = (attribute) => {
                     <Typography variant="h6" fontWeight={700} gutterBottom>Specifications & Attributes</Typography>
                     <Divider sx={{ mb: 2 }} />
                     <Grid container spacing={2.5}>
-                      {categoryAttributes.filter(a => !(isFashionVariantCategory && a.is_variant)).map(attribute => (
+                      {categoryAttributes.filter(a => !(isFashionVariantCategory && a.is_variant) && a.name.trim().toLowerCase() !== 'fabric').map(attribute => (
                         <Grid item xs={12} sm={6} key={attribute.id}>
                           {renderAttributeField(attribute)}
                         </Grid>

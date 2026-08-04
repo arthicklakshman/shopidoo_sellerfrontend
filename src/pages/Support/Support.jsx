@@ -26,6 +26,7 @@ import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumb
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { useDispatch } from 'react-redux';
+import socket from "../../services/socket";
 import EmptyState from '../../components/common/EmptyState/EmptyState';
 import { sellerService } from '../../services/seller.service';
 import { formatDate, formatDateTime } from '../../utils/formatDate';
@@ -82,6 +83,7 @@ const normalizeTicket = (ticket = {}) => ({
   created_at: ticket.created_at || null,
   updated_at: ticket.updated_at || ticket.created_at || null,
   reply: typeof ticket.reply === 'string' ? ticket.reply : '',
+  messages: Array.isArray(ticket.messages) ? ticket.messages : [],
 });
 
 const SummaryCard = ({ title, value, icon: Icon, tint }) => (
@@ -184,6 +186,8 @@ const Support = () => {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingTicketId, setDeletingTicketId] = useState(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const stats = useMemo(() => ([
     {
@@ -229,6 +233,20 @@ const Support = () => {
     loadTickets();
   }, []);
 
+  useEffect(() => {
+    const handleNewMessage = ({ ticketId, message }) => {
+      setSelectedTicket((prev) =>
+        prev && prev.id === ticketId
+          ? { ...prev, messages: [...(prev.messages || []), message] }
+          : prev
+      );
+      loadTickets();
+    };
+
+    socket.on('support_message', handleNewMessage);
+    return () => socket.off('support_message', handleNewMessage);
+  }, []);
+
   const handleFormChange = (key) => (event) => {
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
   };
@@ -269,6 +287,23 @@ const Support = () => {
       setFormError(getErrorMessage(error));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedTicket) return;
+
+    setSendingMessage(true);
+    try {
+      const { data } = await sellerService.addTicketMessage(selectedTicket.id, newMessage.trim());
+      const updatedTicket = normalizeTicket(data?.data);
+      setSelectedTicket(updatedTicket);
+      setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
+      setNewMessage('');
+    } catch (error) {
+      dispatch(showToast({ message: getErrorMessage(error), severity: 'error' }));
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -476,9 +511,9 @@ const Support = () => {
                 {selectedTicket?.display_id}
               </Typography>
             </Box>
-            <IconButton onClick={() => setDetailsOpen(false)}>
+           <IconButton onClick={() => { setDetailsOpen(false); setNewMessage(''); }}>
               <CloseIcon />
-            </IconButton>
+            </IconButton> 
           </Box>
         </DialogTitle>
         <DialogContent sx={{ px: 3, pb: 2 }}>
@@ -509,12 +544,72 @@ const Support = () => {
                 <Typography>{selectedTicket.updated_at ? formatDateTime(selectedTicket.updated_at) : 'N/A'}</Typography>
               </Box>
 
-              {selectedTicket.reply && (
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">Support Reply</Typography>
-                  <Typography>{selectedTicket.reply}</Typography>
-                </Box>
-              )}
+             <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Conversation
+                </Typography>
+                <Stack
+                  spacing={1.5}
+                  sx={{ maxHeight: 260, overflowY: 'auto', p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}
+                >
+                  {(selectedTicket.messages || []).length === 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      No replies yet. Admin will respond soon.
+                    </Typography>
+                  )}
+                  {(selectedTicket.messages || []).map((m) => {
+                    const isMine = m.sender_role === 'seller';
+                    return (
+                      <Box key={m.id} sx={{ alignSelf: isMine ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {isMine ? 'You' : m.sender_name} • {formatDateTime(m.created_at)}
+                        </Typography>
+                        <Box
+                          sx={{
+                            bgcolor: isMine ? 'primary.main' : 'background.paper',
+                            color: isMine ? 'primary.contrastText' : 'text.primary',
+                            borderRadius: 2,
+                            p: 1.25,
+                            mt: 0.5,
+                          }}
+                        >
+                          <Typography variant="body2">{m.message}</Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+
+                <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Type a reply..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    disabled={sendingMessage}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleSendMessage}
+                    disabled={sendingMessage || !newMessage.trim()}
+                    sx={{
+                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                      color: '#000',
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {sendingMessage ? 'Sending...' : 'Send'}
+                  </Button>
+                </Stack>
+              </Box>
             </Stack>
           )}
         </DialogContent>
@@ -530,7 +625,7 @@ const Support = () => {
               Delete Ticket
             </Button>
           )}
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+         <Button onClick={() => { setDetailsOpen(false); setNewMessage(''); }}>Close</Button> 
         </DialogActions>
       </Dialog>
 

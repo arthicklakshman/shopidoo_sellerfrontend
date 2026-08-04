@@ -121,4 +121,3 @@ export const validateImage = (file, imageType) => {
     img.src = objectUrl;
   });
 };
-
