@@ -334,7 +334,7 @@
 //               {pagination.totalItems || products.length || 0} products found
 //             </Typography>
 //             <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>
-//               New seller products go to admin as pending. Only approved products appear in the user frontend.
+//               New seller products go to admin as pending. Only approved products appear to customers.
 //             </Typography>
 //           </Box>
 
@@ -1034,7 +1034,7 @@ const Products = () => {
               {pagination.totalItems || products.length || 0} products found
             </Typography>
             <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>
-              New seller products go to admin as pending. Only approved products appear in the user frontend.
+              New seller products go to admin as pending. Only approved products appear to customers.
             </Typography>
           </Box>
 

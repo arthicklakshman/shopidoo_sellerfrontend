@@ -52,7 +52,11 @@ const Notifications = () => {
         data.type === 'payout_status' ||
         data.type === 'new_order' ||
         data.type === 'new_review' ||
-        data.type === 'low_stock'
+        data.type === 'low_stock' ||
+        data.type === 'order_delivered' ||
+        data.type === 'shipment_status' ||
+        data.type === 'order_status_update' ||
+        data.type === 'return_penalty'
       ) {
         setNotifications((prev) => {
           const alreadyExists = prev.some((n) => n.id === data.id);
@@ -73,7 +77,10 @@ const Notifications = () => {
     try {
       setLoading(true);
       const res = await api.get('/notifications');
-      const sellerTypes = ['product_status', 'support_reply', 'payout_status', 'new_order', 'new_review', 'low_stock'];
+      const sellerTypes = [
+        'product_status', 'support_reply', 'payout_status', 'new_order', 
+        'new_review', 'low_stock', 'order_delivered', 'shipment_status', 'order_status_update', 'return_penalty'
+      ];
       const filtered = (res.data.data || []).filter((n) =>
         sellerTypes.includes(n.type)
       );
@@ -139,13 +146,15 @@ const Notifications = () => {
       navigate(`/support?highlight=${item.reference_id}`);
     } else if (item.type === 'payout_status') {
       navigate('/wallet');
-    } else if (item.type === 'new_order') {
+    } else if (item.type === 'new_order' || item.type === 'order_delivered' || item.type === 'shipment_status' || item.type === 'order_status_update') {
       navigate('/orders');
     } else if (item.type === 'new_review') {
       navigate('/sellerreviews');
     } else if (item.type === 'low_stock') {
       const productName = item.message.match(/"([^"]+)"/)?.[1] || '';
       navigate(`/inventory?search=${encodeURIComponent(productName)}`);
+    } else if (item.type === 'return_penalty') {
+      navigate('/returns');
     }
   };
 
@@ -331,8 +340,12 @@ const Notifications = () => {
               {selectedNotification.type === 'product_status' && renderStatusUpdate('Product Status Update', '#6366f1')}
               {selectedNotification.type === 'support_reply' && renderStatusUpdate('Support Response', '#ff9800')}
               {selectedNotification.type === 'new_order' && renderStatusUpdate('New Order Placed', '#0fb9b1')}
+              {selectedNotification.type === 'order_delivered' && renderStatusUpdate('Order Delivered 🎉', '#10b981')}
+              {selectedNotification.type === 'shipment_status' && renderStatusUpdate('Shipment Status Update', '#0284c7')}
+              {selectedNotification.type === 'order_status_update' && renderStatusUpdate('Order Status Updated', '#0fb9b1')}
               {selectedNotification.type === 'new_review' && renderStatusUpdate('New Product Review', '#0b8457')}
               {selectedNotification.type === 'low_stock' && renderStatusUpdate('Low Stock Alert', '#d97706')}
+              {selectedNotification.type === 'return_penalty' && renderStatusUpdate('Return Penalty Imposed ⚠️', '#ef4444')}
             </DialogContent>
           </>
         )}
