@@ -2,7 +2,7 @@
 
 export const IMAGE_RULES = {
   product: {
-    minSize: 10 * 1024, // 10 KB (Just to prevent corrupted/empty files)
+    minSize: 0, // No minimum size requirement
     maxSize: 5 * 1024 * 1024, // 5 MB
     minWidth: 500,
     minHeight: 500,
@@ -11,7 +11,7 @@ export const IMAGE_RULES = {
     requireSquare: true,
   },
   brandStore_bg_banner: {
-    minSize: 15 * 1024, // 15 KB
+    minSize: 0,
     maxSize: 10 * 1024 * 1024, // 10 MB
     minWidth: 1500,
     minHeight: 280,
@@ -20,7 +20,7 @@ export const IMAGE_RULES = {
     aspectRatio: 1500 / 280,
   },
   brandStore_top_banner: {
-    minSize: 15 * 1024,
+    minSize: 0,
     maxSize: 10 * 1024 * 1024,
     minWidth: 1200,
     minHeight: 400,
@@ -29,7 +29,7 @@ export const IMAGE_RULES = {
     aspectRatio: 1200 / 400, // 3.0
   },
   brandStore_bottom_banner: {
-    minSize: 15 * 1024,
+    minSize: 0,
     maxSize: 10 * 1024 * 1024,
     minWidth: 1200,
     minHeight: 400,
@@ -58,10 +58,10 @@ export const validateImage = (file, imageType) => {
     }
 
     // 2. Validate File Size
-    const minKB = Math.round(rules.minSize / 1024);
+    const minKB = rules.minSize ? Math.round(rules.minSize / 1024) : 0;
     const maxMB = rules.maxSize / (1024 * 1024);
 
-    if (file.size < rules.minSize) {
+    if (rules.minSize && rules.minSize > 0 && file.size < rules.minSize) {
       return reject(`File is too small. Minimum size is ${minKB}KB.`);
     }
     if (file.size > rules.maxSize) {
@@ -121,4 +121,3 @@ export const validateImage = (file, imageType) => {
     img.src = objectUrl;
   });
 };
-

@@ -505,7 +505,7 @@ const SellerCMS = () => {
 
             {bannerRules && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                 <strong>Requirements:</strong> Min {bannerRules.minWidth}x{bannerRules.minHeight}px resolution, {formatBytes(bannerRules.minSize)} - {formatBytes(bannerRules.maxSize)} file size.
+              <strong>Requirements:</strong> Min {bannerRules.minWidth}x{bannerRules.minHeight}px resolution, {bannerRules.minSize && bannerRules.minSize > 0 ? `${formatBytes(bannerRules.minSize)} - ${formatBytes(bannerRules.maxSize)}` : `Max ${formatBytes(bannerRules.maxSize)}`} file size.
               </Typography>
             )}
 
@@ -572,7 +572,6 @@ const SellerCMS = () => {
 };
 
 export default SellerCMS;
-
 
 
 

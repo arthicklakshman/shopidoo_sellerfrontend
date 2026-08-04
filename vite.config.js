@@ -13,13 +13,6 @@ export default defineConfig({
   },
   resolve: { alias: { '@': '/src' } },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor_react: ['react', 'react-dom', 'react-router-dom'],
-          vendor_mui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled']
-        }
-      }
-    }
+    chunkSizeWarningLimit: 1000,
   }
 });

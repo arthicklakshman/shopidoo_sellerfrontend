@@ -65,5 +65,6 @@ export const sellerService = {
     }),
 
   deleteBanner: (id) => api.delete(`/banners/${id}`),
+  addTicketMessage: (id, message) => api.post(`/support/${id}/messages`, { message }),
 };
 
