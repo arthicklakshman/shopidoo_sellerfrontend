@@ -1785,17 +1785,6 @@ const renderAttributeField = (attribute) => {
                       </Grid>
                     )}
 
-                    <TextField
-                      label="Express Delivery Charge (₹)"
-                      type="number"
-                      value={form.express_delivery_charge}
-                      onChange={handleChange('express_delivery_charge')}
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      helperText="Optional faster delivery fee."
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-
                     {/* State-wise Shipping Rules */}
                     {form.delivery_type !== 'free' && (
                       <Box sx={{ mt: 3 }}>

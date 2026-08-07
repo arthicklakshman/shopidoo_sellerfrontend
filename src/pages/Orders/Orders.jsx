@@ -382,7 +382,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
               </Box>
               {sellerCoupon && couponDiscount > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Coupon Discount ({sellerCoupon.code})</Typography>
+                  <Typography variant="body2" color="text.secondary">Coupon Discount ({sellerCoupon.code}) (Seller)</Typography>
                   <Typography variant="body2" color={theme.palette.error.main}>-{formatCurrency(couponDiscount)}</Typography>
                 </Box>
               )}

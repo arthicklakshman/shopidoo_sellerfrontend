@@ -113,7 +113,11 @@ const SellerLayout = () => {
         data.type === 'payout_status' ||
         data.type === 'new_order' ||
         data.type === 'new_review' ||
-        data.type === 'low_stock'
+        data.type === 'low_stock' ||
+        data.type === 'order_delivered' ||
+        data.type === 'shipment_status' ||
+        data.type === 'order_status_update' ||
+        data.type === 'return_penalty'
       ) {
         setNotifications((prev) => {
           const exists = prev.some((n) => n.id === data.id);
@@ -175,7 +179,11 @@ const SellerLayout = () => {
           item.type === 'payout_status' ||
           item.type === 'new_order' ||
           item.type === 'new_review' ||
-          item.type === 'low_stock'
+          item.type === 'low_stock' ||
+          item.type === 'order_delivered' ||
+          item.type === 'shipment_status' ||
+          item.type === 'order_status_update' ||
+          item.type === 'return_penalty'
       );
 
       setNotifications(onlyProductNotifications);
@@ -230,13 +238,23 @@ const SellerLayout = () => {
         navigate('/wallet');
       }
 
-      if (item.type === 'new_order') {
+        if (
+        item.type === 'new_order' ||
+        item.type === 'order_delivered' ||
+        item.type === 'shipment_status' ||
+        item.type === 'order_status_update'
+      ) {
         navigate('/orders');
       }
 
       if (item.type === 'new_review') {
         navigate('/sellerreviews');
       }
+
+       if (item.type === 'return_penalty') {
+        navigate('/returns');
+      }
+
 
       handleCloseNotifications();
     } catch (err) {

@@ -142,9 +142,9 @@ const Coupons = () => {
     discount_value: Number(formData.discount_value),
     min_purchase_amount: Number(formData.min_purchase_amount || 0),
     max_discount_amount:
-      formData.max_discount_amount === ''
-        ? null
-        : Number(formData.max_discount_amount),
+     formData.discount_type === 'percentage'
+        ? (formData.max_discount_amount === '' ? null : Number(formData.max_discount_amount))
+        : null,
     valid_from: formData.valid_from,
     valid_until: formData.valid_until,
     usage_limit: Number(formData.usage_limit || 0),
@@ -180,6 +180,7 @@ const Coupons = () => {
     }
 
     if (
+      formData.discount_type === 'percentage' &&
       formData.max_discount_amount !== '' &&
       Number(formData.max_discount_amount) < 0
     ) {
@@ -560,17 +561,21 @@ const Coupons = () => {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6}>
-            <TextField
-              type="number"
-              fullWidth
-              label="Max Discount"
-              value={formData.max_discount_amount}
-              onChange={(e) =>
-                handleInputChange('max_discount_amount', e.target.value)
-              }
-            />
-          </Grid>
+         {formData.discount_type === 'percentage' && (
+            <Grid item xs={12} sm={6}>
+              <TextField
+                type="number"
+                fullWidth
+                label="Max Discount"
+                value={formData.max_discount_amount}
+                onChange={(e) =>
+                  handleInputChange('max_discount_amount', e.target.value)
+                }
+                error={!!errors.max_discount_amount}
+                helperText={errors.max_discount_amount}
+              />
+            </Grid>
+          )}
 
           <Grid item xs={12} sm={6}>
             <TextField

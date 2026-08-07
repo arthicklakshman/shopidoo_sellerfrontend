@@ -410,10 +410,15 @@ const SellerReturns = () => {
                 </TableCell>
 
                 <TableCell>
-                  <Typography variant="body2" fontWeight={700}>
-                    {formatCurrency(req.order?.total_amount || req.orderItem?.total_price || req.product?.price || 0)}
-                  </Typography>
-                </TableCell>
+  <Typography variant="body2" fontWeight={700}>
+    {formatCurrency(req.net_payout ?? 0)}
+  </Typography>
+  {req.gross_amount != null && req.gross_amount !== req.net_payout && (
+    <Typography variant="caption" color="text.secondary" display="block">
+      Gross: {formatCurrency(req.gross_amount)}
+    </Typography>
+  )}
+</TableCell>
 
                 <TableCell>
                   <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: 'primary.main' }}>
