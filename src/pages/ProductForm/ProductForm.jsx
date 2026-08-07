@@ -408,10 +408,11 @@ const ProductForm = () => {
     return `${Math.round(bytes / 1024)} KB`;
   };
 
+  const productRules = IMAGE_RULES?.product || {};
   const productSizeReq = productRules.minSize && productRules.minSize > 0
     ? `${formatBytes(productRules.minSize)} - ${formatBytes(productRules.maxSize)}`
-    : `Max ${formatBytes(productRules.maxSize)}`;
-  const productDimReq = `Min ${productRules.minWidth}x${productRules.minHeight}px (1:1 Ratio)`;
+    : `Max ${formatBytes(productRules.maxSize || 5242880)}`;
+  const productDimReq = `Min ${productRules.minWidth || 500}x${productRules.minHeight || 500}px (1:1 Ratio)`;
 
   // ── Hooks must all be at top level, before any early returns ──
   const { commission } = useCommissionHint(form.price);
@@ -424,12 +425,11 @@ const ProductForm = () => {
     const mrp = parseFloat(form.compare_price);
     if (isNaN(mrp)) return null;
 
-    const comm = commission ?? 0;
-    if (mrp <= selling + comm) {
-      return `MRP must be greater than ₹${(selling + comm).toLocaleString('en-IN')} (Selling ₹${selling} + platform fees ₹${comm})`;
+    if (mrp <= selling) {
+      return `MRP must be greater than Selling Price (₹${selling.toLocaleString('en-IN')})`;
     }
     return null;
-  }, [form.price, form.compare_price, commission]);
+  }, [form.price, form.compare_price]);
 
   const variantAttributes = useMemo(() => categoryAttributes.filter(a => a.is_variant), [categoryAttributes]);
   const colorAttribute = useMemo(() => variantAttributes.find(a => isColorAttributeName(a.name)), [variantAttributes]);
@@ -1167,10 +1167,6 @@ const renderAttributeField = (attribute) => {
     }
   };
 
-<<<<<<< HEAD
-=======
-  // â”€â”€ Early return AFTER all hooks â”€â”€
->>>>>>> 6c9cd54 (aug 4 update)
   // ── Early return AFTER all hooks ──
   if (loading) {
     return (
@@ -1797,17 +1793,6 @@ const renderAttributeField = (attribute) => {
                         )}
                       </Grid>
                     )}
-
-                    <TextField
-                      label="Express Delivery Charge (₹)"
-                      type="number"
-                      value={form.express_delivery_charge}
-                      onChange={handleChange('express_delivery_charge')}
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      helperText="Optional faster delivery fee."
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
 
                     {/* State-wise Shipping Rules */}
                     {form.delivery_type !== 'free' && (
