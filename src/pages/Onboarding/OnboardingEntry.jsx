@@ -53,7 +53,17 @@ export default function OnboardingEntry() {
             <Container maxWidth="lg">
 
                 {/* HEADER */}
-                <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
+                <Box 
+                    sx={{ 
+                        textAlign: 'center', 
+                        mb: { xs: 6, md: 8 },
+                        cursor: 'pointer',
+                        display: 'inline-block',
+                        width: '100%',
+                        '&:hover': { opacity: 0.85 }
+                    }}
+                    onClick={() => navigate('/login')}
+                >
              
                     <Box 
                         component="img"

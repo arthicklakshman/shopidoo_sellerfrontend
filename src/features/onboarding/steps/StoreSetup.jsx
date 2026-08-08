@@ -200,9 +200,25 @@ export default function StoreSetup({ onBack, onNext }) {
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem("onboarding_step_6");
     const parsed = savedData ? JSON.parse(savedData) : {};
+    let sessionFiles = {};
+    try {
+      sessionFiles = JSON.parse(sessionStorage.getItem("onboarding_step_6_files") || "{}");
+    } catch (e) {
+      sessionFiles = {};
+    }
+
+    const getInitialFile = (key) => {
+      const sess = sessionFiles[key];
+      if (sess && (sess.name || sess.data)) return sess;
+      const loc = parsed[key];
+      if (loc && (loc.name || loc.data)) return loc;
+      if (typeof loc === 'string' && loc.trim() !== '') return { name: 'Uploaded Image', data: loc };
+      return null;
+    };
+
     return {
-      storeLogo: parsed.storeLogo || null,
-      storeBanner: parsed.storeBanner || null,
+      storeLogo: getInitialFile('storeLogo'),
+      storeBanner: getInitialFile('storeBanner'),
       selectedCategories: parsed.selectedCategories || [],
       sameAsBusinessAddress: parsed.sameAsBusinessAddress ?? true,
       pickupAddress: parsed.pickupAddress || "",
@@ -259,14 +275,28 @@ export default function StoreSetup({ onBack, onNext }) {
   }, []);
 
   useEffect(() => {
+    const getSafeFile = (file) => {
+      if (!file) return null;
+      if (typeof file === 'string') return { name: 'Uploaded Image' };
+      if (typeof file === 'object' && (file.name || file.data)) return { name: file.name || 'Uploaded Image' };
+      return null;
+    };
+
     const safeStorageData = {
       ...formData,
-      storeLogo: formData.storeLogo ? { name: formData.storeLogo.name } : null,
-      storeBanner: formData.storeBanner
-        ? { name: formData.storeBanner.name }
-        : null,
+      storeLogo: getSafeFile(formData.storeLogo),
+      storeBanner: getSafeFile(formData.storeBanner),
     };
     localStorage.setItem("onboarding_step_6", JSON.stringify(safeStorageData));
+
+    try {
+      sessionStorage.setItem("onboarding_step_6_files", JSON.stringify({
+        storeLogo: formData.storeLogo,
+        storeBanner: formData.storeBanner,
+      }));
+    } catch (e) {
+      console.warn("sessionStorage failed for StoreSetup files", e);
+    }
   }, [formData]);
 
   const handleCategoryToggle = (categoryName) => {

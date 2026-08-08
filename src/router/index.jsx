@@ -36,28 +36,28 @@ const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
-  
+
+  if (user?.seller_status !== 'approved') {
+    if (user?.seller_status === 'pending' || user?.seller_status === 'rejected') {
+      return <Navigate to="/onboarding/success" replace />;
+    }
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return children;
 };
 
 const GuestRoute = ({ children }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth || {});
   const location = useLocation();
-  
-  // 🌟 REVISED: Only redirect if we are on Login/Register and ALREADY registered.
-  // This completely stays out of the way of the onboarding flow.
+
   const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
-  
+
   if (isAuthenticated && isAuthPath) {
     if (user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
-    
-    if (user?.seller_status === 'approved') {
-      return <Navigate to="/dashboard" replace />;
-    } else if (user?.seller_status === 'pending' || user?.seller_status === 'rejected') {
-      return <Navigate to="/onboarding/success" replace />;
-    }
+    if (user?.seller_status === 'approved') return <Navigate to="/dashboard" replace />;
   }
-  
+
   return children || null;
 };
 
@@ -65,6 +65,7 @@ const AppRouter = () => (
   <BrowserRouter>
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route 
@@ -96,7 +97,6 @@ const AppRouter = () => (
 
         <Route path="/maintenance" element={<Maintenance />} />
         <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/new" element={<ProductForm />} />
@@ -119,7 +119,7 @@ const AppRouter = () => (
         {/* ✅ Public routes - no auth needed */}
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/seller-policies" element={<SellerPolicies />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Suspense>
   </BrowserRouter>

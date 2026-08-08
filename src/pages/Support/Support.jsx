@@ -539,12 +539,7 @@ const Support = () => {
                 <Typography>{selectedTicket.created_at ? formatDateTime(selectedTicket.created_at) : 'N/A'}</Typography>
               </Box>
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Last Updated</Typography>
-                <Typography>{selectedTicket.updated_at ? formatDateTime(selectedTicket.updated_at) : 'N/A'}</Typography>
-              </Box>
-
-             <Box>
+            <Box>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                   Conversation
                 </Typography>
@@ -580,36 +575,42 @@ const Support = () => {
                   })}
                 </Stack>
 
-                <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Type a reply..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    disabled={sendingMessage}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleSendMessage}
-                    disabled={sendingMessage || !newMessage.trim()}
-                    sx={{
-                      background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-                      color: '#000',
-                      textTransform: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {sendingMessage ? 'Sending...' : 'Send'}
-                  </Button>
-                </Stack>
-              </Box>
+             {selectedTicket.status === 'Resolved' ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                    This ticket is resolved. Replies are closed.
+                  </Typography>
+                ) : (
+                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Type a reply..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      disabled={sendingMessage}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={handleSendMessage}
+                      disabled={sendingMessage || !newMessage.trim()}
+                      sx={{
+                        background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                        color: '#000',
+                        textTransform: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {sendingMessage ? 'Sending...' : 'Send'}
+                    </Button>
+                  </Stack>
+                )}
+              </Box>  
             </Stack>
           )}
         </DialogContent>

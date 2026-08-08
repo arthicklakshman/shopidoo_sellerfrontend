@@ -101,11 +101,31 @@ const UploadZoneCard = ({ title, subtitle, required, fileData, onChange, error, 
 export default function Documents({ onBack, onNext }) {
   
   const [documents, setDocuments] = useState(() => {
-    const savedData = localStorage.getItem('onboarding_step_5'); 
-    return savedData ? JSON.parse(savedData) : {
-      panCard: null, aadhaarFront: null, aadhaarBack: null,
-      signature: null, businessProof: null, bankProof: null, gstProof: null 
+    const savedData = localStorage.getItem('onboarding_step_5');
+    const parsedData = savedData ? JSON.parse(savedData) : {};
+    let sessionDocs = {};
+    try {
+      sessionDocs = JSON.parse(sessionStorage.getItem('onboarding_step_5_files') || '{}');
+    } catch (e) {
+      sessionDocs = {};
+    }
+
+    const getInitialDoc = (key) => {
+      const sess = sessionDocs[key];
+      if (sess && (sess.name || sess.data)) return sess;
+      const loc = parsedData[key];
+      if (loc && (loc.name || loc.data)) return loc;
+      if (typeof loc === 'string' && loc.trim() !== '') return { name: 'Uploaded Document', data: loc };
+      return null;
     };
+
+    const docKeys = ['panCard', 'aadhaarFront', 'aadhaarBack', 'signature', 'businessProof', 'bankProof', 'gstProof'];
+    const initial = {};
+    docKeys.forEach(key => {
+      initial[key] = getInitialDoc(key);
+    });
+
+    return initial;
   });
 
   const [showOptional, setShowOptional] = useState(false);
@@ -124,21 +144,30 @@ export default function Documents({ onBack, onNext }) {
   const [apiError, setApiError] = useState('');      
 
   useEffect(() => {
+    const getSafeDoc = (doc) => {
+      if (!doc) return null;
+      if (typeof doc === 'string') return { name: 'Uploaded Document' };
+      if (typeof doc === 'object' && (doc.name || doc.data)) return { name: doc.name || 'Uploaded Document' };
+      return null;
+    };
+
     const safeStorageData = {
-      panCard: documents.panCard ? { name: documents.panCard.name } : null,
-      aadhaarFront: documents.aadhaarFront ? { name: documents.aadhaarFront.name } : null,
-      aadhaarBack: documents.aadhaarBack ? { name: documents.aadhaarBack.name } : null,
-      signature: documents.signature ? { name: documents.signature.name } : null,
-      businessProof: documents.businessProof ? { name: documents.businessProof.name } : null,
-      bankProof: documents.bankProof ? { name: documents.bankProof.name } : null,
-      gstProof: documents.gstProof ? { name: documents.gstProof.name } : null,
+      panCard: getSafeDoc(documents.panCard),
+      aadhaarFront: getSafeDoc(documents.aadhaarFront),
+      aadhaarBack: getSafeDoc(documents.aadhaarBack),
+      signature: getSafeDoc(documents.signature),
+      businessProof: getSafeDoc(documents.businessProof),
+      bankProof: getSafeDoc(documents.bankProof),
+      gstProof: getSafeDoc(documents.gstProof),
     };
     localStorage.setItem('onboarding_step_5', JSON.stringify(safeStorageData));
-  }, [
-    documents.panCard?.name, documents.aadhaarFront?.name, documents.aadhaarBack?.name, 
-    documents.signature?.name, documents.businessProof?.name, documents.bankProof?.name,
-    documents.gstProof?.name
-  ]);
+
+    try {
+      sessionStorage.setItem('onboarding_step_5_files', JSON.stringify(documents));
+    } catch (e) {
+      console.warn('sessionStorage failed for documents', e);
+    }
+  }, [documents]);
 
   const handleFileChange = async (field, file) => {
     if (!file) {
@@ -174,11 +203,13 @@ export default function Documents({ onBack, onNext }) {
     });
   };
 
+  const isDocPresent = (doc) => !!(doc && (doc.name || doc.data || (typeof doc === 'string' && doc.trim() !== '')));
+
   const handleContinue = async () => {
     const newErrors = {};
     
-    if (!documents.gstProof) newErrors.gstProof = "GST Proof is required";
-    if (!documents.signature) newErrors.signature = "Signature is required";
+    if (!isDocPresent(documents.gstProof)) newErrors.gstProof = "GST Proof is required";
+    if (!isDocPresent(documents.signature)) newErrors.signature = "Signature is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);

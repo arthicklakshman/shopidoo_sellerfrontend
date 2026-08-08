@@ -89,30 +89,50 @@ export default function BankDetails({ onBack, onNext }) {
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem("onboarding_step_3");
     const parsedData = savedData ? JSON.parse(savedData) : null;
+    const sessionFile = sessionStorage.getItem("onboarding_step_3_file");
+    const sessionDocName = sessionStorage.getItem("onboarding_step_3_docName");
 
+    let initialBankProof = null;
+    if (sessionFile) {
+      initialBankProof = sessionFile;
+    } else if (typeof parsedData?.bankProofImage === "string" && parsedData.bankProofImage.trim() !== "") {
+      initialBankProof = parsedData.bankProofImage;
+    } else if (parsedData?.documentName) {
+      initialBankProof = { name: parsedData.documentName };
+    }
 
     return {
       accountName: parsedData?.accountName || "",
       accountNumber: parsedData?.accountNumber || "",
       ifscCode: parsedData?.ifscCode || "",
-      bankProofImage: parsedData?.bankProofImage || "",
-      documentName: parsedData?.documentName || "",
+      bankProofImage: initialBankProof,
+      documentName: sessionDocName || parsedData?.documentName || "",
     };
   });
 
-      const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
   useEffect(() => {
-    // 🌟 Make sure we don't save Base64 strings to localStorage to avoid QuotaExceededError
+    const docName = formData.documentName || (typeof formData.bankProofImage === 'object' ? formData.bankProofImage?.name : '');
     const safeData = {
-      ...formData,
-      bankProofImage: formData.bankProofImage ? { name: formData.bankProofImage.name } : null
+      accountName: formData.accountName,
+      accountNumber: formData.accountNumber,
+      ifscCode: formData.ifscCode,
+      documentName: docName,
     };
     localStorage.setItem("onboarding_step_3", JSON.stringify(safeData));
+
+    if (typeof formData.bankProofImage === "string" && formData.bankProofImage.startsWith("data:")) {
+      sessionStorage.setItem("onboarding_step_3_file", formData.bankProofImage);
+      sessionStorage.setItem("onboarding_step_3_docName", docName || "");
+    } else if (!formData.bankProofImage) {
+      sessionStorage.removeItem("onboarding_step_3_file");
+      sessionStorage.removeItem("onboarding_step_3_docName");
+    }
   }, [formData]);
 
   const handleInputChange = (e) => {
@@ -136,6 +156,9 @@ export default function BankDetails({ onBack, onNext }) {
 
     try {
       const base64String = await convertToBase64(file);
+      sessionStorage.setItem("onboarding_step_3_file", base64String);
+      sessionStorage.setItem("onboarding_step_3_docName", file.name);
+
       setFormData((prev) => ({
         ...prev,
         bankProofImage: base64String,
@@ -187,13 +210,17 @@ export default function BankDetails({ onBack, onNext }) {
         return;
       }
 
-      // 🌟 USING THE SERVICE FILE
-      await onboardingService.updateBankDetails(sellerId, {
+      const payload = {
         accountName: formData.accountName,
         accountNumber: formData.accountNumber,
         ifscCode: formData.ifscCode,
-        bankProofImage: formData.bankProofImage,
-      });
+      };
+
+      if (typeof formData.bankProofImage === "string" && formData.bankProofImage.trim() !== "") {
+        payload.bankProofImage = formData.bankProofImage;
+      }
+
+      await onboardingService.updateBankDetails(sellerId, payload);
 
       onNext();
     } catch (err) {
@@ -479,24 +506,26 @@ export default function BankDetails({ onBack, onNext }) {
                           fontWeight: 600,
                         }}
                       >
-                        {formData.documentName}
+                        {formData.documentName || "Uploaded Document"}
                       </Typography>
                    
-                     {/* 🌟 NEW: Preview & Remove Buttons Group */}
+                      {/* 🌟 Preview & Remove Buttons Group */}
                       <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                        <Button
-                          variant="text" // 👈 Changed from "outlined" to "text"
-                          size="small"
-                          startIcon={<VisibilityOutlinedIcon />}
-                          sx={{ color: '#059669', textTransform: 'none' }} // 👈 Removed borderColor
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation(); 
-                            setIsPreviewOpen(true); 
-                          }}
-                        >
-                          Preview
-                        </Button>
+                        {(typeof formData.bankProofImage === "string" || formData.bankProofImage?.data) && (
+                          <Button
+                            variant="text"
+                            size="small"
+                            startIcon={<VisibilityOutlinedIcon />}
+                            sx={{ color: '#059669', textTransform: 'none' }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation(); 
+                              setIsPreviewOpen(true); 
+                            }}
+                          >
+                            Preview
+                          </Button>
+                        )}
                         <Button
                           variant="text"
                           size="small"
@@ -504,6 +533,8 @@ export default function BankDetails({ onBack, onNext }) {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            sessionStorage.removeItem("onboarding_step_3_file");
+                            sessionStorage.removeItem("onboarding_step_3_docName");
                             setFormData((prev) => ({
                               ...prev,
                               bankProofImage: null,

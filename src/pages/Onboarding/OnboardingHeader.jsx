@@ -1,10 +1,25 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom'; 
+import { useDispatch } from 'react-redux';
 import shopidooLogo from '../../assets/Shopidoo_logo.png'; 
 import SaveAndExit from '../../features/onboarding/components/SaveAndExit';
+import { logoutSeller } from '../../features/auth/authSlice';
 
 export default function OnboardingHeader({ step = 1 }) {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleLogoClick = async (e) => {
+    e.preventDefault();
+    try {
+      await dispatch(logoutSeller());
+    } catch (err) {
+      console.error(err);
+    }
+    navigate('/login');
+  };
+
   return (
     <Box 
       component="header"
@@ -20,17 +35,20 @@ export default function OnboardingHeader({ step = 1 }) {
       }}
     >
       {/* Left side: Logo and Title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        
+      <Box 
+        onClick={handleLogoClick}
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2, 
+          textDecoration: 'none', 
+          color: 'inherit',
+          cursor: 'pointer',
+          '&:hover': { opacity: 0.85 }
+        }}
+      >
         {/* Logo */}
-        <Box 
-          component={RouterLink} 
-          to="/login" 
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
-        >
-          {/* 🌟 2. Use the imported variable name here instead of a hardcoded string */}
-          <Box component="img" src={shopidooLogo} sx={{ height: 50, width: 'auto' }} alt="Shopidoo" />
-        </Box>
+        <Box component="img" src={shopidooLogo} sx={{ height: 50, width: 'auto' }} alt="Shopidoo" />
         
         {/* Subtitle */}
         <Typography sx={{ color: '#6b7280', fontSize: '1.05rem', fontWeight: 400, display: { xs: 'none', sm: 'block' } }}>

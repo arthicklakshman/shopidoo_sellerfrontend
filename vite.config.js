@@ -6,9 +6,39 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
-      '/api': { target: 'http://127.0.0.1:5001', changeOrigin: true },
-      '/uploads': { target: 'http://127.0.0.1:5001', changeOrigin: true },
-      '/mock': { target: 'http://127.0.0.1:5001', changeOrigin: true },
+      '/api': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNREFUSED') {
+              console.warn('[vite proxy] Backend (127.0.0.1:5001) is starting up or offline.');
+            }
+          });
+        },
+      },
+      '/uploads': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNREFUSED') {
+              console.warn('[vite proxy] Backend (127.0.0.1:5001) is starting up or offline.');
+            }
+          });
+        },
+      },
+      '/mock': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNREFUSED') {
+              console.warn('[vite proxy] Backend (127.0.0.1:5001) is starting up or offline.');
+            }
+          });
+        },
+      },
     },
   },
   resolve: { alias: { '@': '/src' } },

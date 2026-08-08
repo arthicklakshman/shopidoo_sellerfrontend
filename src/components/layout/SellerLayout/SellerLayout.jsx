@@ -269,7 +269,10 @@ const SellerLayout = () => {
 
   const DrawerContent = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box 
+        onClick={() => navigate('/login')}
+        sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+      >
         <Avatar
           sx={{
             background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',

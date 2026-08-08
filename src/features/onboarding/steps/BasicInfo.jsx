@@ -123,16 +123,22 @@ export default function BasicInformation({ onNext, sellerId }) {
              if (email_verified) {
                setFormData(prev => ({ ...prev, email_verified: 1, verifiedEmailValue: formData.email }));
                setIsEmailVerified(true);
+             } else {
+               setIsEmailVerified(false);
+               setFormData(prev => ({ ...prev, email_verified: 0, verifiedEmailValue: '' }));
              }
           } else {
              setFormData(prev => ({ ...prev, isRegistered: null }));
+             if (!isEmailVerified) {
+               setFormData(prev => ({ ...prev, email_verified: 0, verifiedEmailValue: '' }));
+             }
           }
         } catch (e) { console.error('Check exists failed:', e); }
       }
     };
     const delayDebounceFn = setTimeout(() => { checkEmail(); }, 600);
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.email]);
+  }, [formData.email, isEmailVerified]);
 
   useEffect(() => {
     const checkPhone = async () => {
@@ -145,16 +151,22 @@ export default function BasicInformation({ onNext, sellerId }) {
              if (phone_verified) {
                setFormData(prev => ({ ...prev, phone_verified: 1, verifiedPhoneValue: formData.phone }));
                setIsMobileVerified(true);
+             } else {
+               setIsMobileVerified(false);
+               setFormData(prev => ({ ...prev, phone_verified: 0, verifiedPhoneValue: '' }));
              }
           } else {
              setFormData(prev => ({ ...prev, isRegistered: null }));
+             if (!isMobileVerified) {
+               setFormData(prev => ({ ...prev, phone_verified: 0, verifiedPhoneValue: '' }));
+             }
           }
         } catch (e) { console.error('Check exists failed:', e); }
       }
     };
     const delayDebounceFn = setTimeout(() => { checkPhone(); }, 600);
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.phone]);
+  }, [formData.phone, isMobileVerified]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
