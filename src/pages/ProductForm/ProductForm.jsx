@@ -21,7 +21,7 @@ import api from '../../services/api';
 import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
 import SettlementBreakdown from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
-// â”€â”€â”€ Commission hint hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Commission hint hook ─────────────────────────────────────────────────
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -56,8 +56,6 @@ function useCommissionHint(price) {
 }
 
 
-
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const emptyForm = {
   name: '',
   description: '',
@@ -69,6 +67,12 @@ const emptyForm = {
   condition: 'new',
   category_id: '',
   subcategory_id: '',
+
+  // Custom category hierarchy
+  custom_category: '',
+  custom_subcategory: '',
+  custom_product_type: '',
+
   delivery_type: 'free',
   delivery_charge: '',
   free_delivery_min_order: '',
@@ -81,7 +85,6 @@ const emptyForm = {
   product_length: '',
   product_breadth: '',
   product_height: '',
-  custom_category: '',
   gst_rate: '',
   warranty_type: '',
   warranty_duration: '',
@@ -134,7 +137,7 @@ const formFocusStyles = {
   '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#0FB9B1' },
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ─────────────────────────────────────────────────────────────
 const createColorGroup = (color = '') => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   color,
@@ -227,7 +230,7 @@ const isWeightAttribute = (name) => {
 
 
 
-// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sub-components ─────────────────────────────────────────────────────────
 const CustomSpecsEditor = ({ customSpecs, onChange, onAdd, onRemove }) => (
   <Box>
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
@@ -305,7 +308,7 @@ const VariantImageUpload = ({ url, onUpload, onRemove }) => {
   );
 };
 
-// â”€â”€â”€ Commission Badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Commission Badge ─────────────────────────────────────────────────────
 const CommissionBadge = ({ price }) => {
   const { commission, loading } = useCommissionHint(price);
 
@@ -338,7 +341,7 @@ const CommissionBadge = ({ price }) => {
   );
 };
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ─────────────────────────────────────────────────────────
 const INDIAN_STATES = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
   "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
@@ -363,6 +366,8 @@ const ProductForm = () => {
   });
 
   const [form, setForm] = useState(emptyForm);
+  const [productTypeId, setProductTypeId] = useState('');
+  const resolvedProductTypeRef = useState({ done: false })[0];
 
   useEffect(() => {
     import('../../services/api').then(({ default: api }) => {
@@ -436,17 +441,39 @@ const ProductForm = () => {
   const sizeAttribute = useMemo(() => variantAttributes.find(a => isSizeLikeAttributeName(a.name)), [variantAttributes]);
 
   const currentCategory = useMemo(() => {
-    const catId = form.subcategory_id || form.category_id;
-    return categories.find(c => Number(c.id) === Number(catId));
-  }, [categories, form.category_id, form.subcategory_id]);
+  const catId = productTypeId || form.subcategory_id || form.category_id;
+  return categories.find(c => Number(c.id) === Number(catId));
+   }, [categories, form.category_id, form.subcategory_id, productTypeId]);
 
   const isFashionVariantCategory = useMemo(() => {
+    // No Color/Size attributes configured on this category at all → this is
+    // NOT a fashion-variant product, it's just a category with no attributes
+    // set up yet. (Returning true here would make every attribute-less
+    // category render an empty "fashion variant" UI, which is confusing.)
     if (!colorAttribute || !sizeAttribute) return false;
     return categoryHasAny(currentCategory, [
       'fashion', 'clothing', 'apparel', 'footwear', 'shoe',
       'sports clothing', 'kids clothing', 'kids-clothing',
     ]);
   }, [colorAttribute, sizeAttribute, currentCategory]);
+
+  const hasSpecifications = useMemo(() => {
+  return categoryAttributes.some(
+    a =>
+      !(isFashionVariantCategory && a.is_variant) &&
+      a.name.trim().toLowerCase() !== 'fabric'
+  );
+}, [categoryAttributes, isFashionVariantCategory]);
+const hasVariants = isFashionVariantCategory
+  ? colorGroups.length > 0
+  : variants.length > 0;
+ const specificationAttributes = useMemo(() => {
+  return categoryAttributes.filter(
+    a =>
+      !(isFashionVariantCategory && a.is_variant) &&
+      a.name.trim().toLowerCase() !== 'fabric'
+  );
+}, [categoryAttributes, isFashionVariantCategory]); 
 
   const uniqueColors = useMemo(() => {
     if (isFashionVariantCategory) return colorGroups.map(g => g.color).filter(Boolean);
@@ -497,6 +524,7 @@ const ProductForm = () => {
             warranty_duration_unit: p.warranty_duration_unit || 'months',
             warranty_description: p.warranty_description || '',
           });
+          setProductTypeId(p.product_type_id != null ? Number(p.product_type_id) : '');
           setAttributeValues(
             (p.specifications || []).reduce((acc, spec) => {
               if (spec.attribute_id && !spec.is_variant) acc[String(spec.attribute_id)] = spec.value || '';
@@ -527,14 +555,80 @@ const ProductForm = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    const categoryId = form.subcategory_id || form.category_id;
-    if (!categoryId || categoryId === 'other') { setCategoryAttributes([]); return; }
-    sellerService.getCategoryAttributes(categoryId)
-      .then(({ data }) => setCategoryAttributes(data.data || []))
-      .catch(() => setCategoryAttributes([]));
-  }, [form.category_id, form.subcategory_id]);
+useEffect(() => {
+  let isCurrent = true;
 
+  const loadAttributes = async () => {
+    // Keep existing attributes while loading.
+    // Do NOT immediately clear them.
+    
+    const idsToTry = [
+      productTypeId,
+      form.subcategory_id,
+      form.category_id,
+    ]
+      .filter(Boolean)
+      .filter((id, index, arr) => arr.indexOf(id) === index);
+
+    if (!idsToTry.length || idsToTry.includes('other')) {
+      if (isCurrent) {
+        setCategoryAttributes([]);
+      }
+      return;
+    }
+
+    try {
+      let foundAttributes = [];
+
+      for (const categoryId of idsToTry) {
+        try {
+          const { data } = await sellerService.getCategoryAttributes(categoryId);
+
+          const attributes = Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+          console.log(
+            'CATEGORY ATTRIBUTES:',
+            categoryId,
+            attributes
+          );
+
+          if (attributes.length > 0) {
+            foundAttributes = attributes;
+            break;
+          }
+        } catch (err) {
+          console.warn(
+            `Failed to load attributes for category ${categoryId}`,
+            err
+          );
+        }
+      }
+
+      if (!isCurrent) return;
+
+      setCategoryAttributes(foundAttributes);
+    } catch (err) {
+      if (!isCurrent) return;
+
+      console.error('CATEGORY ATTRIBUTES ERROR:', err);
+
+      // Don't unnecessarily destroy existing attributes
+      setCategoryAttributes(prev => prev);
+    }
+  };
+
+  loadAttributes();
+
+  return () => {
+    isCurrent = false;
+  };
+}, [
+  form.category_id,
+  form.subcategory_id,
+  productTypeId,
+]);
   useEffect(() => {
     if (isFashionVariantCategory) return; // fashion uses colorGroups instead
     generateVariants();
@@ -680,13 +774,13 @@ const ProductForm = () => {
   const structured = categoryAttributes.map((attribute, index) => {
     const isVolOrWt = isVolumeAttribute(attribute.name) || isWeightAttribute(attribute.name);
     // Volume/weight store combined value like "500 ml" or "250 g" directly
-    // Size/shoe-size use the old "value Ã— qty" pattern
+    // Size/shoe-size use the old "value × qty" pattern
     const qtyKey   = `__qty__${attribute.id}`;
     const qtyValue = attributeValues[qtyKey];
     const baseValue = attributeValues[String(attribute.id)] || '';
     const isQtyLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
     const finalValue = (!isVolOrWt && isQtyLinked && qtyValue && baseValue)
-      ? `${baseValue} Ã— ${qtyValue}`
+      ? `${baseValue} × ${qtyValue}`
       : baseValue;
 
     return {
@@ -716,24 +810,103 @@ const renderAttributeField = (attribute) => {
   const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
   const options = attribute.options || [];
 
-  // â”€â”€ Variant attributes (multi-select / free text) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Variant attributes (multi-select / free text) ──────────────────────
   if (attribute.is_variant) {
-    const value = variantAttributeValues[attribute.name] || [];
-    if (!options.length) {
-      return (
-        <TextField
+  const value = variantAttributeValues[attribute.name] || [];
+
+  // Admin configured options
+  if (options.length > 0) {
+    return (
+      <FormControl
+        fullWidth
+        required={attribute.is_required}
+        sx={formFocusStyles}
+      >
+        <InputLabel>
+          {label} (Variant)
+        </InputLabel>
+
+        <Select
+          multiple
+          value={Array.isArray(value) ? value : []}
+          onChange={handleVariantAttributeChange(
+            attribute.id,
+            attribute.name
+          )}
           label={`${label} (Variant)`}
-          value={Array.isArray(value) ? value.join(', ') : value}
-          onChange={(e) => {
-            const values = e.target.value.split(',').map(item => item.trim()).filter(Boolean);
-            setVariantAttributeValues(prev => ({ ...prev, [attribute.name]: values }));
-          }}
-          fullWidth
-          helperText="Enter multiple values separated by commas."
-          required={attribute.is_required}
-        />
-      );
-    }
+          MenuProps={menuPropsDownward}
+          renderValue={(selected) => (
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 0.5,
+                flexWrap: 'wrap',
+              }}
+            >
+              {selected.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  size="small"
+                />
+              ))}
+            </Box>
+          )}
+        >
+          {options.map((option, index) => {
+            const optionValue =
+              typeof option === 'object'
+                ? option.value ?? option.label ?? ''
+                : option;
+
+            const selected =
+              Array.isArray(value) &&
+              value.includes(optionValue);
+
+            return (
+              <MenuItem
+                key={`${optionValue}-${index}`}
+                value={optionValue}
+              >
+                <Checkbox checked={selected} />
+
+                <ListItemText
+                  primary={optionValue}
+                />
+              </MenuItem>
+            );
+          })}
+        </Select>
+      </FormControl>
+    );
+  }
+
+  return (
+    <TextField
+      label={`${label} (Variant)`}
+      value={
+        Array.isArray(value)
+          ? value.join(', ')
+          : value
+      }
+      onChange={(e) => {
+        const values = e.target.value
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean);
+
+        setVariantAttributeValues(prev => ({
+          ...prev,
+          [attribute.name]: values,
+        }));
+      }}
+      fullWidth
+      helperText="Enter multiple values separated by commas."
+      required={attribute.is_required}
+      sx={formFocusStyles}
+    />
+  );
+
    return (
       <FormControl fullWidth>
         <InputLabel>{label} (Variant)</InputLabel>
@@ -760,61 +933,58 @@ const renderAttributeField = (attribute) => {
     );
   }
 
-  // â”€â”€ Volume: quantity input + ml/L unit dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  if (isVolumeAttribute(attribute.name)) {
-    const qtyKey = `__qty__${attribute.id}`;
-    const unitKey = `__unit__${attribute.id}`;
-    const qtyValue = attributeValues[qtyKey] || '';
-    const unitValue = attributeValues[unitKey] || 'ml';
+// ── Admin configured dropdown ─────────────────────────────
+if (
+  attribute.input_type === 'select' &&
+  Array.isArray(attribute.options) &&
+  attribute.options.length > 0
+) {
+  const selectOptions = attribute.options.map(option =>
+    typeof option === 'string' ? option : option.value
+  );
 
-    // Combine into the spec value on every change
-    const syncValue = (qty, unit) => {
-      const combined = qty ? `${qty} ${unit}` : '';
-      setAttributeValues(prev => ({
-        ...prev,
-        [String(attribute.id)]: combined,
-        [qtyKey]: qty,
-        [unitKey]: unit,
-      }));
-    };
+  const currentValue = attributeValues[String(attribute.id)] || '';
 
-    return (
-      <Box>
-        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-          {attribute.name}{attribute.is_required ? ' *' : ''}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            placeholder="e.g. 500"
-            type="number"
-            value={qtyValue}
-            onChange={(e) => syncValue(e.target.value, unitValue)}
-            inputProps={{ min: 0, step: 0.1 }}
-            sx={{ flex: 1 }}
-            required={attribute.is_required}
-            size="medium"
-          />
-          <FormControl sx={{ minWidth: 90 }}>
-    <Select
-              value={unitValue}
-              onChange={(e) => syncValue(qtyValue, e.target.value)}
-              size="medium"
-              MenuProps={menuPropsDownward}
-            >
-              {VOLUME_UNITS.map(u => (
-                <MenuItem key={u} value={u}>{u}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Enter quantity and select unit (ml or L)
-        </Typography>
-      </Box>
-    );
-  }
+  return (
+    <FormControl
+      fullWidth
+      required={attribute.is_required}
+      sx={formFocusStyles}
+    >
+      <InputLabel>
+        {attribute.name}
+        {attribute.is_required ? ' *' : ''}
+      </InputLabel>
 
-  // â”€â”€ Weight: quantity input + g/kg unit dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      <Select
+        value={currentValue}
+        label={`${attribute.name}${attribute.is_required ? ' *' : ''}`}
+        onChange={(e) => {
+          setAttributeValues(prev => ({
+            ...prev,
+            [String(attribute.id)]: e.target.value,
+          }));
+        }}
+        MenuProps={menuPropsDownward}
+      >
+        <MenuItem value="">
+          Select {attribute.name}
+        </MenuItem>
+
+        {selectOptions.map((optionValue, index) => (
+          <MenuItem
+            key={`${optionValue}-${index}`}
+            value={optionValue}
+          >
+            {optionValue}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}
+
+  // ── Weight: quantity input + g/kg unit dropdown ──────────────────────────
   if (isWeightAttribute(attribute.name)) {
     const qtyKey = `__qty__${attribute.id}`;
     const unitKey = `__unit__${attribute.id}`;
@@ -867,7 +1037,7 @@ const renderAttributeField = (attribute) => {
     );
   }
 
-  // â”€â”€ Standard select â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Standard select ──────────────────────────────────────────────────────
   const value = attributeValues[String(attribute.id)] || '';
   const qtyKey = `__qty__${attribute.id}`;
   const qtyValue = attributeValues[qtyKey] || '';
@@ -1051,6 +1221,22 @@ const renderAttributeField = (attribute) => {
     if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
     if (/[^a-zA-Z\s]/.test(form.name.trim())) { setError('Product name can only contain letters and spaces.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
+    if (form.category_id === 'other') {
+  if (!form.custom_category?.trim()) {
+    setError('Please specify a custom category.');
+    return;
+  }
+
+  if (!form.custom_subcategory?.trim()) {
+    setError('Please specify a custom subcategory.');
+    return;
+  }
+
+  if (!form.custom_product_type?.trim()) {
+    setError('Please specify a custom product type.');
+    return;
+  }
+}
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
 
@@ -1073,10 +1259,13 @@ const renderAttributeField = (attribute) => {
     if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
     if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
     if (!form.height || parseFloat(form.height) <= 0) { setError('Please enter a valid height greater than 0.'); return; }
-    if (!form.product_weight || parseFloat(form.product_weight) <= 0) { setError('Please enter a valid product weight greater than 0.'); return; }
-    if (!form.product_length || parseFloat(form.product_length) <= 0) { setError('Please enter a valid product length greater than 0.'); return; }
-    if (!form.product_breadth || parseFloat(form.product_breadth) <= 0) { setError('Please enter a valid product breadth greater than 0.'); return; }
-    if (!form.product_height || parseFloat(form.product_height) <= 0) { setError('Please enter a valid product height greater than 0.'); return; }
+   for (const dimKey of ['product_weight', 'product_length', 'product_breadth', 'product_height']) {
+      const dimVal = form[dimKey];
+      if (dimVal !== '' && dimVal !== null && dimVal !== undefined && parseFloat(dimVal) <= 0) {
+        setError('Product dimensions, if provided, must be greater than 0.');
+        return;
+      }
+    }
     if (shippingPreference === 'self') {
       if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
         setError('Please enter a delivery charge for fixed delivery.');
@@ -1102,6 +1291,7 @@ const renderAttributeField = (attribute) => {
         condition: form.condition,
         category_id: form.category_id === 'other' ? 'other' : parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
+        product_type_id: productTypeId ? parseInt(productTypeId) : null,
         weight: form.weight ? parseFloat(form.weight) : null,
         length: form.length ? parseFloat(form.length) : null,
         breadth: form.breadth ? parseFloat(form.breadth) : null,
@@ -1119,6 +1309,8 @@ const renderAttributeField = (attribute) => {
         hsn_code: form.hsn_code?.trim() || null,
         gst_rate: (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate,
         custom_category: form.custom_category?.trim() || null,
+        custom_subcategory: form.custom_subcategory?.trim() || null,
+        custom_product_type: form.custom_product_type?.trim() || null,
         warranty_type: form.warranty_type || null,
         warranty_duration: form.warranty_duration ? parseInt(form.warranty_duration) : null,
         warranty_duration_unit: form.warranty_type ? form.warranty_duration_unit : null,
@@ -1342,23 +1534,30 @@ const renderAttributeField = (attribute) => {
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth required>
                         <InputLabel id="cat-label">Category</InputLabel>
-                       <Select
+                        <Select
                           labelId="cat-label"
                           label="Category"
                           value={form.category_id}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setForm(prev => ({
-                              ...prev,
-                              category_id: val,
-                              subcategory_id: '',
-                              custom_category: val === 'other' ? prev.custom_category : '',
-                            }));
-                            setAttributeValues({});
-                            setVariantAttributeValues({});
-                            setVariants([]);
-                            setColorGroups([]);
-                          }}
+                         onChange={(e) => {
+  const val = e.target.value;
+
+  setForm(prev => ({
+    ...prev,
+    category_id: val,
+    subcategory_id: '',
+    custom_category: val === 'other' ? prev.custom_category : '',
+    custom_subcategory: val === 'other' ? prev.custom_subcategory : '',
+    custom_product_type: val === 'other' ? prev.custom_product_type : '',
+  }));
+
+  // IMPORTANT: clear everything related to previous category
+  setCategoryAttributes([]);
+  setAttributeValues({});
+  setVariantAttributeValues({});
+  setVariants([]);
+  setColorGroups([]);
+  setProductTypeId('');
+}}
                           MenuProps={menuPropsDownward}
                         >
                           
@@ -1371,17 +1570,45 @@ const renderAttributeField = (attribute) => {
                       </FormControl>
                     </Grid>
 
-                    {form.category_id === 'other' && (
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Specify Category Name"
-                          value={form.custom_category}
-                          onChange={handleChange('custom_category')}
-                          fullWidth required
-                          placeholder="e.g. Handmade Crafts"
-                        />
-                      </Grid>
-                    )}
+                  {form.category_id === 'other' && (
+  <>
+    {/* Custom Category */}
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Specify Category Name"
+        value={form.custom_category}
+        onChange={handleChange('custom_category')}
+        fullWidth
+        required
+        placeholder="e.g. Handmade Crafts"
+      />
+    </Grid>
+
+    {/* Custom Subcategory */}
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Specify Subcategory"
+        value={form.custom_subcategory}
+        onChange={handleChange('custom_subcategory')}
+        fullWidth
+        required
+        placeholder="e.g. Handmade Home Decor"
+      />
+    </Grid>
+
+    {/* Custom Product Type */}
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Specify Product Type"
+        value={form.custom_product_type}
+        onChange={handleChange('custom_product_type')}
+        fullWidth
+        required
+        placeholder="e.g. Wall Hanging"
+      />
+    </Grid>
+  </>
+)} 
 
                     
               {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
@@ -1393,17 +1620,56 @@ const renderAttributeField = (attribute) => {
                             label="Subcategory"
                             value={form.subcategory_id}
                             onChange={(e) => {
-                              const val = e.target.value;
-                              setForm(prev => ({ ...prev, subcategory_id: val }));
-                              setAttributeValues({});
-                              setVariantAttributeValues({});
-                              setVariants([]);
-                              setColorGroups([]);
-                            }}
+  const val = e.target.value;
+
+  setForm(prev => ({
+    ...prev,
+    subcategory_id: val,
+  }));
+
+  // Clear attributes belonging to previous selection
+  setCategoryAttributes([]);
+  setAttributeValues({});
+  setVariantAttributeValues({});
+  setVariants([]);
+  setColorGroups([]);
+  setProductTypeId('');
+}}
                             MenuProps={menuPropsDownward}
                           >
                             <MenuItem value="">None</MenuItem>
                             {categories.filter(c => c.parent_id === Number(form.category_id)).map(c => (
+                              <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
+
+                    {form.subcategory_id && categories.filter(c => c.parent_id === Number(form.subcategory_id)).length > 0 && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel id="type-label">Product Type</InputLabel>
+                          <Select
+                            labelId="type-label"
+                            label="Product Type"
+                            value={productTypeId}
+                            onChange={(e) => {
+  const val = e.target.value;
+
+  setProductTypeId(val);
+
+  // Clear old attributes/variants
+  setCategoryAttributes([]);
+  setAttributeValues({});
+  setVariantAttributeValues({});
+  setVariants([]);
+  setColorGroups([]);
+}}
+                            MenuProps={menuPropsDownward}
+                          >
+                            <MenuItem value="">None</MenuItem>
+                            {categories.filter(c => c.parent_id === Number(form.subcategory_id)).map(c => (
                               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                             ))}
                           </Select>
@@ -1423,25 +1689,24 @@ const renderAttributeField = (attribute) => {
                   </Typography>
                   <Grid container spacing={2}>
                    <Grid item xs={12} sm={6}>
-                      <TextField
+                    <TextField
                         label="Product Weight (kg)"
                         type="number"
                         value={form.product_weight}
                         onChange={handleChange('product_weight')}
                         fullWidth
-                        required
                         placeholder="e.g. 12.5"
                         inputProps={{ min: 0, step: 0.01 }}
-                      />
+                      />  
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Product Size (L x B x H in cm) *
+                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Product Size (L x B x H in cm)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <TextField size="small" placeholder="L" type="number" required value={form.product_length} onChange={handleChange('product_length')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="B" type="number" required value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="H" type="number" required value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="L" type="number" value={form.product_length} onChange={handleChange('product_length')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="B" type="number" value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="H" type="number" value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} />
                       </Box>
                     </Grid> 
                   </Grid>
@@ -1483,17 +1748,23 @@ const renderAttributeField = (attribute) => {
               </Card>
 
               {/* Dynamic Attributes & Specifications */}
-              {categoryAttributes.length > 0 && (
+              {(hasSpecifications || hasVariants || isFashionVariantCategory) && (
                 <Card sx={{ mb: 3 }}>
                   <CardContent>
                     <Typography variant="h6" fontWeight={700} gutterBottom>Specifications & Attributes</Typography>
                     <Divider sx={{ mb: 2 }} />
                     <Grid container spacing={2.5}>
-                      {categoryAttributes.filter(a => !(isFashionVariantCategory && a.is_variant) && a.name.trim().toLowerCase() !== 'fabric').map(attribute => (
-                        <Grid item xs={12} sm={6} key={attribute.id}>
-                          {renderAttributeField(attribute)}
-                        </Grid>
-                      ))}
+                      {specificationAttributes
+  .filter(
+    a =>
+      !(isFashionVariantCategory && a.is_variant) &&
+      a.name.trim().toLowerCase() !== 'fabric'
+  )
+  .map(attribute => (
+    <Grid item xs={12} sm={6} key={attribute.id}>
+      {renderAttributeField(attribute)}
+    </Grid>
+  ))}
                     </Grid>
 
                     {/* Fashion specific variant builder (Color / Size blocks) */}
@@ -1664,7 +1935,7 @@ const renderAttributeField = (attribute) => {
                     )}
 
                     {/* Generic variants */}
-                    {!isFashionVariantCategory && categoryAttributes.some(a => a.is_variant) && (
+                    {!isFashionVariantCategory && hasVariants && (
                       <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                           <Typography variant="subtitle2" fontWeight={700}>Product Variants</Typography>
