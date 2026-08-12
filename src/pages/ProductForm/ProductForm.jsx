@@ -15,12 +15,15 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { sellerService } from '../../services/seller.service';
+import { getAssetUrl } from '../../utils/getAssetUrl';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
 import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
-import SettlementBreakdown from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
+import SettlementBreakdown, { calculateSettlement } from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
+import { Collapse } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // ─── Commission hint hook ─────────────────────────────────────────────────
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
@@ -157,6 +160,14 @@ const getVariantValue = (variant, names) => {
   const key = Object.keys(attrs).find(attrName => names.includes(String(attrName).toLowerCase()));
   return key ? attrs[key] : '';
 };
+const variantAttributesMatch = (a, b) => {
+  const keysA = Object.keys(a || {});
+  const keysB = Object.keys(b || {});
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(
+    (k) => Object.prototype.hasOwnProperty.call(b, k) && String(a[k]) === String(b[k])
+  );
+};
 
 const groupFashionVariants = (flatVariants = []) => {
   const groups = new Map();
@@ -287,13 +298,14 @@ const VariantImageUpload = ({ url, onUpload, onRemove }) => {
     }
   };
 
-  return (
+  
+return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <input accept="image/*" style={{ display: 'none' }} id={inputId} type="file" onChange={handleChange} />
-      <label htmlFor={url ? '' : inputId}>
+      <label htmlFor={inputId}>
         <Tooltip title={url ? 'Click to change' : 'Upload Image'}>
           <Box sx={{ position: 'relative', cursor: 'pointer' }}>
-            <Avatar src={url} variant="rounded" sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}>
+            <Avatar src={getAssetUrl(url)} variant="rounded" sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}>
               {loading ? <CircularProgress size={20} /> : <CloudUploadIcon fontSize="small" />}
             </Avatar>
           </Box>
@@ -340,6 +352,86 @@ const CommissionBadge = ({ price }) => {
     </Box>
   );
 };
+// ─── Compact per-variant Net Payout hint ──────────────────────────────────
+function VariantNetPayout({ price, gstRate }) {
+  const { commission, loading: commissionLoading } = useCommissionHint(price);
+  const [rates, setRates] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    fetchSettingsOnce()
+      .then(raw => {
+        setRates({
+          razorpayFeeRate: Number(raw?.gatewayFee ?? 0),
+          gstRate: Number(raw?.gst ?? 0),
+          tcsRate: Number(raw?.tcsRate ?? 1),
+        });
+      })
+      .catch(() => setRates(null));
+  }, []);
+
+  const numericPrice = Number(price);
+  if (!numericPrice || numericPrice <= 0) return null;
+  if (!rates || commissionLoading || commission === null) {
+    return (
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        Calculating payout...
+      </Typography>
+    );
+  }
+
+  const s = calculateSettlement(
+    numericPrice,
+    rates.razorpayFeeRate,
+    rates.gstRate,
+    commission,
+    Number(gstRate) || 0,
+    rates.tcsRate
+  );
+
+  const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
+
+  return (
+    <Box sx={{ mt: 0.5 }}>
+      <Box
+        onClick={() => setExpanded(v => !v)}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+      >
+        <Typography variant="caption" sx={{ color: s.netPayout >= 0 ? 'success.main' : 'error.main', fontWeight: 700 }}>
+          Net payout: {fmt(s.netPayout)}
+        </Typography>
+        <ExpandMoreIcon
+          fontSize="inherit"
+          sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s', fontSize: 14, color: 'text.secondary' }}
+        />
+      </Box>
+      <Collapse in={expanded}>
+        <Box sx={{ mt: 0.5, p: 1, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Order amount</Typography>
+            <Typography variant="caption">{fmt(s.orderAmount)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Gateway fee ({rates.razorpayFeeRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.razorpayFee)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">GST on fee ({rates.gstRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.razorpayGst)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Platform fee</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.commission)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">TCS ({rates.tcsRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.tcs)}</Typography>
+          </Box>
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 const INDIAN_STATES = [
@@ -688,8 +780,8 @@ useEffect(() => {
     const combinations = optionsArray.reduce((a, b) =>
       a.reduce((r, v) => r.concat(b.map(w => ({ ...v, ...w }))), [])
     );
-    const newVariants = combinations.map(combo => {
-      const existing = variants.find(v => JSON.stringify(v.variant_attributes) === JSON.stringify(combo));
+   const newVariants = combinations.map(combo => {
+      const existing = variants.find(v => variantAttributesMatch(v.variant_attributes, combo));
       return existing || { sku: '', price: form.price || '', stock_quantity: 0, variant_attributes: combo };
     });
     setVariants(newVariants);
@@ -1835,7 +1927,7 @@ if (
                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                                     {existingColorImages.map(img => (
                                       <Box key={img.id} sx={{ position: 'relative' }}>
-                                        <Box component="img" src={img.image_url} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                                       <Box component="img" src={getAssetUrl(img.image_url)} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} /> 
                                         <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
                                           <DeleteIcon sx={{ fontSize: 14 }} />
                                         </IconButton>
@@ -1899,7 +1991,8 @@ if (
                                                 <TextField size="small" type="number" value={sizeRow.stock_quantity} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
                                               </TableCell>
                                               <TableCell>
-                                                <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                              <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                              <VariantNetPayout price={sizeRow.price} gstRate={form.gst_rate} />
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
@@ -1964,7 +2057,8 @@ if (
                                       <TextField size="small" placeholder="SKU" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} />
                                     </TableCell>
                                     <TableCell>
-                                      <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
+                                    <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
+                                    <VariantNetPayout price={variant.price} gstRate={form.gst_rate} />
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
@@ -2284,10 +2378,10 @@ if (
                       {Array.from({ length: MAX_PRODUCT_IMAGES }).map((_, index) => {
                         const generalDbImages = images.filter(img => !img.color);
                         const preview = index < generalDbImages.length
-                          ? generalDbImages[index].image_url
-                          : index - generalDbImages.length < newFiles.length
-                            ? URL.createObjectURL(newFiles[index - generalDbImages.length])
-                            : null;
+                           ? getAssetUrl(generalDbImages[index].image_url)
+                           : index - generalDbImages.length < newFiles.length
+                              ? URL.createObjectURL(newFiles[index - generalDbImages.length])
+                              : null;
 
                         return (
                           <Box
@@ -2368,73 +2462,6 @@ if (
                 </CardContent>
               </Card>
 
-              {/* Color Specific Galleries */}
-              {!isFashionVariantCategory && uniqueColors.map((color) => (
-                <Card key={color} sx={{ mb: 3, border: '1px solid', borderColor: '#0FB9B1' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Typography variant="h6" fontWeight={700}>Gallery: {color}</Typography>
-                      <Chip label="Color-specific" size="small" variant="outlined" sx={{ color: '#0FB9B1', borderColor: '#0FB9B1' }} />
-                    </Box>
-                    <Divider sx={{ mb: 2 }} />
-
-                    {/* Existing color images */}
-                    {images.filter(img => img.color === color).length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        {images.filter(img => img.color === color).map((img) => (
-                          <Box key={img.id} sx={{ position: 'relative' }}>
-                            <Box
-                              component="img"
-                              src={img.image_url}
-                              sx={{
-                                width: 90, height: 90, objectFit: 'cover', borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                              }}
-                            />
-                            <IconButton
-                              size="small" color="error"
-                              onClick={() => handleDeleteImage(img.id)}
-                              sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
-                            >
-                              <DeleteIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-
-                    {/* Newly selected color files */}
-                    {colorFiles[color]?.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        {colorFiles[color].map((f, i) => (
-                          <Chip
-                            key={i}
-                            label={f.name}
-                            size="small"
-                            onDelete={() => removeColorFile(color, i)}
-                          />
-                        ))}
-                      </Box>
-                    )}
-
-                    <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={secondaryButtonStyle}>
-                      Upload {color} Images
-                      <input
-                        type="file"
-                        hidden
-                        multiple
-                        accept="image/*"
-                        onChange={handleColorFileChange(color)}
-                      />
-                    </Button>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                      Images shown only when "{color}" is selected. <br/>
-                      <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
             </Box>
           </Grid>
 
