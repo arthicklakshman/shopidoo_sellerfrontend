@@ -342,7 +342,7 @@ export default function StoreInfo() {
                                         />
                                         <Box>
                                             <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
-                                                Platform Logistics (Recommended)
+                                                Platform Logistics
                                             </Typography>
                                             <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>
                                                 Let us handle shipping with pre-negotiated rates and better tracking

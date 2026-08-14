@@ -516,7 +516,7 @@ export default function StoreSetup({ onBack, onNext }) {
                 <Typography
                   sx={{ fontWeight: 600, color: "#111827", fontSize: "15px" }}
                 >
-                  Platform Logistics (Recommended)
+                  Platform Logistics
                 </Typography>
               </Box>
               <Typography

@@ -802,7 +802,7 @@ function useCommissionMap(products) {
         });
         setCommissionMap(map);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [products]);
 
   return commissionMap;
@@ -855,9 +855,9 @@ const Products = () => {
 
       const productList =
         Array.isArray(data?.data) ? data.data :
-        Array.isArray(data?.products) ? data.products :
-        Array.isArray(data?.data?.products) ? data.data.products :
-        [];
+          Array.isArray(data?.products) ? data.products :
+            Array.isArray(data?.data?.products) ? data.data.products :
+              [];
 
       setProducts(productList);
       setPagination(
@@ -888,7 +888,7 @@ const Products = () => {
       };
       walk(data.data || []);
       setCategories(flattened);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -1298,8 +1298,8 @@ const Products = () => {
                               : product.admin_status === 'approved' && !product.is_active
                                 ? 'Hidden from users'
                                 : product.admin_status === 'blocked'
-                                ? 'Hidden from users'
-                                : 'Waiting for admin approval'}
+                                  ? 'Hidden from users'
+                                  : 'Waiting for admin approval'}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -1330,10 +1330,10 @@ const Products = () => {
                             {!allProductsVisible
                               ? 'Turn ON main button first'
                               : product.admin_status !== 'approved'
-                              ? 'Approve first'
-                              : product.is_active
-                                ? 'ON'
-                                : 'OFF'}
+                                ? 'Approve first'
+                                : product.is_active
+                                  ? 'ON'
+                                  : 'OFF'}
                           </Typography>
                         </Stack>
                       </TableCell>
