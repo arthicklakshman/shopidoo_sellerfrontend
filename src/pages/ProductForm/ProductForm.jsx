@@ -1193,9 +1193,9 @@ const ProductForm = () => {
     if (!files.length) return;
 
     setImageErrs([]); // Reset errors
-    const totalColorFiles = Object.values(colorFiles).reduce((sum, filesForColor) => sum + filesForColor.length, 0);
-    const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+    const generalExisting = images.filter(img => !img.color).length;
+    const totalGeneralImages = generalExisting + newFiles.length;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalGeneralImages);
 
     if (availableSlots <= 0) {
       setImageErrs([`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`]);
@@ -1233,17 +1233,21 @@ const ProductForm = () => {
 
   const handleColorFileChange = (color) => async (e) => {
     const files = Array.from(e.target.files || []);
-    const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
-    const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+    const normalizedColor = String(color || '').trim().toLowerCase();
 
-    if (!String(color || '').trim()) {
+    if (!normalizedColor) {
       dispatch(showToast({ message: 'Enter a color name before uploading color images.', severity: 'warning' }));
       e.target.value = '';
       return;
     }
+
+    const existingColorImages = images.filter(img => img.color && String(img.color).trim().toLowerCase() === normalizedColor);
+    const pendingColorFiles = colorFiles[color] || [];
+    const totalForThisColor = existingColorImages.length + pendingColorFiles.length;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalForThisColor);
+
     if (availableSlots <= 0) {
-      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images only.`, severity: 'error' }));
+      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images for '${color}'.`, severity: 'error' }));
       e.target.value = '';
       return;
     }
@@ -1252,7 +1256,7 @@ const ProductForm = () => {
     const validFiles = [];
 
     if (files.length > availableSlots) {
-      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed. Excess files were ignored.`, severity: 'warning' }));
+      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images allowed per color group. Excess files were ignored.`, severity: 'warning' }));
     }
 
     for (const file of filesToProcess) {
@@ -1322,7 +1326,26 @@ const ProductForm = () => {
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
 
-    if ((images.length + newFiles.length + totalColorFiles) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
+    // Check general images limit for non-fashion products
+    const generalImagesCount = images.filter(img => !img.color).length + newFiles.length;
+    if (!isFashionVariantCategory && generalImagesCount > MAX_PRODUCT_IMAGES) {
+      setError(`You can upload up to ${MAX_PRODUCT_IMAGES} general product images only.`);
+      return;
+    }
+
+    // Check color images limit per color group for fashion products
+    if (isFashionVariantCategory) {
+      for (const group of colorGroups) {
+        if (!group.color || !group.color.trim()) continue;
+        const colorName = group.color.trim().toLowerCase();
+        const existingColorCount = images.filter(img => img.color && String(img.color).trim().toLowerCase() === colorName).length;
+        const pendingColorCount = (colorFiles[group.color] || []).length;
+        if ((existingColorCount + pendingColorCount) > MAX_PRODUCT_IMAGES) {
+          setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images for color '${group.color}' only.`);
+          return;
+        }
+      }
+    }
     if (isFashionVariantCategory && colorGroups.length === 0) {
       setError('Add at least one color variant for fashion products.');
       return;
@@ -1417,10 +1440,12 @@ const ProductForm = () => {
         productId = data.data.id;
       }
 
+      const uploadPromises = [];
+
       if (newFiles.length > 0) {
         const fd = new FormData();
         newFiles.forEach(f => fd.append('images', f));
-        await sellerService.addImages(productId, fd);
+        uploadPromises.push(sellerService.addImages(productId, fd));
       }
 
       for (const [color, files] of Object.entries(colorFiles)) {
@@ -1428,8 +1453,12 @@ const ProductForm = () => {
           const fd = new FormData();
           files.forEach(f => fd.append('images', f));
           fd.append('color', color);
-          await sellerService.addImages(productId, fd);
+          uploadPromises.push(sellerService.addImages(productId, fd));
         }
+      }
+
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
       }
 
       dispatch(showToast({ message: isEdit ? 'Product updated!' : 'Product created!', severity: 'success' }));
@@ -1929,8 +1958,11 @@ const ProductForm = () => {
                                   </IconButton>
                                 </Box>
 
-                                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                                  Upload {group.color || 'Color'} Images
+                                <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                                  Upload {group.color || 'Color'} Images (Up to 6)
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                  <strong>Requirements:</strong> Min 500x500px (1:1 Square Ratio), Max 5MB per image.
                                 </Typography>
 
                                 {(existingColorImages.length > 0 || colorFiles[group.color]?.length > 0) && (
@@ -1943,14 +1975,26 @@ const ProductForm = () => {
                                         </IconButton>
                                       </Box>
                                     ))}
-                                    {(colorFiles[group.color] || []).map((f, i) => (
-                                      <Chip key={`${f.name}-${i}`} label={f.name} size="small" onDelete={() => removeColorFile(group.color, i)} />
+                                    {(colorFiles[group.color] || []).map((file, i) => (
+                                      <Box key={`color-file-${i}`} sx={{ position: 'relative' }}>
+                                        <Box component="img" src={URL.createObjectURL(file)} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                                        <IconButton size="small" color="error" onClick={() => removeColorFile(group.color, i)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
+                                          <DeleteIcon sx={{ fontSize: 14 }} />
+                                        </IconButton>
+                                      </Box>
                                     ))}
                                   </Box>
                                 )}
 
-                                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={secondaryButtonStyle}>
-                                  Upload Images
+                                <Button
+                                  variant="outlined"
+                                  component="label"
+                                  startIcon={<CloudUploadIcon />}
+                                  size="small"
+                                  disabled={(existingColorImages.length + (colorFiles[group.color]?.length || 0)) >= MAX_PRODUCT_IMAGES}
+                                  sx={secondaryButtonStyle}
+                                >
+                                  Upload {group.color || 'Color'} Photos (Max 6)
                                   <input type="file" hidden multiple accept="image/*" onChange={handleColorFileChange(group.color)} />
                                 </Button>
 

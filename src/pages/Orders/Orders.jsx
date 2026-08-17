@@ -368,7 +368,12 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Product</Typography>
-            <Typography variant="body1">{order.product || '-'}</Typography>
+            <Typography variant="body1" fontWeight={600}>{order.product || '-'}</Typography>
+            {(order.variantStr || order.rawItem?.variant?.variant_attributes) && (
+              <Typography variant="body2" color="primary.main" fontWeight={700} sx={{ mt: 0.5 }}>
+                Variant: {order.variantStr || Object.values(order.rawItem.variant.variant_attributes).join(' / ')}
+              </Typography>
+            )}
           </Grid>
         </Grid>
         <Divider sx={{ mb: 2.5 }} />
@@ -1095,6 +1100,7 @@ const Orders = () => {
                                   orderNumber: (item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`,
                                   customer: (item.Order || item.order)?.user?.name || '-',
                                   product: item.product?.name || '-',
+                                  variantStr: item.variant?.variant_attributes ? Object.values(item.variant.variant_attributes).join(' / ') : '',
                                   quantity: item.quantity,
                                   amount: item.total_price,
                                   status: displayStatus,
