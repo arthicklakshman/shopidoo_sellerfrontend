@@ -55,12 +55,15 @@ const BTN_STYLE = {
   },
 };
 
-const LOCATION_OPTIONS = ["brand_store", "store_top", "top_of_second_image"];
+const LOCATION_OPTIONS = ["homepage_top", "homepage_middle", "homepage_bottom", "store_top", "top_of_second_image", "brand_store"];
 
 const LOCATION_LABELS = {
-  brand_store: "Brand Store Background (1500x280)",
-  store_top: "Above Products (1200x400)",
-  top_of_second_image: "Below Products (1200x400)"
+  homepage_top: "Homepage Top Banner (1100x350)",
+  homepage_middle: "Homepage Middle Banner (1200x400)",
+  homepage_bottom: "Homepage Bottom Banner (1200x400)",
+  store_top: "Above Products Banner (1200x400)",
+  top_of_second_image: "Below Products Banner (1200x400)",
+  brand_store: "Brand Store Header (1500x280)"
 };
 
 const BannerPreviewImage = ({ src, alt }) => {
