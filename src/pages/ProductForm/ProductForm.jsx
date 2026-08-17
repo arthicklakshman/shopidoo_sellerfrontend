@@ -15,12 +15,15 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { sellerService } from '../../services/seller.service';
+import { getAssetUrl } from '../../utils/getAssetUrl';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
 import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
-import SettlementBreakdown from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
+import SettlementBreakdown, { calculateSettlement } from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
+import { Collapse } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // ─── Commission hint hook ─────────────────────────────────────────────────
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
@@ -138,10 +141,10 @@ const formFocusStyles = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
-const createColorGroup = (color = '') => ({
+const createColorGroup = (color = '', defaults = {}) => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   color,
-  sizes: [],
+  sizes: [emptySizeVariant(defaults)],
 });
 
 const emptySizeVariant = (defaults = {}) => ({
@@ -156,6 +159,14 @@ const getVariantValue = (variant, names) => {
   const attrs = variant?.variant_attributes || {};
   const key = Object.keys(attrs).find(attrName => names.includes(String(attrName).toLowerCase()));
   return key ? attrs[key] : '';
+};
+const variantAttributesMatch = (a, b) => {
+  const keysA = Object.keys(a || {});
+  const keysB = Object.keys(b || {});
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(
+    (k) => Object.prototype.hasOwnProperty.call(b, k) && String(a[k]) === String(b[k])
+  );
 };
 
 const groupFashionVariants = (flatVariants = []) => {
@@ -283,17 +294,18 @@ const VariantImageUpload = ({ url, onUpload, onRemove }) => {
       dispatch(showToast({ message: getErrorMessage(err), severity: 'error' }));
     } finally {
       setLoading(false);
-      e.target.value = ''; 
+      e.target.value = '';
     }
   };
+
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <input accept="image/*" style={{ display: 'none' }} id={inputId} type="file" onChange={handleChange} />
-      <label htmlFor={url ? '' : inputId}>
+      <label htmlFor={inputId}>
         <Tooltip title={url ? 'Click to change' : 'Upload Image'}>
           <Box sx={{ position: 'relative', cursor: 'pointer' }}>
-            <Avatar src={url} variant="rounded" sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}>
+            <Avatar src={getAssetUrl(url)} variant="rounded" sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}>
               {loading ? <CircularProgress size={20} /> : <CloudUploadIcon fontSize="small" />}
             </Avatar>
           </Box>
@@ -340,14 +352,94 @@ const CommissionBadge = ({ price }) => {
     </Box>
   );
 };
+// ─── Compact per-variant Net Payout hint ──────────────────────────────────
+function VariantNetPayout({ price, gstRate }) {
+  const { commission, loading: commissionLoading } = useCommissionHint(price);
+  const [rates, setRates] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    fetchSettingsOnce()
+      .then(raw => {
+        setRates({
+          razorpayFeeRate: Number(raw?.gatewayFee ?? 0),
+          gstRate: Number(raw?.gst ?? 0),
+          tcsRate: Number(raw?.tcsRate ?? 1),
+        });
+      })
+      .catch(() => setRates(null));
+  }, []);
+
+  const numericPrice = Number(price);
+  if (!numericPrice || numericPrice <= 0) return null;
+  if (!rates || commissionLoading || commission === null) {
+    return (
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        Calculating payout...
+      </Typography>
+    );
+  }
+
+  const s = calculateSettlement(
+    numericPrice,
+    rates.razorpayFeeRate,
+    rates.gstRate,
+    commission,
+    Number(gstRate) || 0,
+    rates.tcsRate
+  );
+
+  const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
+
+  return (
+    <Box sx={{ mt: 0.5 }}>
+      <Box
+        onClick={() => setExpanded(v => !v)}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+      >
+        <Typography variant="caption" sx={{ color: s.netPayout >= 0 ? 'success.main' : 'error.main', fontWeight: 700 }}>
+          Net payout: {fmt(s.netPayout)}
+        </Typography>
+        <ExpandMoreIcon
+          fontSize="inherit"
+          sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s', fontSize: 14, color: 'text.secondary' }}
+        />
+      </Box>
+      <Collapse in={expanded}>
+        <Box sx={{ mt: 0.5, p: 1, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Order amount</Typography>
+            <Typography variant="caption">{fmt(s.orderAmount)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Gateway fee ({rates.razorpayFeeRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.razorpayFee)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">GST on fee ({rates.gstRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.razorpayGst)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">Platform fee</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.commission)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="caption" color="text.secondary">TCS ({rates.tcsRate}%)</Typography>
+            <Typography variant="caption" color="error.main">-{fmt(s.tcs)}</Typography>
+          </Box>
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 const INDIAN_STATES = [
-  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
-  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
-  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
-  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
-  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa",
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka",
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
   "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
 
@@ -441,9 +533,9 @@ const ProductForm = () => {
   const sizeAttribute = useMemo(() => variantAttributes.find(a => isSizeLikeAttributeName(a.name)), [variantAttributes]);
 
   const currentCategory = useMemo(() => {
-  const catId = productTypeId || form.subcategory_id || form.category_id;
-  return categories.find(c => Number(c.id) === Number(catId));
-   }, [categories, form.category_id, form.subcategory_id, productTypeId]);
+    const catId = productTypeId || form.subcategory_id || form.category_id;
+    return categories.find(c => Number(c.id) === Number(catId));
+  }, [categories, form.category_id, form.subcategory_id, productTypeId]);
 
   const isFashionVariantCategory = useMemo(() => {
     // No Color/Size attributes configured on this category at all → this is
@@ -458,22 +550,22 @@ const ProductForm = () => {
   }, [colorAttribute, sizeAttribute, currentCategory]);
 
   const hasSpecifications = useMemo(() => {
-  return categoryAttributes.some(
-    a =>
-      !(isFashionVariantCategory && a.is_variant) &&
-      a.name.trim().toLowerCase() !== 'fabric'
-  );
-}, [categoryAttributes, isFashionVariantCategory]);
-const hasVariants = isFashionVariantCategory
-  ? colorGroups.length > 0
-  : variants.length > 0;
- const specificationAttributes = useMemo(() => {
-  return categoryAttributes.filter(
-    a =>
-      !(isFashionVariantCategory && a.is_variant) &&
-      a.name.trim().toLowerCase() !== 'fabric'
-  );
-}, [categoryAttributes, isFashionVariantCategory]); 
+    return categoryAttributes.some(
+      a =>
+        !(isFashionVariantCategory && a.is_variant) &&
+        a.name.trim().toLowerCase() !== 'fabric'
+    );
+  }, [categoryAttributes, isFashionVariantCategory]);
+  const hasVariants = isFashionVariantCategory
+    ? colorGroups.length > 0
+    : variants.length > 0;
+  const specificationAttributes = useMemo(() => {
+    return categoryAttributes.filter(
+      a =>
+        !(isFashionVariantCategory && a.is_variant) &&
+        a.name.trim().toLowerCase() !== 'fabric'
+    );
+  }, [categoryAttributes, isFashionVariantCategory]);
 
   const uniqueColors = useMemo(() => {
     if (isFashionVariantCategory) return colorGroups.map(g => g.color).filter(Boolean);
@@ -488,7 +580,7 @@ const hasVariants = isFashionVariantCategory
   useEffect(() => {
     sellerService.getCategories().then(({ data }) => {
       setCategories(flattenCategories(data.data || []));
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (isEdit) {
       import('../../services/api').then(({ default: api }) =>
@@ -555,97 +647,87 @@ const hasVariants = isFashionVariantCategory
     }
   }, [id]);
 
-useEffect(() => {
-  let isCurrent = true;
+  useEffect(() => {
+    let isCurrent = true;
 
-  const loadAttributes = async () => {
-    // Keep existing attributes while loading.
-    // Do NOT immediately clear them.
-    
-    const idsToTry = [
-      productTypeId,
-      form.subcategory_id,
-      form.category_id,
-    ]
-      .filter(Boolean)
-      .filter((id, index, arr) => arr.indexOf(id) === index);
+    const loadAttributes = async () => {
+      // Keep existing attributes while loading.
+      // Do NOT immediately clear them.
 
-    if (!idsToTry.length || idsToTry.includes('other')) {
-      if (isCurrent) {
-        setCategoryAttributes([]);
-      }
-      return;
-    }
+      const idsToTry = [
+        productTypeId,
+        form.subcategory_id,
+        form.category_id,
+      ]
+        .filter(Boolean)
+        .filter((id, index, arr) => arr.indexOf(id) === index);
 
-    try {
-      let foundAttributes = [];
-
-      for (const categoryId of idsToTry) {
-        try {
-          const { data } = await sellerService.getCategoryAttributes(categoryId);
-
-          const attributes = Array.isArray(data?.data)
-            ? data.data
-            : [];
-
-          console.log(
-            'CATEGORY ATTRIBUTES:',
-            categoryId,
-            attributes
-          );
-
-          if (attributes.length > 0) {
-            foundAttributes = attributes;
-            break;
-          }
-        } catch (err) {
-          console.warn(
-            `Failed to load attributes for category ${categoryId}`,
-            err
-          );
+      if (!idsToTry.length || idsToTry.includes('other')) {
+        if (isCurrent) {
+          setCategoryAttributes([]);
         }
+        return;
       }
 
-      if (!isCurrent) return;
+      try {
+        let foundAttributes = [];
 
-      setCategoryAttributes(foundAttributes);
-    } catch (err) {
-      if (!isCurrent) return;
+        for (const categoryId of idsToTry) {
+          try {
+            const { data } = await sellerService.getCategoryAttributes(categoryId);
 
-      console.error('CATEGORY ATTRIBUTES ERROR:', err);
+            const attributes = Array.isArray(data?.data)
+              ? data.data
+              : [];
 
-      // Don't unnecessarily destroy existing attributes
-      setCategoryAttributes(prev => prev);
-    }
-  };
+            console.log(
+              'CATEGORY ATTRIBUTES:',
+              categoryId,
+              attributes
+            );
 
-  loadAttributes();
+            if (attributes.length > 0) {
+              foundAttributes = attributes;
+              break;
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to load attributes for category ${categoryId}`,
+              err
+            );
+          }
+        }
 
-  return () => {
-    isCurrent = false;
-  };
-}, [
-  form.category_id,
-  form.subcategory_id,
-  productTypeId,
-]);
+        if (!isCurrent) return;
+
+        setCategoryAttributes(foundAttributes);
+      } catch (err) {
+        if (!isCurrent) return;
+
+        console.error('CATEGORY ATTRIBUTES ERROR:', err);
+
+        // Don't unnecessarily destroy existing attributes
+        setCategoryAttributes(prev => prev);
+      }
+    };
+
+    loadAttributes();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    form.category_id,
+    form.subcategory_id,
+    productTypeId,
+  ]);
   useEffect(() => {
     if (isFashionVariantCategory) return; // fashion uses colorGroups instead
     generateVariants();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantAttributeValues, categoryAttributes, isFashionVariantCategory]);
 
-  useEffect(() => {
-    let total = 0;
-    if (isFashionVariantCategory) {
-      colorGroups.forEach(group => group.sizes.forEach(size => { total += (Number(size.stock_quantity) || 0); }));
-    } else if (variants.length > 0) {
-      variants.forEach(v => { total += (Number(v.stock_quantity) || 0); });
-    }
-    if (isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) {
-      setForm(prev => ({ ...prev, stock_quantity: total }));
-    }
-  }, [colorGroups, variants, isFashionVariantCategory]);
+
 
   const handleChange = (key) => (e) => {
     let value = e.target.value;
@@ -689,7 +771,7 @@ useEffect(() => {
       a.reduce((r, v) => r.concat(b.map(w => ({ ...v, ...w }))), [])
     );
     const newVariants = combinations.map(combo => {
-      const existing = variants.find(v => JSON.stringify(v.variant_attributes) === JSON.stringify(combo));
+      const existing = variants.find(v => variantAttributesMatch(v.variant_attributes, combo));
       return existing || { sku: '', price: form.price || '', stock_quantity: 0, variant_attributes: combo };
     });
     setVariants(newVariants);
@@ -699,7 +781,7 @@ useEffect(() => {
     setVariants(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
   };
 
-  const addColorGroup = () => setColorGroups(prev => [...prev, createColorGroup('')]);
+  const addColorGroup = () => setColorGroups(prev => [...prev, createColorGroup('', { price: form.price, compare_price: form.compare_price })]);
   const removeColorGroup = (groupIndex) => setColorGroups(prev => prev.filter((_, i) => i !== groupIndex));
 
   const updateColorGroup = (groupIndex, field, value) => {
@@ -771,349 +853,349 @@ useEffect(() => {
   };
 
   const buildSpecifications = () => {
-  const structured = categoryAttributes.map((attribute, index) => {
-    const isVolOrWt = isVolumeAttribute(attribute.name) || isWeightAttribute(attribute.name);
-    // Volume/weight store combined value like "500 ml" or "250 g" directly
-    // Size/shoe-size use the old "value × qty" pattern
-    const qtyKey   = `__qty__${attribute.id}`;
-    const qtyValue = attributeValues[qtyKey];
-    const baseValue = attributeValues[String(attribute.id)] || '';
-    const isQtyLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
-    const finalValue = (!isVolOrWt && isQtyLinked && qtyValue && baseValue)
-      ? `${baseValue} × ${qtyValue}`
-      : baseValue;
+    const structured = categoryAttributes.map((attribute, index) => {
+      const isVolOrWt = isVolumeAttribute(attribute.name) || isWeightAttribute(attribute.name);
+      // Volume/weight store combined value like "500 ml" or "250 g" directly
+      // Size/shoe-size use the old "value × qty" pattern
+      const qtyKey = `__qty__${attribute.id}`;
+      const qtyValue = attributeValues[qtyKey];
+      const baseValue = attributeValues[String(attribute.id)] || '';
+      const isQtyLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
+      const finalValue = (!isVolOrWt && isQtyLinked && qtyValue && baseValue)
+        ? `${baseValue} × ${qtyValue}`
+        : baseValue;
 
-    return {
-      attribute_id: attribute.id,
-      name: attribute.name,
-      value: finalValue,
-      input_type: attribute.input_type,
-      unit: attribute.unit || null,
-      is_custom: false,
-      sort_order: attribute.sort_order ?? index,
-    };
-  });
+      return {
+        attribute_id: attribute.id,
+        name: attribute.name,
+        value: finalValue,
+        input_type: attribute.input_type,
+        unit: attribute.unit || null,
+        is_custom: false,
+        sort_order: attribute.sort_order ?? index,
+      };
+    });
 
-  const custom = customSpecs
-    .map((spec, index) => ({
-      name: String(spec.name || '').trim(),
-      value: String(spec.value || '').trim(),
-      is_custom: true,
-      sort_order: categoryAttributes.length + index,
-    }))
-    .filter(spec => spec.name && spec.value);
+    const custom = customSpecs
+      .map((spec, index) => ({
+        name: String(spec.name || '').trim(),
+        value: String(spec.value || '').trim(),
+        is_custom: true,
+        sort_order: categoryAttributes.length + index,
+      }))
+      .filter(spec => spec.name && spec.value);
 
-  return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
-};
+    return [...structured, ...custom].filter(spec => String(spec.value || '').trim());
+  };
 
-const renderAttributeField = (attribute) => {
-  const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
-  const options = attribute.options || [];
+  const renderAttributeField = (attribute) => {
+    const label = `${attribute.name}${attribute.unit ? ` (${attribute.unit})` : ''}`;
+    const options = attribute.options || [];
 
-  // ── Variant attributes (multi-select / free text) ──────────────────────
-  if (attribute.is_variant) {
-  const value = variantAttributeValues[attribute.name] || [];
+    // ── Variant attributes (multi-select / free text) ──────────────────────
+    if (attribute.is_variant) {
+      const value = variantAttributeValues[attribute.name] || [];
 
-  // Admin configured options
-  if (options.length > 0) {
-    return (
-      <FormControl
-        fullWidth
-        required={attribute.is_required}
-        sx={formFocusStyles}
-      >
-        <InputLabel>
-          {label} (Variant)
-        </InputLabel>
+      // Admin configured options
+      if (options.length > 0) {
+        return (
+          <FormControl
+            fullWidth
+            required={attribute.is_required}
+            sx={formFocusStyles}
+          >
+            <InputLabel>
+              {label} (Variant)
+            </InputLabel>
 
-        <Select
-          multiple
-          value={Array.isArray(value) ? value : []}
-          onChange={handleVariantAttributeChange(
-            attribute.id,
-            attribute.name
-          )}
-          label={`${label} (Variant)`}
-          MenuProps={menuPropsDownward}
-          renderValue={(selected) => (
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                flexWrap: 'wrap',
-              }}
+            <Select
+              multiple
+              value={Array.isArray(value) ? value : []}
+              onChange={handleVariantAttributeChange(
+                attribute.id,
+                attribute.name
+              )}
+              label={`${label} (Variant)`}
+              MenuProps={menuPropsDownward}
+              renderValue={(selected) => (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 0.5,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {selected.map((item) => (
+                    <Chip
+                      key={item}
+                      label={item}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              )}
             >
-              {selected.map((item) => (
-                <Chip
-                  key={item}
-                  label={item}
-                  size="small"
-                />
-              ))}
-            </Box>
-          )}
+              {options.map((option, index) => {
+                const optionValue =
+                  typeof option === 'object'
+                    ? option.value ?? option.label ?? ''
+                    : option;
+
+                const selected =
+                  Array.isArray(value) &&
+                  value.includes(optionValue);
+
+                return (
+                  <MenuItem
+                    key={`${optionValue}-${index}`}
+                    value={optionValue}
+                  >
+                    <Checkbox checked={selected} />
+
+                    <ListItemText
+                      primary={optionValue}
+                    />
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
+        );
+      }
+
+      return (
+        <TextField
+          label={`${label} (Variant)`}
+          value={
+            Array.isArray(value)
+              ? value.join(', ')
+              : value
+          }
+          onChange={(e) => {
+            const values = e.target.value
+              .split(',')
+              .map(item => item.trim())
+              .filter(Boolean);
+
+            setVariantAttributeValues(prev => ({
+              ...prev,
+              [attribute.name]: values,
+            }));
+          }}
+          fullWidth
+          helperText="Enter multiple values separated by commas."
+          required={attribute.is_required}
+          sx={formFocusStyles}
+        />
+      );
+
+      return (
+        <FormControl fullWidth>
+          <InputLabel>{label} (Variant)</InputLabel>
+          <Select
+            multiple value={value}
+            onChange={handleVariantAttributeChange(attribute.id, attribute.name)}
+            renderValue={selected => selected.join(', ')}
+            label={`${label} (Variant)`}
+            MenuProps={menuPropsDownward}
+          >
+            {options.map(option => (
+              <MenuItem key={option.id} value={option.value}>
+                <Checkbox checked={value.indexOf(option.value) > -1} />
+                <ListItemText primary={option.value} />
+              </MenuItem>
+            ))}
+          </Select>
+          {isWeightAttribute(attribute.name) || isVolumeAttribute(attribute.name) ? (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              Product's net weight/volume (e.g. 250g, 100ml) — not the same as shipping package weight below.
+            </Typography>
+          ) : null}
+        </FormControl>
+      );
+    }
+
+    // ── Admin configured dropdown ─────────────────────────────
+    if (
+      attribute.input_type === 'select' &&
+      Array.isArray(attribute.options) &&
+      attribute.options.length > 0
+    ) {
+      const selectOptions = attribute.options.map(option =>
+        typeof option === 'string' ? option : option.value
+      );
+
+      const currentValue = attributeValues[String(attribute.id)] || '';
+
+      return (
+        <FormControl
+          fullWidth
+          required={attribute.is_required}
+          sx={formFocusStyles}
         >
-          {options.map((option, index) => {
-            const optionValue =
-              typeof option === 'object'
-                ? option.value ?? option.label ?? ''
-                : option;
+          <InputLabel>
+            {attribute.name}
+            {attribute.is_required ? ' *' : ''}
+          </InputLabel>
 
-            const selected =
-              Array.isArray(value) &&
-              value.includes(optionValue);
+          <Select
+            value={currentValue}
+            label={`${attribute.name}${attribute.is_required ? ' *' : ''}`}
+            onChange={(e) => {
+              setAttributeValues(prev => ({
+                ...prev,
+                [String(attribute.id)]: e.target.value,
+              }));
+            }}
+            MenuProps={menuPropsDownward}
+          >
+            <MenuItem value="">
+              Select {attribute.name}
+            </MenuItem>
 
-            return (
+            {selectOptions.map((optionValue, index) => (
               <MenuItem
                 key={`${optionValue}-${index}`}
                 value={optionValue}
               >
-                <Checkbox checked={selected} />
-
-                <ListItemText
-                  primary={optionValue}
-                />
+                {optionValue}
               </MenuItem>
-            );
-          })}
-        </Select>
-      </FormControl>
-    );
-  }
-
-  return (
-    <TextField
-      label={`${label} (Variant)`}
-      value={
-        Array.isArray(value)
-          ? value.join(', ')
-          : value
-      }
-      onChange={(e) => {
-        const values = e.target.value
-          .split(',')
-          .map(item => item.trim())
-          .filter(Boolean);
-
-        setVariantAttributeValues(prev => ({
-          ...prev,
-          [attribute.name]: values,
-        }));
-      }}
-      fullWidth
-      helperText="Enter multiple values separated by commas."
-      required={attribute.is_required}
-      sx={formFocusStyles}
-    />
-  );
-
-   return (
-      <FormControl fullWidth>
-        <InputLabel>{label} (Variant)</InputLabel>
-         <Select
-          multiple value={value}
-          onChange={handleVariantAttributeChange(attribute.id, attribute.name)}
-          renderValue={selected => selected.join(', ')}
-          label={`${label} (Variant)`}
-          MenuProps={menuPropsDownward}
-        >
-          {options.map(option => (
-            <MenuItem key={option.id} value={option.value}>
-              <Checkbox checked={value.indexOf(option.value) > -1} />
-              <ListItemText primary={option.value} />
-            </MenuItem>
-          ))}
-        </Select>
-        {isWeightAttribute(attribute.name) || isVolumeAttribute(attribute.name) ? (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            Product's net weight/volume (e.g. 250g, 100ml) — not the same as shipping package weight below.
-          </Typography>
-        ) : null}
-      </FormControl>
-    );
-  }
-
-// ── Admin configured dropdown ─────────────────────────────
-if (
-  attribute.input_type === 'select' &&
-  Array.isArray(attribute.options) &&
-  attribute.options.length > 0
-) {
-  const selectOptions = attribute.options.map(option =>
-    typeof option === 'string' ? option : option.value
-  );
-
-  const currentValue = attributeValues[String(attribute.id)] || '';
-
-  return (
-    <FormControl
-      fullWidth
-      required={attribute.is_required}
-      sx={formFocusStyles}
-    >
-      <InputLabel>
-        {attribute.name}
-        {attribute.is_required ? ' *' : ''}
-      </InputLabel>
-
-      <Select
-        value={currentValue}
-        label={`${attribute.name}${attribute.is_required ? ' *' : ''}`}
-        onChange={(e) => {
-          setAttributeValues(prev => ({
-            ...prev,
-            [String(attribute.id)]: e.target.value,
-          }));
-        }}
-        MenuProps={menuPropsDownward}
-      >
-        <MenuItem value="">
-          Select {attribute.name}
-        </MenuItem>
-
-        {selectOptions.map((optionValue, index) => (
-          <MenuItem
-            key={`${optionValue}-${index}`}
-            value={optionValue}
-          >
-            {optionValue}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  );
-}
-
-  // ── Weight: quantity input + g/kg unit dropdown ──────────────────────────
-  if (isWeightAttribute(attribute.name)) {
-    const qtyKey = `__qty__${attribute.id}`;
-    const unitKey = `__unit__${attribute.id}`;
-    const qtyValue = attributeValues[qtyKey] || '';
-    const unitValue = attributeValues[unitKey] || 'g';
-
-    const syncValue = (qty, unit) => {
-      const combined = qty ? `${qty} ${unit}` : '';
-      setAttributeValues(prev => ({
-        ...prev,
-        [String(attribute.id)]: combined,
-        [qtyKey]: qty,
-        [unitKey]: unit,
-      }));
-    };
-
-    return (
-      <Box>
-        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-          {attribute.name}{attribute.is_required ? ' *' : ''}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            placeholder="e.g. 250"
-            type="number"
-            value={qtyValue}
-            onChange={(e) => syncValue(e.target.value, unitValue)}
-            inputProps={{ min: 0, step: 0.1 }}
-            sx={{ flex: 1 }}
-            required={attribute.is_required}
-            size="medium"
-          />
-          <FormControl sx={{ minWidth: 90 }}>
-            <Select
-              value={unitValue}
-              onChange={(e) => syncValue(qtyValue, e.target.value)}
-              size="medium"
-              MenuProps={menuPropsDownward}
-            >
-              {WEIGHT_UNITS.map(u => (
-                <MenuItem key={u} value={u}>{u}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Enter quantity and select unit (g or kg)
-        </Typography>
-      </Box>
-    );
-  }
-
-  // ── Standard select ──────────────────────────────────────────────────────
-  const value = attributeValues[String(attribute.id)] || '';
-  const qtyKey = `__qty__${attribute.id}`;
-  const qtyValue = attributeValues[qtyKey] || '';
-  const isQuantityLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
-
-  if (attribute.input_type === 'select') {
-    return (
-      <Box>
-        <FormControl fullWidth required={attribute.is_required}>
-          <InputLabel>{label}</InputLabel>
-          <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)} MenuProps={menuPropsDownward}>
-            <MenuItem value="">Select {attribute.name}</MenuItem>
-            {options.map(option => (
-              <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        {isQuantityLinked && value && (
-          <TextField
-            label={`Quantity for ${value}`}
-            type="number"
-            value={qtyValue}
-            onChange={(e) =>
-              setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
-            }
-            fullWidth
-            placeholder="e.g. 2"
-            inputProps={{ min: 1 }}
-            sx={{ mt: 1 }}
-            helperText={`How many units of ${value}?`}
-          />
-        )}
-      </Box>
-    );
-  }
+      );
+    }
 
-  if (attribute.input_type === 'radio') {
+    // ── Weight: quantity input + g/kg unit dropdown ──────────────────────────
+    if (isWeightAttribute(attribute.name)) {
+      const qtyKey = `__qty__${attribute.id}`;
+      const unitKey = `__unit__${attribute.id}`;
+      const qtyValue = attributeValues[qtyKey] || '';
+      const unitValue = attributeValues[unitKey] || 'g';
+
+      const syncValue = (qty, unit) => {
+        const combined = qty ? `${qty} ${unit}` : '';
+        setAttributeValues(prev => ({
+          ...prev,
+          [String(attribute.id)]: combined,
+          [qtyKey]: qty,
+          [unitKey]: unit,
+        }));
+      };
+
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+            {attribute.name}{attribute.is_required ? ' *' : ''}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              placeholder="e.g. 250"
+              type="number"
+              value={qtyValue}
+              onChange={(e) => syncValue(e.target.value, unitValue)}
+              inputProps={{ min: 0, step: 0.1 }}
+              sx={{ flex: 1 }}
+              required={attribute.is_required}
+              size="medium"
+            />
+            <FormControl sx={{ minWidth: 90 }}>
+              <Select
+                value={unitValue}
+                onChange={(e) => syncValue(qtyValue, e.target.value)}
+                size="medium"
+                MenuProps={menuPropsDownward}
+              >
+                {WEIGHT_UNITS.map(u => (
+                  <MenuItem key={u} value={u}>{u}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            Enter quantity and select unit (g or kg)
+          </Typography>
+        </Box>
+      );
+    }
+
+    // ── Standard select ──────────────────────────────────────────────────────
+    const value = attributeValues[String(attribute.id)] || '';
+    const qtyKey = `__qty__${attribute.id}`;
+    const qtyValue = attributeValues[qtyKey] || '';
+    const isQuantityLinked = ['size', 'shoe size'].includes(attribute.name.toLowerCase());
+
+    if (attribute.input_type === 'select') {
+      return (
+        <Box>
+          <FormControl fullWidth required={attribute.is_required}>
+            <InputLabel>{label}</InputLabel>
+            <Select value={value} label={label} onChange={handleAttributeChange(attribute.id)} MenuProps={menuPropsDownward}>
+              <MenuItem value="">Select {attribute.name}</MenuItem>
+              {options.map(option => (
+                <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {isQuantityLinked && value && (
+            <TextField
+              label={`Quantity for ${value}`}
+              type="number"
+              value={qtyValue}
+              onChange={(e) =>
+                setAttributeValues(prev => ({ ...prev, [qtyKey]: e.target.value }))
+              }
+              fullWidth
+              placeholder="e.g. 2"
+              inputProps={{ min: 1 }}
+              sx={{ mt: 1 }}
+              helperText={`How many units of ${value}?`}
+            />
+          )}
+        </Box>
+      );
+    }
+
+    if (attribute.input_type === 'radio') {
+      return (
+        <Box>
+          <FormControl required={attribute.is_required}>
+            <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>{label}</Typography>
+            <RadioGroup row value={value} onChange={handleAttributeChange(attribute.id)}>
+              {options.map(option => (
+                <FormControlLabel
+                  key={option.id}
+                  value={option.value}
+                  control={<Radio size="small" />}
+                  label={option.value}
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </Box>
+      );
+    }
+
     return (
-      <Box>
-        <FormControl required={attribute.is_required}>
-          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>{label}</Typography>
-          <RadioGroup row value={value} onChange={handleAttributeChange(attribute.id)}>
-            {options.map(option => (
-              <FormControlLabel
-                key={option.id}
-                value={option.value}
-                control={<Radio size="small" />}
-                label={option.value}
-              />
-            ))}
-          </RadioGroup>
-        </FormControl>
-      </Box>
+      <TextField
+        label={label}
+        type={attribute.input_type === 'number' ? 'number' : 'text'}
+        value={value}
+        onChange={handleAttributeChange(attribute.id)}
+        fullWidth
+        required={attribute.is_required}
+      />
     );
-  }
-
-  return (
-    <TextField
-      label={label}
-      type={attribute.input_type === 'number' ? 'number' : 'text'}
-      value={value}
-      onChange={handleAttributeChange(attribute.id)}
-      fullWidth
-      required={attribute.is_required}
-    />
-  );
-};
+  };
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     setImageErrs([]); // Reset errors
-    const totalColorFiles = Object.values(colorFiles).reduce((sum, filesForColor) => sum + filesForColor.length, 0);
-    const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+    const generalExisting = images.filter(img => !img.color).length;
+    const totalGeneralImages = generalExisting + newFiles.length;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalGeneralImages);
 
     if (availableSlots <= 0) {
       setImageErrs([`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`]);
@@ -1143,7 +1225,7 @@ if (
     if (validFiles.length > 0) {
       setNewFiles((prev) => [...prev, ...validFiles]);
     }
-    
+
     e.target.value = '';
   };
 
@@ -1151,17 +1233,21 @@ if (
 
   const handleColorFileChange = (color) => async (e) => {
     const files = Array.from(e.target.files || []);
-    const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
-    const totalExistingImages = images.length + newFiles.length + totalColorFiles;
-    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalExistingImages);
+    const normalizedColor = String(color || '').trim().toLowerCase();
 
-    if (!String(color || '').trim()) {
+    if (!normalizedColor) {
       dispatch(showToast({ message: 'Enter a color name before uploading color images.', severity: 'warning' }));
       e.target.value = '';
       return;
     }
+
+    const existingColorImages = images.filter(img => img.color && String(img.color).trim().toLowerCase() === normalizedColor);
+    const pendingColorFiles = colorFiles[color] || [];
+    const totalForThisColor = existingColorImages.length + pendingColorFiles.length;
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalForThisColor);
+
     if (availableSlots <= 0) {
-      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images only.`, severity: 'error' }));
+      dispatch(showToast({ message: `You can upload up to ${MAX_PRODUCT_IMAGES} images for '${color}'.`, severity: 'error' }));
       e.target.value = '';
       return;
     }
@@ -1170,7 +1256,7 @@ if (
     const validFiles = [];
 
     if (files.length > availableSlots) {
-      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images are allowed. Excess files were ignored.`, severity: 'warning' }));
+      dispatch(showToast({ message: `Only ${MAX_PRODUCT_IMAGES} images allowed per color group. Excess files were ignored.`, severity: 'warning' }));
     }
 
     for (const file of filesToProcess) {
@@ -1188,7 +1274,7 @@ if (
         [color]: [...(prev[color] || []), ...validFiles]
       }));
     }
-    
+
     e.target.value = '';
   };
 
@@ -1222,25 +1308,44 @@ if (
     if (/[^a-zA-Z\s]/.test(form.name.trim())) { setError('Product name can only contain letters and spaces.'); return; }
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (form.category_id === 'other') {
-  if (!form.custom_category?.trim()) {
-    setError('Please specify a custom category.');
-    return;
-  }
+      if (!form.custom_category?.trim()) {
+        setError('Please specify a custom category.');
+        return;
+      }
 
-  if (!form.custom_subcategory?.trim()) {
-    setError('Please specify a custom subcategory.');
-    return;
-  }
+      if (!form.custom_subcategory?.trim()) {
+        setError('Please specify a custom subcategory.');
+        return;
+      }
 
-  if (!form.custom_product_type?.trim()) {
-    setError('Please specify a custom product type.');
-    return;
-  }
-}
+      if (!form.custom_product_type?.trim()) {
+        setError('Please specify a custom product type.');
+        return;
+      }
+    }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
 
-    if ((images.length + newFiles.length + totalColorFiles) > MAX_PRODUCT_IMAGES) { setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images only.`); return; }
+    // Check general images limit for non-fashion products
+    const generalImagesCount = images.filter(img => !img.color).length + newFiles.length;
+    if (!isFashionVariantCategory && generalImagesCount > MAX_PRODUCT_IMAGES) {
+      setError(`You can upload up to ${MAX_PRODUCT_IMAGES} general product images only.`);
+      return;
+    }
+
+    // Check color images limit per color group for fashion products
+    if (isFashionVariantCategory) {
+      for (const group of colorGroups) {
+        if (!group.color || !group.color.trim()) continue;
+        const colorName = group.color.trim().toLowerCase();
+        const existingColorCount = images.filter(img => img.color && String(img.color).trim().toLowerCase() === colorName).length;
+        const pendingColorCount = (colorFiles[group.color] || []).length;
+        if ((existingColorCount + pendingColorCount) > MAX_PRODUCT_IMAGES) {
+          setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images for color '${group.color}' only.`);
+          return;
+        }
+      }
+    }
     if (isFashionVariantCategory && colorGroups.length === 0) {
       setError('Add at least one color variant for fashion products.');
       return;
@@ -1259,7 +1364,7 @@ if (
     if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
     if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
     if (!form.height || parseFloat(form.height) <= 0) { setError('Please enter a valid height greater than 0.'); return; }
-   for (const dimKey of ['product_weight', 'product_length', 'product_breadth', 'product_height']) {
+    for (const dimKey of ['product_weight', 'product_length', 'product_breadth', 'product_height']) {
       const dimVal = form[dimKey];
       if (dimVal !== '' && dimVal !== null && dimVal !== undefined && parseFloat(dimVal) <= 0) {
         setError('Product dimensions, if provided, must be greater than 0.');
@@ -1335,10 +1440,12 @@ if (
         productId = data.data.id;
       }
 
+      const uploadPromises = [];
+
       if (newFiles.length > 0) {
         const fd = new FormData();
         newFiles.forEach(f => fd.append('images', f));
-        await sellerService.addImages(productId, fd);
+        uploadPromises.push(sellerService.addImages(productId, fd));
       }
 
       for (const [color, files] of Object.entries(colorFiles)) {
@@ -1346,8 +1453,12 @@ if (
           const fd = new FormData();
           files.forEach(f => fd.append('images', f));
           fd.append('color', color);
-          await sellerService.addImages(productId, fd);
+          uploadPromises.push(sellerService.addImages(productId, fd));
         }
+      }
+
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
       }
 
       dispatch(showToast({ message: isEdit ? 'Product updated!' : 'Product created!', severity: 'success' }));
@@ -1437,12 +1548,12 @@ if (
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth required>
                         <InputLabel>GST Rate (%)</InputLabel>
-                         <Select
-                           value={form.gst_rate}
-                           label="GST Rate (%)"
-                           onChange={handleChange('gst_rate')}
-                           MenuProps={menuPropsDownward}
-                         >
+                        <Select
+                          value={form.gst_rate}
+                          label="GST Rate (%)"
+                          onChange={handleChange('gst_rate')}
+                          MenuProps={menuPropsDownward}
+                        >
                           <MenuItem value="">Select GST Rate</MenuItem>
                           <MenuItem value={0}>0%</MenuItem>
                           <MenuItem value={3}>3%</MenuItem>
@@ -1463,6 +1574,8 @@ if (
                         onChange={handleChange('price')}
                         fullWidth required
                         placeholder="0.00"
+                        helperText={hasVariants ? "💡 Pre-fills default price for variant rows below. You can also change individual variant prices in the table." : undefined}
+                        FormHelperTextProps={{ sx: { color: hasVariants ? '#0b8457' : 'text.secondary', fontWeight: hasVariants ? 600 : 400 } }}
                         inputProps={{ min: 0, step: 0.01 }}
                       />
                       <CommissionBadge price={form.price} />
@@ -1483,22 +1596,23 @@ if (
                       />
                     </Grid>
                     {form.price && Number(form.price) > 0 && (
-  <Grid item xs={12}>
-    <SettlementBreakdown orderAmount={Number(form.price)} commission={commission ?? 0} productGstRate={Number(form.gst_rate) || 0} />
-  </Grid>
-)}
+                      <Grid item xs={12}>
+                        <SettlementBreakdown orderAmount={Number(form.price)} commission={commission ?? 0} productGstRate={Number(form.gst_rate) || 0} />
+                      </Grid>
+                    )}
 
                     <Grid item xs={12} sm={6}>
                       <TextField
-                        label="Stock Quantity"
+                        label={hasVariants ? "Stock Quantity (Variants Active)" : "Stock Quantity"}
                         type="number"
-                        value={form.stock_quantity}
+                        value={hasVariants ? '' : form.stock_quantity}
                         onChange={handleChange('stock_quantity')}
                         fullWidth
-                        required={isFashionVariantCategory ? colorGroups.length === 0 : variants.length === 0}
-                        disabled={isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0}
-                        placeholder="0"
-                        helperText={(isFashionVariantCategory ? colorGroups.length > 0 : variants.length > 0) ? 'Automatically calculated from variants' : ''}
+                        required={!hasVariants}
+                        disabled={hasVariants}
+                        placeholder={hasVariants ? "Managed per variant" : "0"}
+                        helperText={hasVariants ? "📦 Stock is managed per variant in the section below." : "Base product inventory count"}
+                        FormHelperTextProps={{ sx: { color: hasVariants ? 'warning.main' : 'text.secondary', fontWeight: hasVariants ? 600 : 400 } }}
                         inputProps={{ min: 0 }}
                       />
                     </Grid>
@@ -1517,12 +1631,12 @@ if (
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth>
                         <InputLabel>Product Condition</InputLabel>
-                         <Select
-                           value={form.condition}
-                           label="Product Condition"
-                           onChange={handleChange('condition')}
-                           MenuProps={menuPropsDownward}
-                         >
+                        <Select
+                          value={form.condition}
+                          label="Product Condition"
+                          onChange={handleChange('condition')}
+                          MenuProps={menuPropsDownward}
+                        >
                           <MenuItem value="new">New</MenuItem>
                           <MenuItem value="used">Used</MenuItem>
                           <MenuItem value="refurbished">Refurbished</MenuItem>
@@ -1538,29 +1652,29 @@ if (
                           labelId="cat-label"
                           label="Category"
                           value={form.category_id}
-                         onChange={(e) => {
-  const val = e.target.value;
+                          onChange={(e) => {
+                            const val = e.target.value;
 
-  setForm(prev => ({
-    ...prev,
-    category_id: val,
-    subcategory_id: '',
-    custom_category: val === 'other' ? prev.custom_category : '',
-    custom_subcategory: val === 'other' ? prev.custom_subcategory : '',
-    custom_product_type: val === 'other' ? prev.custom_product_type : '',
-  }));
+                            setForm(prev => ({
+                              ...prev,
+                              category_id: val,
+                              subcategory_id: '',
+                              custom_category: val === 'other' ? prev.custom_category : '',
+                              custom_subcategory: val === 'other' ? prev.custom_subcategory : '',
+                              custom_product_type: val === 'other' ? prev.custom_product_type : '',
+                            }));
 
-  // IMPORTANT: clear everything related to previous category
-  setCategoryAttributes([]);
-  setAttributeValues({});
-  setVariantAttributeValues({});
-  setVariants([]);
-  setColorGroups([]);
-  setProductTypeId('');
-}}
+                            // IMPORTANT: clear everything related to previous category
+                            setCategoryAttributes([]);
+                            setAttributeValues({});
+                            setVariantAttributeValues({});
+                            setVariants([]);
+                            setColorGroups([]);
+                            setProductTypeId('');
+                          }}
                           MenuProps={menuPropsDownward}
                         >
-                          
+
                           <MenuItem value="">Select Category</MenuItem>
                           {categories.filter(c => c.depth === 0).map(c => (
                             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
@@ -1570,71 +1684,71 @@ if (
                       </FormControl>
                     </Grid>
 
-                  {form.category_id === 'other' && (
-  <>
-    {/* Custom Category */}
-    <Grid item xs={12} sm={4}>
-      <TextField
-        label="Specify Category Name"
-        value={form.custom_category}
-        onChange={handleChange('custom_category')}
-        fullWidth
-        required
-        placeholder="e.g. Handmade Crafts"
-      />
-    </Grid>
+                    {form.category_id === 'other' && (
+                      <>
+                        {/* Custom Category */}
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            label="Specify Category Name"
+                            value={form.custom_category}
+                            onChange={handleChange('custom_category')}
+                            fullWidth
+                            required
+                            placeholder="e.g. Handmade Crafts"
+                          />
+                        </Grid>
 
-    {/* Custom Subcategory */}
-    <Grid item xs={12} sm={4}>
-      <TextField
-        label="Specify Subcategory"
-        value={form.custom_subcategory}
-        onChange={handleChange('custom_subcategory')}
-        fullWidth
-        required
-        placeholder="e.g. Handmade Home Decor"
-      />
-    </Grid>
+                        {/* Custom Subcategory */}
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            label="Specify Subcategory"
+                            value={form.custom_subcategory}
+                            onChange={handleChange('custom_subcategory')}
+                            fullWidth
+                            required
+                            placeholder="e.g. Handmade Home Decor"
+                          />
+                        </Grid>
 
-    {/* Custom Product Type */}
-    <Grid item xs={12} sm={4}>
-      <TextField
-        label="Specify Product Type"
-        value={form.custom_product_type}
-        onChange={handleChange('custom_product_type')}
-        fullWidth
-        required
-        placeholder="e.g. Wall Hanging"
-      />
-    </Grid>
-  </>
-)} 
+                        {/* Custom Product Type */}
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            label="Specify Product Type"
+                            value={form.custom_product_type}
+                            onChange={handleChange('custom_product_type')}
+                            fullWidth
+                            required
+                            placeholder="e.g. Wall Hanging"
+                          />
+                        </Grid>
+                      </>
+                    )}
 
-                    
-              {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
+
+                    {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
                       <Grid item xs={12} sm={6}>
                         <FormControl fullWidth>
                           <InputLabel id="subcat-label">Subcategory</InputLabel>
-                         <Select
+                          <Select
                             labelId="subcat-label"
                             label="Subcategory"
                             value={form.subcategory_id}
                             onChange={(e) => {
-  const val = e.target.value;
+                              const val = e.target.value;
 
-  setForm(prev => ({
-    ...prev,
-    subcategory_id: val,
-  }));
+                              setForm(prev => ({
+                                ...prev,
+                                subcategory_id: val,
+                              }));
 
-  // Clear attributes belonging to previous selection
-  setCategoryAttributes([]);
-  setAttributeValues({});
-  setVariantAttributeValues({});
-  setVariants([]);
-  setColorGroups([]);
-  setProductTypeId('');
-}}
+                              // Clear attributes belonging to previous selection
+                              setCategoryAttributes([]);
+                              setAttributeValues({});
+                              setVariantAttributeValues({});
+                              setVariants([]);
+                              setColorGroups([]);
+                              setProductTypeId('');
+                            }}
                             MenuProps={menuPropsDownward}
                           >
                             <MenuItem value="">None</MenuItem>
@@ -1655,17 +1769,17 @@ if (
                             label="Product Type"
                             value={productTypeId}
                             onChange={(e) => {
-  const val = e.target.value;
+                              const val = e.target.value;
 
-  setProductTypeId(val);
+                              setProductTypeId(val);
 
-  // Clear old attributes/variants
-  setCategoryAttributes([]);
-  setAttributeValues({});
-  setVariantAttributeValues({});
-  setVariants([]);
-  setColorGroups([]);
-}}
+                              // Clear old attributes/variants
+                              setCategoryAttributes([]);
+                              setAttributeValues({});
+                              setVariantAttributeValues({});
+                              setVariants([]);
+                              setColorGroups([]);
+                            }}
                             MenuProps={menuPropsDownward}
                           >
                             <MenuItem value="">None</MenuItem>
@@ -1688,8 +1802,8 @@ if (
                     The real size of the product itself — helps buyers judge fit . Separate from the shipping package weight/dimensions above.
                   </Typography>
                   <Grid container spacing={2}>
-                   <Grid item xs={12} sm={6}>
-                    <TextField
+                    <Grid item xs={12} sm={6}>
+                      <TextField
                         label="Product Weight (kg)"
                         type="number"
                         value={form.product_weight}
@@ -1697,10 +1811,10 @@ if (
                         fullWidth
                         placeholder="e.g. 12.5"
                         inputProps={{ min: 0, step: 0.01 }}
-                      />  
+                      />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                         Product Size (L x B x H in cm)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -1708,7 +1822,7 @@ if (
                         <TextField size="small" placeholder="B" type="number" value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} />
                         <TextField size="small" placeholder="H" type="number" value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} />
                       </Box>
-                    </Grid> 
+                    </Grid>
                   </Grid>
                 </CardContent>
               </Card>
@@ -1755,21 +1869,32 @@ if (
                     <Divider sx={{ mb: 2 }} />
                     <Grid container spacing={2.5}>
                       {specificationAttributes
-  .filter(
-    a =>
-      !(isFashionVariantCategory && a.is_variant) &&
-      a.name.trim().toLowerCase() !== 'fabric'
-  )
-  .map(attribute => (
-    <Grid item xs={12} sm={6} key={attribute.id}>
-      {renderAttributeField(attribute)}
-    </Grid>
-  ))}
+                        .filter(
+                          a =>
+                            !(isFashionVariantCategory && a.is_variant) &&
+                            a.name.trim().toLowerCase() !== 'fabric'
+                        )
+                        .map(attribute => (
+                          <Grid item xs={12} sm={6} key={attribute.id}>
+                            {renderAttributeField(attribute)}
+                          </Grid>
+                        ))}
                     </Grid>
 
                     {/* Fashion specific variant builder (Color / Size blocks) */}
                     {isFashionVariantCategory && (
                       <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Alert severity="info" sx={{ mb: 2.5, borderRadius: 2 }}>
+                          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                            ℹ️ Variant Pricing & Inventory Guidance
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            • Each variant below has its own independent <strong>Price</strong> and <strong>Stock Quantity</strong>.<br/>
+                            • Customer purchases and inventory tracking are managed per individual variant row.<br/>
+                            • Top Selling Price pre-fills new variants automatically as a starting price.<br/>
+                            • The primary image of your first variant/color block will automatically serve as the main product thumbnail across search results and catalog pages.
+                          </Typography>
+                        </Alert>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                           <Typography variant="subtitle2" fontWeight={700}>Fashion Variants (Color & Size)</Typography>
                           <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addColorGroup} sx={secondaryButtonStyle}>
@@ -1783,6 +1908,12 @@ if (
                             const colorOptions = colorAttribute?.options || [];
                             const sizeOptions = sizeAttribute?.options || [];
                             const existingColorImages = images.filter(img => img.color === group.color);
+                            const selectedColorsInOtherGroups = colorGroups
+                              .filter((g, idx) => idx !== groupIndex && g.color)
+                              .map(g => g.color);
+                            const availableColorOptions = colorOptions.filter(
+                              opt => opt.value === group.color || !selectedColorsInOtherGroups.includes(opt.value)
+                            );
 
                             return (
                               <Box key={group.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default' }}>
@@ -1807,7 +1938,7 @@ if (
                                           MenuProps={menuPropsDownward}
                                         >
                                           <MenuItem value="">Select color</MenuItem>
-                                          {colorOptions.map(option => (
+                                          {availableColorOptions.map(option => (
                                             <MenuItem key={option.id} value={option.value}>{option.value}</MenuItem>
                                           ))}
                                         </Select>
@@ -1827,28 +1958,43 @@ if (
                                   </IconButton>
                                 </Box>
 
-                                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                                  Upload {group.color || 'Color'} Images
+                                <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                                  Upload {group.color || 'Color'} Images (Up to 6)
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                  <strong>Requirements:</strong> Min 500x500px (1:1 Square Ratio), Max 5MB per image.
                                 </Typography>
 
                                 {(existingColorImages.length > 0 || colorFiles[group.color]?.length > 0) && (
                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                                     {existingColorImages.map(img => (
                                       <Box key={img.id} sx={{ position: 'relative' }}>
-                                        <Box component="img" src={img.image_url} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                                        <Box component="img" src={getAssetUrl(img.image_url)} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
                                         <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
                                           <DeleteIcon sx={{ fontSize: 14 }} />
                                         </IconButton>
                                       </Box>
                                     ))}
-                                    {(colorFiles[group.color] || []).map((f, i) => (
-                                      <Chip key={`${f.name}-${i}`} label={f.name} size="small" onDelete={() => removeColorFile(group.color, i)} />
+                                    {(colorFiles[group.color] || []).map((file, i) => (
+                                      <Box key={`color-file-${i}`} sx={{ position: 'relative' }}>
+                                        <Box component="img" src={URL.createObjectURL(file)} sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                                        <IconButton size="small" color="error" onClick={() => removeColorFile(group.color, i)} sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}>
+                                          <DeleteIcon sx={{ fontSize: 14 }} />
+                                        </IconButton>
+                                      </Box>
                                     ))}
                                   </Box>
                                 )}
 
-                                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={secondaryButtonStyle}>
-                                  Upload Images
+                                <Button
+                                  variant="outlined"
+                                  component="label"
+                                  startIcon={<CloudUploadIcon />}
+                                  size="small"
+                                  disabled={(existingColorImages.length + (colorFiles[group.color]?.length || 0)) >= MAX_PRODUCT_IMAGES}
+                                  sx={secondaryButtonStyle}
+                                >
+                                  Upload {group.color || 'Color'} Photos (Max 6)
                                   <input type="file" hidden multiple accept="image/*" onChange={handleColorFileChange(group.color)} />
                                 </Button>
 
@@ -1879,7 +2025,7 @@ if (
                                               <TableCell>
                                                 {sizeOptions.length > 0 ? (
                                                   <FormControl fullWidth size="small">
-                                                  <Select
+                                                    <Select
                                                       value={sizeRow.size}
                                                       onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'size', e.target.value)}
                                                       displayEmpty
@@ -1900,6 +2046,7 @@ if (
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                                <VariantNetPayout price={sizeRow.price} gstRate={form.gst_rate} />
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
@@ -1937,6 +2084,17 @@ if (
                     {/* Generic variants */}
                     {!isFashionVariantCategory && hasVariants && (
                       <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Alert severity="info" sx={{ mb: 2.5, borderRadius: 2 }}>
+                          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                            ℹ️ Variant Pricing & Inventory Guidance
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            • Each variant below has its own independent <strong>Price</strong> and <strong>Stock Quantity</strong>.<br/>
+                            • Customer purchases and inventory tracking are managed per individual variant row.<br/>
+                            • Top Selling Price pre-fills new variants automatically as a starting price.<br/>
+                            • The primary image of your first variant will automatically serve as the main product thumbnail across search results and catalog pages.
+                          </Typography>
+                        </Alert>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                           <Typography variant="subtitle2" fontWeight={700}>Product Variants</Typography>
                           <Button variant="outlined" size="small" onClick={generateVariants} sx={secondaryButtonStyle}>Generate Combinations</Button>
@@ -1965,6 +2123,7 @@ if (
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
+                                      <VariantNetPayout price={variant.price} gstRate={form.gst_rate} />
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
@@ -2069,113 +2228,113 @@ if (
                     {form.delivery_type !== 'free' && (
                       <Box sx={{ mt: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="body2" fontWeight={700}>State-wise Delivery Charges</Typography>
-                        <Button 
-                          variant="outlined" 
-                          size="small" 
-                          startIcon={<AddIcon />}
-                          sx={secondaryButtonStyle}
-                          onClick={() => setShippingRules(prev => [...prev, { state: '', delivery_type: 'free', delivery_charge: '', free_delivery_min_order: '' }])}
-                        >
-                          Add State Rule
-                        </Button>
-                      </Box>
-                      {shippingRules.length > 0 && (
-                        <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflowX: 'auto' }}>
-                          <Table size="small" sx={{ minWidth: 600 }}>
-                            <TableHead sx={{ bgcolor: 'background.default' }}>
-                              <TableRow>
-                                <TableCell>State</TableCell>
-                                <TableCell>Type</TableCell>
-                                <TableCell>Charge / Threshold</TableCell>
-                                <TableCell align="right">Action</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {shippingRules.map((rule, idx) => (
-                                <TableRow key={idx}>
-                                  <TableCell sx={{ minWidth: 150 }}>
-                                    <FormControl fullWidth size="small">
-                                  <Select
-                                        value={rule.state}
-                                        onChange={(e) => {
-                                          const newRules = [...shippingRules];
-                                          newRules[idx].state = e.target.value;
-                                          setShippingRules(newRules);
-                                        }}
-                                        displayEmpty
-                                        MenuProps={menuPropsDownward}
-                                      >
-                                        <MenuItem value="" disabled>Select State</MenuItem>
-                                        {INDIAN_STATES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 130 }}>
-                                    <FormControl fullWidth size="small">
-                                     <Select
-                                        value={rule.delivery_type}
-                                        onChange={(e) => {
-                                          const newRules = [...shippingRules];
-                                          newRules[idx].delivery_type = e.target.value;
-                                          if (e.target.value === 'free') {
-                                            newRules[idx].delivery_charge = '';
-                                            newRules[idx].free_delivery_min_order = '';
-                                          }
-                                          setShippingRules(newRules);
-                                        }}
-                                        MenuProps={menuPropsDownward}
-                                      >
-                                        <MenuItem value="free">Free</MenuItem>
-                                        <MenuItem value="fixed">Fixed</MenuItem>
-                                        <MenuItem value="conditional">Conditional</MenuItem>
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 180 }}>
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                      {rule.delivery_type !== 'free' && (
-                                        <TextField
-                                          size="small"
-                                          placeholder="Charge (₹)"
-                                          type="number"
-                                          value={rule.delivery_charge}
-                                          onChange={(e) => {
-                                            const newRules = [...shippingRules];
-                                            newRules[idx].delivery_charge = e.target.value;
-                                            setShippingRules(newRules);
-                                          }}
-                                          inputProps={{ min: 0, step: 0.01 }}
-                                        />
-                                      )}
-                                      {rule.delivery_type === 'conditional' && (
-                                        <TextField
-                                          size="small"
-                                          placeholder="Above (₹)"
-                                          type="number"
-                                          value={rule.free_delivery_min_order}
-                                          onChange={(e) => {
-                                            const newRules = [...shippingRules];
-                                            newRules[idx].free_delivery_min_order = e.target.value;
-                                            setShippingRules(newRules);
-                                          }}
-                                          inputProps={{ min: 0, step: 0.01 }}
-                                        />
-                                      )}
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <IconButton size="small" color="error" onClick={() => setShippingRules(prev => prev.filter((_, i) => i !== idx))}>
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </TableCell>
+                          <Typography variant="body2" fontWeight={700}>State-wise Delivery Charges</Typography>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            sx={secondaryButtonStyle}
+                            onClick={() => setShippingRules(prev => [...prev, { state: '', delivery_type: 'free', delivery_charge: '', free_delivery_min_order: '' }])}
+                          >
+                            Add State Rule
+                          </Button>
+                        </Box>
+                        {shippingRules.length > 0 && (
+                          <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflowX: 'auto' }}>
+                            <Table size="small" sx={{ minWidth: 600 }}>
+                              <TableHead sx={{ bgcolor: 'background.default' }}>
+                                <TableRow>
+                                  <TableCell>State</TableCell>
+                                  <TableCell>Type</TableCell>
+                                  <TableCell>Charge / Threshold</TableCell>
+                                  <TableCell align="right">Action</TableCell>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      )}
-                    </Box>
+                              </TableHead>
+                              <TableBody>
+                                {shippingRules.map((rule, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell sx={{ minWidth: 150 }}>
+                                      <FormControl fullWidth size="small">
+                                        <Select
+                                          value={rule.state}
+                                          onChange={(e) => {
+                                            const newRules = [...shippingRules];
+                                            newRules[idx].state = e.target.value;
+                                            setShippingRules(newRules);
+                                          }}
+                                          displayEmpty
+                                          MenuProps={menuPropsDownward}
+                                        >
+                                          <MenuItem value="" disabled>Select State</MenuItem>
+                                          {INDIAN_STATES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                                        </Select>
+                                      </FormControl>
+                                    </TableCell>
+                                    <TableCell sx={{ minWidth: 130 }}>
+                                      <FormControl fullWidth size="small">
+                                        <Select
+                                          value={rule.delivery_type}
+                                          onChange={(e) => {
+                                            const newRules = [...shippingRules];
+                                            newRules[idx].delivery_type = e.target.value;
+                                            if (e.target.value === 'free') {
+                                              newRules[idx].delivery_charge = '';
+                                              newRules[idx].free_delivery_min_order = '';
+                                            }
+                                            setShippingRules(newRules);
+                                          }}
+                                          MenuProps={menuPropsDownward}
+                                        >
+                                          <MenuItem value="free">Free</MenuItem>
+                                          <MenuItem value="fixed">Fixed</MenuItem>
+                                          <MenuItem value="conditional">Conditional</MenuItem>
+                                        </Select>
+                                      </FormControl>
+                                    </TableCell>
+                                    <TableCell sx={{ minWidth: 180 }}>
+                                      <Box sx={{ display: 'flex', gap: 1 }}>
+                                        {rule.delivery_type !== 'free' && (
+                                          <TextField
+                                            size="small"
+                                            placeholder="Charge (₹)"
+                                            type="number"
+                                            value={rule.delivery_charge}
+                                            onChange={(e) => {
+                                              const newRules = [...shippingRules];
+                                              newRules[idx].delivery_charge = e.target.value;
+                                              setShippingRules(newRules);
+                                            }}
+                                            inputProps={{ min: 0, step: 0.01 }}
+                                          />
+                                        )}
+                                        {rule.delivery_type === 'conditional' && (
+                                          <TextField
+                                            size="small"
+                                            placeholder="Above (₹)"
+                                            type="number"
+                                            value={rule.free_delivery_min_order}
+                                            onChange={(e) => {
+                                              const newRules = [...shippingRules];
+                                              newRules[idx].free_delivery_min_order = e.target.value;
+                                              setShippingRules(newRules);
+                                            }}
+                                            inputProps={{ min: 0, step: 0.01 }}
+                                          />
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <IconButton size="small" color="error" onClick={() => setShippingRules(prev => prev.filter((_, i) => i !== idx))}>
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </Box>
                     )}
 
                     {/* Shipping Summary Preview */}
@@ -2196,75 +2355,75 @@ if (
                 </Card>
               )}
               {/* Warranty */}
-<Card sx={{ mb: 3 }}>
-  <CardContent>
-    <Typography variant="h6" fontWeight={700} gutterBottom>Warranty</Typography>
-    <Divider sx={{ mb: 2 }} />
-    <Grid container spacing={2}>
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>Warranty</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Grid container spacing={2}>
 
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth>
-          <InputLabel>Warranty type</InputLabel>
-          <Select
-    value={form.warranty_type}
-    label="Warranty type"
-    onChange={handleChange('warranty_type')}
-    MenuProps={menuPropsDownward}
-  >
-            <MenuItem value="">No warranty</MenuItem>
-            <MenuItem value="seller">Seller warranty</MenuItem>
-            <MenuItem value="brand">Brand warranty</MenuItem>
-            <MenuItem value="manufacturer">Manufacturer warranty</MenuItem>
-          </Select>
-        </FormControl>
-      </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Warranty type</InputLabel>
+                        <Select
+                          value={form.warranty_type}
+                          label="Warranty type"
+                          onChange={handleChange('warranty_type')}
+                          MenuProps={menuPropsDownward}
+                        >
+                          <MenuItem value="">No warranty</MenuItem>
+                          <MenuItem value="seller">Seller warranty</MenuItem>
+                          <MenuItem value="brand">Brand warranty</MenuItem>
+                          <MenuItem value="manufacturer">Manufacturer warranty</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
 
-      {form.warranty_type && (
-        <Grid item xs={12} sm={6}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              label="Duration"
-              type="number"
-              value={form.warranty_duration}
-              onChange={handleChange('warranty_duration')}
-              inputProps={{ min: 1 }}
-              sx={{ flex: 1 }}
-              placeholder="e.g. 12"
-            />
-            <FormControl sx={{ minWidth: 110 }}>
-              <InputLabel>Unit</InputLabel>
-              <Select
-                value={form.warranty_duration_unit}
-                label="Unit"
-                onChange={handleChange('warranty_duration_unit')}
-                MenuProps={menuPropsDownward}
-                >
-                <MenuItem value="days">Days</MenuItem>
-                <MenuItem value="months">Months</MenuItem>
-                <MenuItem value="years">Years</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Grid>
-      )}
+                    {form.warranty_type && (
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField
+                            label="Duration"
+                            type="number"
+                            value={form.warranty_duration}
+                            onChange={handleChange('warranty_duration')}
+                            inputProps={{ min: 1 }}
+                            sx={{ flex: 1 }}
+                            placeholder="e.g. 12"
+                          />
+                          <FormControl sx={{ minWidth: 110 }}>
+                            <InputLabel>Unit</InputLabel>
+                            <Select
+                              value={form.warranty_duration_unit}
+                              label="Unit"
+                              onChange={handleChange('warranty_duration_unit')}
+                              MenuProps={menuPropsDownward}
+                            >
+                              <MenuItem value="days">Days</MenuItem>
+                              <MenuItem value="months">Months</MenuItem>
+                              <MenuItem value="years">Years</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Box>
+                      </Grid>
+                    )}
 
-      {form.warranty_type && (
-        <Grid item xs={12}>
-          <TextField
-            label="What's covered (optional)"
-            value={form.warranty_description}
-            onChange={handleChange('warranty_description')}
-            fullWidth
-            multiline
-            rows={2}
-            placeholder="e.g. Manufacturing defects, parts replacement"
-          />
-        </Grid>
-      )}
+                    {form.warranty_type && (
+                      <Grid item xs={12}>
+                        <TextField
+                          label="What's covered (optional)"
+                          value={form.warranty_description}
+                          onChange={handleChange('warranty_description')}
+                          fullWidth
+                          multiline
+                          rows={2}
+                          placeholder="e.g. Manufacturing defects, parts replacement"
+                        />
+                      </Grid>
+                    )}
 
-    </Grid>
-  </CardContent>
-</Card>
+                  </Grid>
+                </CardContent>
+              </Card>
 
               {/* General images gallery */}
               <Card sx={{ mb: 3 }}>
@@ -2272,169 +2431,108 @@ if (
                   <Typography variant="h6" fontWeight={700} gutterBottom>Product Images (General)</Typography>
                   <Divider sx={{ mb: 2 }} />
 
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, minmax(72px, 1fr))',
-                        gap: 1,
-                        width: { xs: '100%', md: 248 },
-                      }}
-                    >
-                      {Array.from({ length: MAX_PRODUCT_IMAGES }).map((_, index) => {
-                        const generalDbImages = images.filter(img => !img.color);
-                        const preview = index < generalDbImages.length
-                          ? generalDbImages[index].image_url
-                          : index - generalDbImages.length < newFiles.length
-                            ? URL.createObjectURL(newFiles[index - generalDbImages.length])
-                            : null;
+                  {hasVariants ? (
+                    <Alert severity="info" sx={{ borderRadius: 2 }}>
+                      📸 <strong>Variants Active</strong>: Images are uploaded directly inside each variant/color block in the section below.
+                    </Alert>
+                  ) : (
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, minmax(72px, 1fr))',
+                          gap: 1,
+                          width: { xs: '100%', md: 248 },
+                        }}
+                      >
+                        {Array.from({ length: MAX_PRODUCT_IMAGES }).map((_, index) => {
+                          const generalDbImages = images.filter(img => !img.color);
+                          const preview = index < generalDbImages.length
+                            ? getAssetUrl(generalDbImages[index].image_url)
+                            : index - generalDbImages.length < newFiles.length
+                              ? URL.createObjectURL(newFiles[index - generalDbImages.length])
+                              : null;
 
-                        return (
-                          <Box
-                            key={index}
-                            sx={{
-                              width: '100%',
-                              aspectRatio: '1 / 1',
-                              borderRadius: 2,
-                              border: 1,
-                              borderColor: 'divider',
-                              bgcolor: 'background.default',
-                              overflow: 'hidden',
-                              display: 'grid',
-                              placeItems: 'center',
-                              position: 'relative'
-                            }}
-                          >
-                            {preview ? (
-                              <>
-                                <Box
-                                  component="img"
-                                  src={preview}
-                                  alt={`Product preview ${index + 1}`}
-                                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => {
-                                    if (index < generalDbImages.length) {
-                                      handleDeleteImage(generalDbImages[index].id);
-                                    } else {
-                                      removeNewFile(index - generalDbImages.length);
-                                    }
-                                  }}
-                                  sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
-                                >
-                                  <DeleteIcon sx={{ fontSize: 14 }} />
-                                </IconButton>
-                              </>
-                            ) : (
-                              <Typography sx={{ fontSize: 12, color: 'text.disabled', fontWeight: 600 }}>
-                                {index === 0 ? (form.name?.[0]?.toUpperCase() || 'P') : '+'}
-                              </Typography>
-                            )}
-                          </Box>
-                        );
-                      })}
-                    </Box>
+                          return (
+                            <Box
+                              key={index}
+                              sx={{
+                                width: '100%',
+                                aspectRatio: '1 / 1',
+                                borderRadius: 2,
+                                border: 1,
+                                borderColor: 'divider',
+                                bgcolor: 'background.default',
+                                overflow: 'hidden',
+                                display: 'grid',
+                                placeItems: 'center',
+                                position: 'relative'
+                              }}
+                            >
+                              {preview ? (
+                                <>
+                                  <Box
+                                    component="img"
+                                    src={preview}
+                                    alt={`Product preview ${index + 1}`}
+                                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => {
+                                      if (index < generalDbImages.length) {
+                                        handleDeleteImage(generalDbImages[index].id);
+                                      } else {
+                                        removeNewFile(index - generalDbImages.length);
+                                      }
+                                    }}
+                                    sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
+                                  >
+                                    <DeleteIcon sx={{ fontSize: 14 }} />
+                                  </IconButton>
+                                </>
+                              ) : (
+                                <Typography sx={{ fontSize: 12, color: 'text.disabled', fontWeight: 600 }}>
+                                  {index === 0 ? (form.name?.[0]?.toUpperCase() || 'P') : '+'}
+                                </Typography>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Box>
 
-                    <Stack spacing={1.25} sx={{ flex: 1, width: '100%' }}>
-                      <Button variant="outlined" component="label" sx={{ alignSelf: 'flex-start', ...secondaryButtonStyle }}>
-                        Upload Up To 6 Images
-                        <input
-                          hidden
-                          multiple
-                          accept="image/png,image/jpeg,image/jpg,image/webp"
-                          type="file"
-                          onChange={handleFileChange}
-                        />
-                      </Button>
+                      <Stack spacing={1.25} sx={{ flex: 1, width: '100%' }}>
+                        <Button variant="outlined" component="label" sx={{ alignSelf: 'flex-start', ...secondaryButtonStyle }}>
+                          Upload Up To 6 Images
+                          <input
+                            hidden
+                            multiple
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            type="file"
+                            onChange={handleFileChange}
+                          />
+                        </Button>
 
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
-                      </Typography>
-
-                      {imageErrs.map((err, i) => (
-                        <Typography key={i} variant="caption" color="error" sx={{ display: 'block', fontWeight: 600 }}>
-                          {err}
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
                         </Typography>
-                      ))}
 
-                      <Typography variant="body2" color="text.secondary">
-                        The first image will be used as the main product image. You can keep selecting files until all 6 slots are filled.
-                      </Typography>
+                        {imageErrs.map((err, i) => (
+                          <Typography key={i} variant="caption" color="error" sx={{ display: 'block', fontWeight: 600 }}>
+                            {err}
+                          </Typography>
+                        ))}
+
+                        <Typography variant="body2" color="text.secondary">
+                          The first image will be used as the main product image. You can keep selecting files until all 6 slots are filled.
+                        </Typography>
+                      </Stack>
                     </Stack>
-                  </Stack>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Color Specific Galleries */}
-              {!isFashionVariantCategory && uniqueColors.map((color) => (
-                <Card key={color} sx={{ mb: 3, border: '1px solid', borderColor: '#0FB9B1' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Typography variant="h6" fontWeight={700}>Gallery: {color}</Typography>
-                      <Chip label="Color-specific" size="small" variant="outlined" sx={{ color: '#0FB9B1', borderColor: '#0FB9B1' }} />
-                    </Box>
-                    <Divider sx={{ mb: 2 }} />
-
-                    {/* Existing color images */}
-                    {images.filter(img => img.color === color).length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        {images.filter(img => img.color === color).map((img) => (
-                          <Box key={img.id} sx={{ position: 'relative' }}>
-                            <Box
-                              component="img"
-                              src={img.image_url}
-                              sx={{
-                                width: 90, height: 90, objectFit: 'cover', borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                              }}
-                            />
-                            <IconButton
-                              size="small" color="error"
-                              onClick={() => handleDeleteImage(img.id)}
-                              sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', boxShadow: 1, p: 0.3 }}
-                            >
-                              <DeleteIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-
-                    {/* Newly selected color files */}
-                    {colorFiles[color]?.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                        {colorFiles[color].map((f, i) => (
-                          <Chip
-                            key={i}
-                            label={f.name}
-                            size="small"
-                            onDelete={() => removeColorFile(color, i)}
-                          />
-                        ))}
-                      </Box>
-                    )}
-
-                    <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={secondaryButtonStyle}>
-                      Upload {color} Images
-                      <input
-                        type="file"
-                        hidden
-                        multiple
-                        accept="image/*"
-                        onChange={handleColorFileChange(color)}
-                      />
-                    </Button>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                      Images shown only when "{color}" is selected. <br/>
-                      <strong>Requirements:</strong> {productDimReq}, {productSizeReq}.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
             </Box>
           </Grid>
 

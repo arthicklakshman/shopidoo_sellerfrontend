@@ -31,6 +31,8 @@ export const sellerService = {
     api.delete(`/products/${productId}/images/${imageId}`),
   updateOrderItemStatus: (itemId, status) =>
     api.patch(`/seller/orders/${itemId}/status`, { status }),
+  updateImageColor: (productId, imageId, color) =>
+    api.patch(`/products/${productId}/images/${imageId}`, { color }),
   getCategories: () => api.get('/categories'),
   getCategoryAttributes: (categoryId) => api.get(`/categories/${categoryId}/attributes`),
   getProduct: (id) => api.get(`/products/${id}`),
