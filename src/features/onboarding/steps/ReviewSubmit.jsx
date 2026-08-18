@@ -17,26 +17,40 @@ import GradientButton from '../../../components/shared/GradientButton/GradientBu
 import GradientOutlineButton from '../../../components/shared/GradientButton/GradientOutlineButton'; // Verify path!
 
 // --- Reusable Internal Components ---
-const InfoField = ({ label, value, verified = false }) => (
+const InfoField = ({ label, value, verified = false, mandatory = false }) => (
   <Box sx={{ mb: 2 }}>
-    <Typography sx={{ color: '#9ca3af', fontSize: '13px', mb: 0.5 }}>{label}</Typography>
+    <Typography sx={{ color: '#9ca3af', fontSize: '13px', mb: 0.5 }}>
+      {label}{mandatory && <Box component="span" sx={{ color: '#ef4444' }}> *</Box>}
+    </Typography>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-      <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 500 }}>{value || 'Not provided'}</Typography>
+      <Typography sx={{ color: value ? '#111827' : '#ef4444', fontSize: '14px', fontWeight: 500 }}>{value || 'Not provided'}</Typography>
       {verified && <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 18 }} />}
     </Box>
   </Box>
 );
 
-const DocumentItem = ({ label, isUploaded }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+const DocumentItem = ({ label, isUploaded, mandatory = false }) => (
+  <Box sx={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: 1, 
+    mb: 2,
+    ...(mandatory && !isUploaded && {
+      backgroundColor: '#fef2f2',
+      border: '1px solid #fecaca',
+      borderRadius: '8px',
+      p: 1,
+    })
+  }}>
     {isUploaded ? (
       <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 20 }} />
     ) : (
       <ErrorOutlineIcon sx={{ color: '#ef4444', fontSize: 20 }} />
     )}
-    <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500 }}>
-      {label} {isUploaded ? "(Uploaded)" : "(Missing)"}
-    </Typography>
+   <Typography sx={{ color: isUploaded ? '#374151' : '#dc2626', fontSize: '14px', fontWeight: 500 }}>
+  {label}{mandatory && <Box component="span" sx={{ color: '#ef4444' }}> *</Box>} {isUploaded ? "(Uploaded)" : "(Missing)"}
+</Typography> 
+    
   </Box>
 );
 
@@ -70,7 +84,6 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
   const sellerId = propSellerId || localStorage.getItem("sellerId");
   
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [policiesAccepted, setPoliciesAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -89,7 +102,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     });
   }, []);
 
-  const isSubmitEnabled = termsAccepted && policiesAccepted && !isSubmitting;
+  const isSubmitEnabled = termsAccepted && !isSubmitting;
 
   const handleEditClick = (stepIndex) => {
     if (onEditStep) onEditStep(stepIndex);
@@ -154,6 +167,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     {
       step: "4", title: "Documents", stepIndex: 4,
       fields: [
+        { label: "GST Certificate", isDocument: true, isUploaded: !!data.step5.gstProof, mandatory: true },
         { label: "PAN Card", isDocument: true, isUploaded: !!data.step5.panCard },
         { label: "Aadhaar Front", isDocument: true, isUploaded: !!data.step5.aadhaarFront },
         { label: "Aadhaar Back", isDocument: true, isUploaded: !!data.step5.aadhaarBack },
@@ -194,11 +208,11 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
             <Grid container spacing={2}>
               {section.fields.map((field, index) => (
                 <Grid item xs={12} sm={field.fullWidth ? 12 : 6} key={index}>
-                  {field.isDocument ? (
-                    <DocumentItem label={field.label} isUploaded={field.isUploaded} />
-                  ) : (
-                    <InfoField label={field.label} value={field.value} verified={field.verified} />
-                  )}
+                 {field.isDocument ? (
+  <DocumentItem label={field.label} isUploaded={field.isUploaded} mandatory={field.mandatory} />
+) : (
+  <InfoField label={field.label} value={field.value} verified={field.verified} mandatory={field.mandatory} />
+)}
                 </Grid>
               ))}
             </Grid>
@@ -221,20 +235,7 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
   <Box component="span" sx={{ color: '#4b5563' }}> — By checking this, you agree to our seller terms, privacy policy, and platform guidelines.</Box>
 </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              <Checkbox checked={policiesAccepted} onChange={(e) => setPoliciesAccepted(e.target.checked)} disableRipple sx={{ p: 0, mt: -0.25, '&.Mui-checked': { color: '#111827' } }} />
-             <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-  <Box component="span" sx={{ color: '#4b5563' }}>I agree to </Box>
-  <Box
-    component="span"
-    onClick={() => window.open('/seller-policies', '_blank')}
-    sx={{ fontWeight: 600, color: '#0B8457', cursor: 'pointer', textDecoration: 'underline', '&:hover': { color: '#065f46' } }}
-  >
-    Seller Policies
-  </Box>
-  <Box component="span" sx={{ color: '#4b5563' }}> — This includes product listing guidelines, return policies, and commission structure.</Box>
-</Typography>
-            </Box>
+           
           </CardContent>
         </Card>
 

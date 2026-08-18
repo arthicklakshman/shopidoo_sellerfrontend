@@ -34,8 +34,15 @@ sendEmailOtp: async (email, type) => {
     return await api.post(`${API_BASE_URL}/check-exists`, data);
   },
 
-  resumeOnboarding: async (data) => {
+ resumeOnboarding: async (data) => {
     return await api.post(`${API_BASE_URL}/resume-onboarding`, { ...data, role: 'seller' });
+  },
+
+  /**
+   * LOGIN (used as fallback when registration hits 409 - already exists)
+   */
+  login: async (data) => {
+    return await api.post(`${API_BASE_URL}/login`, data);
   },
 
   getProfile: async () => {
@@ -128,5 +135,7 @@ sendEmailOtp: async (email, type) => {
     return await api.put(`${SELLER_API}/${sellerId}/complete`, finalPayload);
   }
 };
+
+
 
 export default onboardingService;
