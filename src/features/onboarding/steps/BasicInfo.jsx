@@ -356,12 +356,12 @@ const handleSendOtp = async (type) => {
           // If the user already exists (409 Conflict), try to log them in with the password they provided
           if (regErr.response?.status === 409) {
             try {
-              const loginResp = await api.post('/auth/login', { 
-                email: formData.email, 
-                password: formData.password,
-                role: 'seller'
-              });
-              response = loginResp;
+             const loginResp = await onboardingService.login({ 
+              email: formData.email, 
+              password: formData.password,
+              role: 'seller'
+            });
+            response = loginResp;
             } catch (loginErr) {
               // If login also fails, throw the original registration error or a custom one
               throw new Error("This email is already registered. Please check your password or use the Login page.");
@@ -475,11 +475,12 @@ const handleSendOtp = async (type) => {
         onNext(sellerId);
       }
 
-    } catch (err) {
-      setApiError(err.response?.data?.message || 'Server connection failed.');
-    } finally {
-      setIsLoading(false);
-    }
+ } catch (err) {
+  const specificError = err.response?.data?.errors?.[0]?.message;
+  setApiError(specificError || err.response?.data?.message || err.message || 'Server connection failed.');
+} finally {
+  setIsLoading(false);
+}
   };
 
   return (

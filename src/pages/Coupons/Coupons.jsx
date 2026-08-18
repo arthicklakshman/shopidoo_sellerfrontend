@@ -10,6 +10,9 @@ import { sellerService } from '../../services/seller.service';
 import { showToast } from '../../features/ui/uiSlice';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 
+
+
+
 const initialFormData = {
   code: '',
   title: '',
@@ -45,6 +48,13 @@ const menuPropsDownward = {
     },
   },
 };
+
+
+const RequiredLabel = (text) => (
+  <>
+    {text} <Box component="span" sx={{ color: '#ef4444' }}>*</Box>
+  </>
+);
 
 const formatCurrency = (value) => `Rs ${Number(value || 0).toFixed(2)}`;
 
@@ -485,7 +495,7 @@ const Coupons = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Code"
+              label={RequiredLabel('Code')}
               value={formData.code}
               onChange={(e) =>
                 handleInputChange('code', e.target.value.toUpperCase())
@@ -539,7 +549,7 @@ const Coupons = () => {
             <TextField
               type="number"
               fullWidth
-              label="Discount Value"
+              label={RequiredLabel('Discount Value')}
               value={formData.discount_value}
               onChange={(e) =>
                 handleInputChange('discount_value', e.target.value)
@@ -581,7 +591,7 @@ const Coupons = () => {
             <TextField
               type="date"
               fullWidth
-              label="Valid From"
+              label={RequiredLabel('Valid From')}
               InputLabelProps={{ shrink: true }}
               value={formData.valid_from}
               onChange={(e) =>
@@ -594,7 +604,7 @@ const Coupons = () => {
             <TextField
               type="date"
               fullWidth
-              label="Valid Until"
+              label={RequiredLabel('Valid Until')}
               InputLabelProps={{ shrink: true }}
               value={formData.valid_until}
               onChange={(e) =>

@@ -132,7 +132,7 @@ const handleSendOtpClick = async (type) => {
       
       // 🌟 Identify the correct portal context ('user' or 'seller')
       // You can read this from a prop, your URL path, or a constant string.
-      const currentPortalRole = 'user'; // Change to dynamic or 'seller' depending on the screen
+     const currentPortalRole = window.location.pathname.includes('/seller') ? 'seller' : 'user'; 
 
       // 3. Send to backend service with the required role parameter included
       await authService.resetPassword({
