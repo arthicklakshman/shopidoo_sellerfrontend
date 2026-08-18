@@ -1416,9 +1416,9 @@ const ProductForm = () => {
         custom_category: form.custom_category?.trim() || null,
         custom_subcategory: form.custom_subcategory?.trim() || null,
         custom_product_type: form.custom_product_type?.trim() || null,
-        warranty_type: form.warranty_type || null,
-        warranty_duration: form.warranty_duration ? parseInt(form.warranty_duration) : null,
-        warranty_duration_unit: form.warranty_type ? form.warranty_duration_unit : null,
+        warranty_type: (form.warranty_type && form.warranty_type !== 'none') ? form.warranty_type : null,
+        warranty_duration: (form.warranty_type && form.warranty_type !== 'none' && form.warranty_duration) ? parseInt(form.warranty_duration) : null,
+        warranty_duration_unit: (form.warranty_type && form.warranty_type !== 'none') ? form.warranty_duration_unit : null,
         warranty_description: form.warranty_description?.trim() || null,
         variants: submittedVariants.length > 0 ? submittedVariants.map(v => ({
           ...v,
@@ -2365,12 +2365,12 @@ const ProductForm = () => {
                       <FormControl fullWidth>
                         <InputLabel>Warranty type</InputLabel>
                         <Select
-                          value={form.warranty_type}
+                          value={form.warranty_type || 'none'}
                           label="Warranty type"
                           onChange={handleChange('warranty_type')}
                           MenuProps={menuPropsDownward}
                         >
-                          <MenuItem value="">No warranty</MenuItem>
+                          <MenuItem value="none">No warranty</MenuItem>
                           <MenuItem value="seller">Seller warranty</MenuItem>
                           <MenuItem value="brand">Brand warranty</MenuItem>
                           <MenuItem value="manufacturer">Manufacturer warranty</MenuItem>
@@ -2378,7 +2378,7 @@ const ProductForm = () => {
                       </FormControl>
                     </Grid>
 
-                    {form.warranty_type && (
+                    {form.warranty_type && form.warranty_type !== 'none' && (
                       <Grid item xs={12} sm={6}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <TextField
@@ -2407,7 +2407,7 @@ const ProductForm = () => {
                       </Grid>
                     )}
 
-                    {form.warranty_type && (
+                    {form.warranty_type && form.warranty_type !== 'none' && (
                       <Grid item xs={12}>
                         <TextField
                           label="What's covered (optional)"
