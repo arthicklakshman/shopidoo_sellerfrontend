@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme, alpha } from '@mui/material';
-import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress, Menu } from '@mui/material';
+import { Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, MenuItem, Select, Pagination, FormControl, TextField, CircularProgress, Menu, Alert } from '@mui/material';
 import { sellerService } from '../../services/seller.service';
 import { shipmentService } from '../../services/shipment.service';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -203,6 +203,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
   const [manualTracking, setManualTracking] = useState('');
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [feeRates, setFeeRates] = useState({ gatewayFeeRate: 0, gstRate: 0 });
+  const [errorMsg, setErrorMsg] = useState('');
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -228,12 +229,14 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
     setManualCourier('');
     setManualTracking('');
     setStatusMenuAnchor(null);
+    setErrorMsg('');
   }, [order, open]);
 
   if (!order) return null;
 
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
+    setErrorMsg('');
     try {
       if (isSelfShipping && newStatus === 'in_transit') {
         await shipmentService.markInTransit(shipment.id);
@@ -251,7 +254,8 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
       onStatusUpdate?.();
       onClose();
     } catch (err) {
-      dispatch(showToast({ message: err?.response?.data?.message || 'Failed to update status', severity: 'error' }));
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update status';
+      setErrorMsg(msg);
     } finally {
       setUpdating(false);
     }
@@ -281,8 +285,10 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
     : (productPriceGross + shippingCharge - couponDiscount);
 
   const handleManualShip = async () => {
+    setErrorMsg('');
     if (!manualCourier || !manualTracking) {
-      dispatch(showToast({ message: 'Courier and Tracking Code are required', severity: 'error' }));
+      const msg = 'Courier and Tracking Code are required';
+      setErrorMsg(msg);
       return;
     }
     setActionLoading(true);
@@ -292,14 +298,28 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
       onStatusUpdate?.();
       onClose();
     } catch (err) {
-      dispatch(showToast({ message: err.response?.data?.message || 'Failed to dispatch shipment', severity: 'error' }));
+      const msg = err.response?.data?.message || 'Failed to dispatch shipment';
+      setErrorMsg(msg);
     } finally {
       setActionLoading(false);
     }
   };
 
+const openDocumentUrl = (url) => {
+  if (!url) return;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    window.open(url, '_blank');
+  } else {
+    const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+    const backendBase = isLocalhost ? 'http://localhost:5001' : 'https://shopidoo.in';
+    const fullUrl = `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    window.open(fullUrl, '_blank');
+  }
+};
+
   const handleAction = async (actionType) => {
     setActionLoading(true);
+    setErrorMsg('');
     try {
       let res;
       if (actionType === 'retry') {
@@ -310,23 +330,24 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
       } else if (actionType === 'label') {
         res = await shipmentService.generateLabel(shipment.id);
         const url = res.data?.data?.labelUrl;
-        if (url) window.open(url, '_blank');
+        openDocumentUrl(url);
       } else if (actionType === 'invoice') {
         res = await shipmentService.generateInvoice(shipment.id);
         const url = res.data?.data?.invoiceUrl;
-        if (url) window.open(url, '_blank');
+        openDocumentUrl(url);
       } else if (actionType === 'manifest') {
         res = await shipmentService.generateManifest(shipment.id);
         const url = res.data?.data?.manifestUrl;
-        if (url) window.open(url, '_blank');
+        openDocumentUrl(url);
       } else if (actionType === 'print-document') {
         res = await shipmentService.printDocuments(shipment.id);
         const url = res.data?.data?.documentUrl;
-        if (url) window.open(url, '_blank');
+        openDocumentUrl(url);
         dispatch(showToast({ message: 'Documents printed successfully.', severity: 'success' }));
       }
     } catch (err) {
-      dispatch(showToast({ message: err.response?.data?.message || `Failed to perform action: ${actionType}`, severity: 'error' }));
+      const msg = err.response?.data?.message || `Failed to perform action: ${actionType}`;
+      setErrorMsg(msg);
     } finally {
       setActionLoading(false);
     }
@@ -361,6 +382,15 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
         </Box>
       </DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
+        {errorMsg && (
+          <Alert
+            severity="error"
+            onClose={() => setErrorMsg('')}
+            sx={{ mb: 2.5, borderRadius: 2, fontWeight: 600 }}
+          >
+            {errorMsg}
+          </Alert>
+        )}
         <Grid container spacing={2} sx={{ mb: 2.5 }}>
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>Customer Name</Typography>
@@ -743,6 +773,15 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
             <Typography variant="body2" color="text.secondary">{order.createdAt ? formatDate(order.createdAt) : '-'}</Typography>
           </Box>
         </Box>
+        {errorMsg && (
+          <Alert
+            severity="error"
+            onClose={() => setErrorMsg('')}
+            sx={{ mb: 2, borderRadius: 2, fontWeight: 600 }}
+          >
+            {errorMsg}
+          </Alert>
+        )}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button variant="outlined" startIcon={<FileDownloadOutlinedIcon />} sx={{ flex: 1, height: 40, ...OUTLINED_GREEN_SX }} onClick={() => generateInvoice(order.rawItem, true)}>
             Download Invoice

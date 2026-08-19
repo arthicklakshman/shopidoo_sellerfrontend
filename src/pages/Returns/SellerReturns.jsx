@@ -27,7 +27,8 @@ import {
   Grid
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import CloseIcon from '@mui/icons-material/Close';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../../features/ui/uiSlice';
 import { returnService } from '../../services/return.service';
 import { formatDate } from '../../utils/formatDate';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -86,6 +87,7 @@ const SellerReturns = () => {
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', response: '' });
+  const dispatch = useDispatch();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState('');
   const [lightboxType, setLightboxType] = useState('image');
@@ -176,7 +178,8 @@ const SellerReturns = () => {
     const isSelfShip = !!selectedReturn.returnShipment && selectedReturn.returnShipment.shippingMode === 'self';
     if (isSelfShip && (statusUpdate.status === 'received_by_seller' || statusUpdate.status === 'inspection_pending')) {
       if (!selectedReturn.return_tracking_number || !selectedReturn.return_receipt_url) {
-        setErrorMsg('Verification Error: Customer must submit a tracking number and courier receipt before you can receive the product.');
+        const msg = 'Verification Error: Customer must submit a tracking number and courier receipt before you can receive the product.';
+        setErrorMsg(msg);
         return;
       }
     }
@@ -186,11 +189,13 @@ const SellerReturns = () => {
         status: statusUpdate.status,
         seller_response: statusUpdate.response
       });
+      dispatch(showToast({ message: 'Return status updated successfully.', severity: 'success' }));
       setOpenDetail(false);
       fetchReturns();
       fetchMetrics();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to update status');
+      const msg = err.response?.data?.message || 'Failed to update status';
+      setErrorMsg(msg);
       console.error(err);
     }
   };
@@ -204,11 +209,13 @@ const SellerReturns = () => {
         inspection_images: inspectionImages,
         inspection_video: inspectionVideo
       });
+      dispatch(showToast({ message: 'Inspection evidence submitted successfully.', severity: 'success' }));
       setOpenDetail(false);
       fetchReturns();
       fetchMetrics();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to submit inspection');
+      const msg = err.response?.data?.message || 'Failed to submit inspection';
+      setErrorMsg(msg);
       console.error(err);
     }
   };
@@ -216,18 +223,21 @@ const SellerReturns = () => {
   const handleRefundSubmit = async () => {
     setErrorMsg('');
     if (!refundAmount || parseFloat(refundAmount) <= 0) {
-      setErrorMsg('Please enter a valid refund amount.');
+      const msg = 'Please enter a valid refund amount.';
+      setErrorMsg(msg);
       return;
     }
     try {
       await returnService.processRefund(selectedReturn.id, {
         amount: parseFloat(refundAmount)
       });
+      dispatch(showToast({ message: 'Refund processed successfully.', severity: 'success' }));
       setOpenDetail(false);
       fetchReturns();
       fetchMetrics();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to process refund');
+      const msg = err.response?.data?.message || 'Failed to process refund';
+      setErrorMsg(msg);
       console.error(err);
     }
   };
@@ -499,6 +509,9 @@ const SellerReturns = () => {
         <DialogContent dividers>
           {selectedReturn && (
             <Box sx={{ py: 1 }}>
+              {errorMsg && (
+                <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>
+              )}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="overline" color="text.secondary" fontWeight={700}>Return Request Information</Typography>
                 <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -911,6 +924,9 @@ const SellerReturns = () => {
                     margin="normal"
                     placeholder="Provide details about approval, rejection, or pickup..."
                   />
+                  {errorMsg && (
+                    <Alert severity="error" onClose={() => setErrorMsg('')} sx={{ mt: 2, borderRadius: 2, fontWeight: 600 }}>{errorMsg}</Alert>
+                  )}
                   <Button
                     variant="contained"
                     fullWidth
