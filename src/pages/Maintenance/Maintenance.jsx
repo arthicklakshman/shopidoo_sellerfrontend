@@ -42,9 +42,9 @@ export default function Maintenance() {
       {/* Contact info */}
       <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
         Need help? Contact us at{' '}
-        <a href="mailto:support@shopidoo.com"
+        <a href="mailto:support@shopidoo.in"
           style={{ color: '#0b8457', fontWeight: 600, textDecoration: 'none' }}>
-          support@shopidoo.com
+          support@shopidoo.in
         </a>
       </p>
     </div>
