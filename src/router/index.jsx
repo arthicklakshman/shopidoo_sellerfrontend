@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useSelector } from 'react-redux';
 import PageLoader from '../components/common/PageLoader/PageLoader';
 import SellerLayout from '../components/layout/SellerLayout/SellerLayout';
+import MaintenanceGuard from '../components/common/MaintenanceGuard';
 const Support = lazy(() => import('../pages/Support/Support'));
 // For Inventory
 const Inventory = lazy(() => import("../pages/Inventory/Inventory"));
@@ -95,8 +96,8 @@ const AppRouter = () => (
           }
           />
 
-        <Route path="/maintenance" element={<Maintenance />} />
-        <Route element={<PrivateRoute><SellerLayout /></PrivateRoute>}>
+          <Route path="/maintenance" element={<MaintenanceGuard><Maintenance /></MaintenanceGuard>} />
+          <Route element={<MaintenanceGuard><PrivateRoute><SellerLayout /></PrivateRoute></MaintenanceGuard>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/new" element={<ProductForm />} />
