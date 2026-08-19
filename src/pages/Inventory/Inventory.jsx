@@ -227,16 +227,23 @@ const Inventory = () => {
 
         <TableCell>
           <Box display="flex" alignItems="center" gap={1}>
-            <Typography
-              fontWeight={600}
-              sx={{
-                color: `${status.color}.main`,
-              }}
-            >
-              {isParentWithVariants
-                ? `${item.stock_quantity ?? 0} units (Total)`
-                : `${item.stock_quantity ?? 0} units`}
-            </Typography>
+            {(() => {
+              const displayStock = isParentWithVariants
+                ? item.variants.reduce((sum, v) => sum + (Number(v.stock_quantity) || 0), 0)
+                : (item.stock_quantity ?? 0);
+              return (
+                <Typography
+                  fontWeight={600}
+                  sx={{
+                    color: `${status.color}.main`,
+                  }}
+                >
+                  {isParentWithVariants
+                    ? `${displayStock} units (Total)`
+                    : `${displayStock} units`}
+                </Typography>
+              );
+            })()}
             {isParentWithVariants && (
               <Chip label={`${item.variants.length} Variants`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
             )}
