@@ -27,6 +27,7 @@ import {
   Grid
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { returnService } from '../../services/return.service';

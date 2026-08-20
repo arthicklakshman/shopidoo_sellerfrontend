@@ -829,7 +829,7 @@ export default function StoreSetup({ onBack, onNext }) {
                             mb: 0.5,
                           }}
                         >
-                          Platform Logistics (Recommended)
+                          Platform Logistics
                         </Typography>
                         <Typography sx={{ fontSize: "13px", color: "#6b7280" }}>
                           Let us handle shipping with pre-negotiated rates and
