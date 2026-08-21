@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Fab, Snackbar, Alert } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { fetchSettingsOnce } from '../../../utils/settingsCache';
 
-const WhatsApp = ({ supportNumber = "919876543210" }) => {
+const WhatsApp = ({ supportNumber }) => {
   const [toastOpen, setToastOpen] = useState(false);
+  const [activeNumber, setActiveNumber] = useState(supportNumber || "919487082294");
+
+  useEffect(() => {
+    if (supportNumber) {
+      setActiveNumber(supportNumber);
+      return;
+    }
+    fetchSettingsOnce()
+      .then((settings) => {
+        if (settings?.supportPhone) {
+          const cleaned = settings.supportPhone.replace(/\D/g, '');
+          if (cleaned) setActiveNumber(cleaned);
+        }
+      })
+      .catch((err) => console.error('Failed to load whatsapp number:', err));
+  }, [supportNumber]);
 
   const handleClick = () => {
     // 1. Show the Shopidoo Toast
     setToastOpen(true);
 
     // 2. Open WhatsApp chat directly to the number
-    const waLink = `https://wa.me/${supportNumber}`;
+    const waLink = `https://wa.me/${activeNumber}`;
     
     // Slight delay to allow the toast to render before redirecting
     setTimeout(() => {
@@ -56,7 +73,7 @@ const WhatsApp = ({ supportNumber = "919876543210" }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={handleCloseToast} severity="success" sx={{ width: '100%' }}>
-          Shopidoo Support WhatsApp: +{supportNumber}
+          Shopidoo Support WhatsApp: +{activeNumber}
         </Alert>
       </Snackbar>
     </>

@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Fab, Snackbar, Alert } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
+import { fetchSettingsOnce } from '../../../utils/settingsCache';
 
-const Mobile = ({ supportNumber = "919876543210" }) => {
+const Mobile = ({ supportNumber }) => {
   const [toastOpen, setToastOpen] = useState(false);
+  const [activeNumber, setActiveNumber] = useState(supportNumber || "919487082294");
+
+  useEffect(() => {
+    if (supportNumber) {
+      setActiveNumber(supportNumber);
+      return;
+    }
+    fetchSettingsOnce()
+      .then((settings) => {
+        if (settings?.supportPhone) {
+          const cleaned = settings.supportPhone.replace(/\D/g, '');
+          if (cleaned) setActiveNumber(cleaned);
+        }
+      })
+      .catch((err) => console.error('Failed to load support mobile number:', err));
+  }, [supportNumber]);
 
   const handleClick = () => {
     // 1. Show the Shopidoo Toast
     setToastOpen(true);
 
     // 2. Trigger the mobile dialer
-    const telLink = `tel:+${supportNumber}`;
+    const telLink = `tel:+${activeNumber}`;
 
     // Slight delay to allow the toast to render
     setTimeout(() => {
@@ -57,7 +74,7 @@ const Mobile = ({ supportNumber = "919876543210" }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={handleCloseToast} severity="info" sx={{ width: '100%' }}>
-          Shopidoo Support Contact: +{supportNumber}
+          Shopidoo Support Contact: +{activeNumber}
         </Alert>
       </Snackbar>
     </>

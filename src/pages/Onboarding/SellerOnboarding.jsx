@@ -44,8 +44,8 @@ const SellerOnboarding = () => {
         onBack={handleBack}
         onEditStep={handleEdit} // 🌟 NEW: Pass it to the content component
       />
-      <WhatsApp supportNumber="919487082294" />
-      <Mobile supportNumber="919487082294" />
+      <WhatsApp />
+      <Mobile />
     </>
   );
 };
