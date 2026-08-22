@@ -1291,13 +1291,19 @@ const ProductForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     const flattenedFashionVariants = buildFashionVariants();
     const submittedVariants = isFashionVariantCategory ? flattenedFashionVariants : variants;
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
 
-    const totalImagesCount = images.length + newFiles.length + totalColorFiles;
+    // Generic (non-fashion) variants can carry their own image_url, uploaded
+    // directly via VariantImageUpload — count those too.
+    const variantImagesCount = !isFashionVariantCategory
+      ? variants.filter(v => v.image_url).length
+      : 0;
+
+    const totalImagesCount = images.length + newFiles.length + totalColorFiles + variantImagesCount;
     if (totalImagesCount === 0) {
       setError('Please upload at least one product image.');
       return;
