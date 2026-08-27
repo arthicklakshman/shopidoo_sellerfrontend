@@ -34,7 +34,8 @@ const TermsAndConditions = lazy(() => import('../pages/TermsAndConditions/TermsA
 const SellerPolicies = lazy(() => import('../pages/SellerPolicies/SellerPolicies'));
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth);
+  const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth);
+  if (!authChecked) return null; // wait for the initial auth check to finish
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
 
@@ -49,8 +50,9 @@ const PrivateRoute = ({ children }) => {
 };
 
 const GuestRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth || {});
+  const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth || {});
   const location = useLocation();
+  if (!authChecked) return null; // wait for the initial auth check to finish
 
   const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
 

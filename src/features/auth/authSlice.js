@@ -45,7 +45,13 @@ export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, { rejectWithVa
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: { user: getUserFromStorage(), isAuthenticated: !!localStorage.getItem('sellerAccessToken'), loading: false, error: null },
+  initialState: {
+    user: getUserFromStorage(),
+    isAuthenticated: !!localStorage.getItem('sellerAccessToken'),
+    loading: false,
+    error: null,
+    authChecked: false, // NEW: tells routes whether the initial auth check has finished
+  },
   reducers: { 
     clearError: (state) => { state.error = null; },
     // 🌟 ADD THIS: Required by BasicInfo.jsx to sync state after Step 1
@@ -77,12 +83,15 @@ const authSlice = createSlice({
       .addCase(fetchMe.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.authChecked = true; // NEW
         localStorage.setItem('sellerUser', JSON.stringify(action.payload));
       })
       .addCase(fetchMe.rejected, (state) => {
         state.user = null; state.isAuthenticated = false;
+        state.authChecked = true; // NEW
         localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerRefreshToken');
       });
+      
   },
 });
 
