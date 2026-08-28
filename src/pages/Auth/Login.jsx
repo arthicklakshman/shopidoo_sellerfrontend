@@ -120,6 +120,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginSeller, googleLoginSeller, clearError } from '../../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
+import SEO from '../../components/SEO/SEO';
 
 // 🌟 IMPORT CUSTOM BUTTON
 import GradientButton from '../../components/shared/GradientButton/GradientButton'; 
@@ -181,6 +182,11 @@ const Login = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 2 }}>
+      <SEO 
+        title="Seller Sign In | Shopidoo Merchant Portal"
+        description="Sign in to your Shopidoo seller account to manage your store, inventory, orders, and sales reports."
+        canonicalUrl="https://seller.shopidoo.in/login"
+      />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', maxWidth: 420 }}>
         <Box sx={{ textAlign: 'center', mb: 3 }}>
           <StorefrontIcon sx={{ fontSize: 48, color: '#0B8457' }} />

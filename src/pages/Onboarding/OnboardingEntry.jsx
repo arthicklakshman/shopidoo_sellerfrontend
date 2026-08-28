@@ -22,6 +22,7 @@ import GradientButton from '../../components/shared/GradientButton/GradientButto
 
 import sellerHero from '../../assets/seller_hero.png';
 import titlelogo from '../../assets/Shopidoo_logo.png';
+import SEO from '../../components/SEO/SEO';
 
 const features = [
     { icon: <TrendingUpIcon />, title: 'Low Commission', desc: 'Keep more of what you earn' },
@@ -50,6 +51,11 @@ export default function OnboardingEntry() {
                 fontFamily: 'sans-serif'
             }}
         >
+            <SEO 
+                title="Sell on Shopidoo | Merchant Registration"
+                description="Grow your business online with Shopidoo. Enjoy low commission, high visibility, and fast payouts. Register your store today."
+                canonicalUrl="https://seller.shopidoo.in/register"
+            />
             <Container maxWidth="lg">
 
                 {/* HEADER */}

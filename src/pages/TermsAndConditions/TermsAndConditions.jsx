@@ -6,6 +6,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
 import api from '../../services/api';
+import SEO from '../../components/SEO/SEO';
 
 // Icons
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -206,6 +207,11 @@ export default function TermsAndConditions() {
         }
       }}
     >
+      <SEO 
+        title="Terms and Conditions | Shopidoo Seller"
+        description="Read the official merchant terms, seller agreement, and operating policies for selling on Shopidoo."
+        canonicalUrl="https://seller.shopidoo.in/terms-and-conditions"
+      />
       {/* ── 1. Top Navbar ── */}
       <Paper
         elevation={0}

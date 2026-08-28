@@ -16,7 +16,8 @@ import { useOtp } from '../../hooks/useOtp';
 import OtpModal from '../../components/shared/OtpModal/OtpModal';
 import GradientButton from '../../components/shared/GradientButton/GradientButton';
 import { validateEmail, validateMobile, validatePassword } from '../../utils/validation';
-import { authService } from '../../services/auth.service'; 
+import { authService } from '../../services/auth.service';
+import SEO from '../../components/SEO/SEO'; 
 
 // --- STYLES & REUSABLE INLINE COMPONENTS ---
 const StyledInputLabel = ({ children }) => (
@@ -161,6 +162,7 @@ const handleSendOtpClick = async (type) => {
   minHeight: '100vh', display: 'flex', alignItems: 'center', 
   justifyContent: 'center', bgcolor: 'background.default', p: 2 
 }}>
+      <SEO title="Reset Password" noIndex={true} />
       <Box sx={{ width: '100%', maxWidth: '500px' }}>
         
         {/* Header */}

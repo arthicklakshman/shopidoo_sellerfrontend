@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /dashboard/
+Disallow: /orders/
+Disallow: /products/
+Disallow: /analytics/
+
+Sitemap: https://seller.shopidoo.in/sitemap.xml

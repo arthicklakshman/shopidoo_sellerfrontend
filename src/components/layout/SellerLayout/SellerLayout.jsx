@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import socket from '../../../services/socket';
+import SEO from '../../SEO/SEO';
 import {
   Box,
   Drawer,
@@ -402,6 +403,7 @@ const SellerLayout = () => {
         bgcolor: 'background.default',
       }}
     >
+      <SEO title="Seller Dashboard" noIndex={true} />
       <Box
         component="nav"
         sx={{

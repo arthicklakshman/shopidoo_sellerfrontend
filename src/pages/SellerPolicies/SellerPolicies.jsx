@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button, Divider } from '@mui/material';
+import SEO from '../../components/SEO/SEO';
 
 export default function SellerPolicies() {
   const sections = [
@@ -47,6 +48,11 @@ export default function SellerPolicies() {
 
   return (
     <Box sx={{ backgroundColor: '#fafafa', minHeight: '100vh', py: 4 }}>
+      <SEO 
+        title="Seller Policies | Merchant Guidelines"
+        description="Read the official seller guidelines, listing rules, shipping policies, and account rules for selling on Shopidoo."
+        canonicalUrl="https://seller.shopidoo.in/seller-policies"
+      />
       <Box sx={{ maxWidth: '800px', mx: 'auto', px: { xs: 2, md: 4 } }}>
 
         <Button
