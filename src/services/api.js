@@ -65,12 +65,14 @@ api.interceptors.response.use(
         localStorage.removeItem('sellerAccessToken');
         localStorage.removeItem('sellerRefreshToken');
         
-        // 🌟 UPDATED: Prevent hard redirect to login if we are in onboarding!
-        // This allows onboarding components to handle the error themselves.
-        if (!window.location.pathname.startsWith('/onboarding')) {
+        // Prevent hard redirect loop to login if we are already on auth or onboarding pages
+        const publicAuthPaths = ['/login', '/register', '/forgot-password'];
+        const isAuthOrOnboarding = publicAuthPaths.includes(window.location.pathname) || window.location.pathname.startsWith('/onboarding');
+
+        if (!isAuthOrOnboarding) {
           window.location.href = '/login';
         }
-        return Promise.reject(new Error('Refresh the page'));
+        return Promise.reject(new Error('Authentication expired'));
       } finally { isRefreshing = false; }
     }
     return Promise.reject(error);

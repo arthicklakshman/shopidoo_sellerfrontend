@@ -39,8 +39,14 @@ export const registerSeller = createAsyncThunk('auth/register', async (userData,
 export const logoutSeller = createAsyncThunk('auth/logout', async () => { try { await authService.logout(); } catch {} });
 
 export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, { rejectWithValue }) => {
-  try { const { data } = await authService.getMe(); return data.data; }
-  catch (err) { return rejectWithValue(err.message); }
+  try {
+    const token = localStorage.getItem('sellerAccessToken');
+    if (!token) return rejectWithValue('No access token');
+    const { data } = await authService.getMe();
+    return data.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
+  }
 });
 
 const authSlice = createSlice({
