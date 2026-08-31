@@ -50,20 +50,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !orig._retry && !isAuthRoute) {
       if (isRefreshing) return new Promise((res, rej) => failedQueue.push({ resolve: res, reject: rej })).then((t) => { orig.headers.Authorization = `Bearer ${t}`; return api(orig); });
       orig._retry = true; isRefreshing = true;
-      try {
-        const refreshToken = localStorage.getItem('sellerRefreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+           try {
+        const { data } = await api.post('/auth/refresh-token');
         const newToken = data.data.accessToken;
         localStorage.setItem('sellerAccessToken', newToken);
-        if (data.data.refreshToken) localStorage.setItem('sellerRefreshToken', data.data.refreshToken);
         processQueue(null, newToken);
         orig.headers.Authorization = `Bearer ${newToken}`;
         return api(orig);
       } catch (err) {
         processQueue(err, null);
         localStorage.removeItem('sellerAccessToken');
-        localStorage.removeItem('sellerRefreshToken');
         
         // 🌟 UPDATED: Prevent hard redirect to login if we are in onboarding!
         // This allows onboarding components to handle the error themselves.
