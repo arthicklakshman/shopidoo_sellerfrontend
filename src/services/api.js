@@ -26,6 +26,7 @@ api.interceptors.request.use((config) => {
   if (token && !isAuthRoute) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  config.headers['x-auth-role'] = 'seller';
   
   return config;
 });
@@ -50,8 +51,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !orig._retry && !isAuthRoute) {
       if (isRefreshing) return new Promise((res, rej) => failedQueue.push({ resolve: res, reject: rej })).then((t) => { orig.headers.Authorization = `Bearer ${t}`; return api(orig); });
       orig._retry = true; isRefreshing = true;
-           try {
-        const { data } = await api.post('/auth/refresh-token');
+      try {
+        const { data } = await api.post('/auth/refresh-token', { role: 'seller' });
         const newToken = data.data.accessToken;
         localStorage.setItem('sellerAccessToken', newToken);
         processQueue(null, newToken);
@@ -60,6 +61,7 @@ api.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         localStorage.removeItem('sellerAccessToken');
+        localStorage.removeItem('sellerUser');
         
         // Prevent hard redirect loop to login if we are already on auth or onboarding pages
         const publicAuthPaths = ['/login', '/register', '/forgot-password'];
