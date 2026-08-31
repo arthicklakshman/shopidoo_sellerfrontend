@@ -8,7 +8,6 @@ const handleAuthFulfilled = (state, action) => {
   state.user = action.payload.user;
   state.isAuthenticated = true;
   localStorage.setItem('sellerAccessToken', action.payload.accessToken);
-  localStorage.setItem('sellerRefreshToken', action.payload.refreshToken);
   localStorage.setItem('sellerUser', JSON.stringify(action.payload.user));
 };
 
@@ -84,7 +83,7 @@ const authSlice = createSlice({
       .addCase(registerSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(logoutSeller.fulfilled, (state) => {
         state.user = null; state.isAuthenticated = false;
-        localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerRefreshToken'); localStorage.removeItem('sellerUser');
+      localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerUser');
       })
       .addCase(fetchMe.fulfilled, (state, action) => {
         state.user = action.payload;
@@ -95,7 +94,7 @@ const authSlice = createSlice({
       .addCase(fetchMe.rejected, (state) => {
         state.user = null; state.isAuthenticated = false;
         state.authChecked = true; // NEW
-        localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerRefreshToken');
+           localStorage.removeItem('sellerAccessToken');
       });
       
   },
