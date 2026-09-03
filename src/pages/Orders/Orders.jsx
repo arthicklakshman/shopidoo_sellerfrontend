@@ -251,8 +251,7 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
         await sellerService.updateOrderItemStatus(order.itemId, newStatus);
       }
       dispatch(showToast({ message: 'Status updated successfully', severity: 'success' }));
-      onStatusUpdate?.();
-      onClose();
+      await onStatusUpdate?.();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to update status';
       setErrorMsg(msg);
@@ -295,8 +294,8 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
     try {
       await shipmentService.selfShip(shipment.id, { courierName: manualCourier, trackingNumber: manualTracking });
       dispatch(showToast({ message: 'Shipment dispatched successfully', severity: 'success' }));
-      onStatusUpdate?.();
-      onClose();
+      setShowManualShipForm(false);
+      await onStatusUpdate?.();
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to dispatch shipment';
       setErrorMsg(msg);
@@ -325,8 +324,7 @@ const openDocumentUrl = (url) => {
       if (actionType === 'retry') {
         res = await shipmentService.retryShipment(shipment.id);
         dispatch(showToast({ message: 'AWB Generation triggered successfully.', severity: 'success' }));
-        onStatusUpdate?.();
-        onClose();
+        await onStatusUpdate?.();
       } else if (actionType === 'label') {
         res = await shipmentService.generateLabel(shipment.id);
         const url = res.data?.data?.labelUrl;
@@ -889,21 +887,49 @@ const Orders = () => {
       .finally(() => setAnalyticsLoading(false));
   };
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    sellerService.getOrders({
-      page,
-      limit: 15,
-      status: statusFilter || undefined,
-      sort: sortFilter,
-      year: yearFilter || undefined,
-      month: monthFilter || undefined,
-      date: dateFilter || undefined,
-    }).then(({ data }) => {
-      setOrders(data.data || []);
-      setPagination(data.pagination || {});
-    }).finally(() => setLoading(false));
     loadAnalytics();
+    try {
+      const { data } = await sellerService.getOrders({
+        page,
+        limit: 15,
+        status: statusFilter || undefined,
+        sort: sortFilter,
+        year: yearFilter || undefined,
+        month: monthFilter || undefined,
+        date: dateFilter || undefined,
+      });
+      const fetchedOrders = data.data || [];
+      setOrders(fetchedOrders);
+      setPagination(data.pagination || {});
+
+      // Keep selectedOrder in sync with re-fetched orders if dialog is open
+      setSelectedOrder((prevSelected) => {
+        if (!prevSelected) return null;
+        const freshItem = fetchedOrders.find((it) => it.id === prevSelected.itemId);
+        if (!freshItem) return prevSelected;
+        const shipmentForStatus = freshItem.Order?.shipments?.[0] || freshItem.order?.shipments?.[0] || null;
+        const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : freshItem.status;
+        return {
+          itemId: freshItem.id,
+          orderNumber: (freshItem.Order || freshItem.order)?.order_number || `ORD${String(freshItem.id).padStart(5, '0')}`,
+          customer: (freshItem.Order || freshItem.order)?.user?.name || '-',
+          product: freshItem.product?.name || '-',
+          variantStr: freshItem.variant?.variant_attributes ? Object.values(freshItem.variant.variant_attributes).join(' / ') : '',
+          quantity: freshItem.quantity,
+          amount: freshItem.total_price,
+          status: displayStatus,
+          createdAt: freshItem.created_at,
+          address: (freshItem.Order || freshItem.order)?.address,
+          rawItem: freshItem
+        };
+      });
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

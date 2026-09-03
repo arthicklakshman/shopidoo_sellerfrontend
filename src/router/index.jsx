@@ -33,7 +33,7 @@ const DeleteAccount = lazy(() => import('../pages/DeleteAccount/DeleteAccount'))
 const TermsAndConditions = lazy(() => import('../pages/TermsAndConditions/TermsAndConditions'));
 const SellerPolicies = lazy(() => import('../pages/SellerPolicies/SellerPolicies'));
 
-const PrivateRoute = ({ children }) => {
+export const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth);
   if (!authChecked) return null; // wait for the initial auth check to finish
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -49,7 +49,7 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
-const GuestRoute = ({ children }) => {
+export const GuestRoute = ({ children }) => {
   const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth || {});
   const location = useLocation();
   if (!authChecked) return null; // wait for the initial auth check to finish
