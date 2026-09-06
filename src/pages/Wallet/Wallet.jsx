@@ -522,6 +522,11 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
   const [txnsLoading, setTxnsLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [displayLimit, setDisplayLimit] = useState(50);
+  const [collapsedOrders, setCollapsedOrders] = useState({});
+
+  const toggleOrder = (key) => {
+    setCollapsedOrders(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     const fetchTxns = async () => {
@@ -659,7 +664,7 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingRight: 8, display: "flex", flexDirection: "column", gap: 16 }}>
           {txnsLoading ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: theme.palette.text.secondary }}>
               <div style={{ width: 28, height: 28, border: "3px solid rgba(11,132,87,0.2)", borderTopColor: "#0b8457", borderRadius: "50%", animation: "wm-spin 0.7s linear infinite", margin: "0 auto 12px" }} />
@@ -674,114 +679,183 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
               {Object.keys(orderGroups).map(orderNum => {
                 const group = orderGroups[orderNum];
                 const dateStr = formatDate(group[0]?.createdAt || group[0]?.created_at);
-                
+                const isCollapsed = !!collapsedOrders[orderNum];
+                const totalOrderAmt = group.reduce((sum, t) => sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount)), 0);
+
                 return (
                   <div key={orderNum} style={{
                     border: `1px solid ${theme.palette.divider}`, borderRadius: 16,
-                    background: theme.palette.background.default, overflow: 'hidden'
+                    background: theme.palette.background.default, overflow: 'hidden',
+                    flexShrink: 0,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
                   }}>
-                    <div style={{
-                      padding: "12px 18px", borderBottom: `1px solid ${theme.palette.divider}`,
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      background: theme.palette.background.paper, backdropFilter: "blur(12px)",
-                      position: "sticky", top: 0, zIndex: 10
-                    }}>
-                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: theme.palette.text.primary }}>
-                        📦 Order #{orderNum}
+                    <div
+                      onClick={() => toggleOrder(orderNum)}
+                      style={{
+                        padding: "14px 18px",
+                        borderBottom: isCollapsed ? "none" : `1px solid ${theme.palette.divider}`,
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        background: theme.palette.background.paper, backdropFilter: "blur(12px)",
+                        cursor: "pointer", userSelect: "none"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 700, color: theme.palette.text.primary }}>
+                          📦 Order #{orderNum}
+                        </div>
+                        <span style={{
+                          fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: 12,
+                          background: alpha(theme.palette.primary.main, 0.08), color: theme.palette.primary.main
+                        }}>
+                          {group.length} {group.length === 1 ? 'item' : 'items'}
+                        </span>
                       </div>
-                      <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
-                        {dateStr}
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
+                          {dateStr}
+                        </div>
+                        <div style={{
+                          fontSize: "1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                          color: totalOrderAmt >= 0 ? theme.palette.success.main : theme.palette.error.main,
+                        }}>
+                          {totalOrderAmt >= 0 ? '+' : '-'}₹{Math.abs(totalOrderAmt).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div style={{
+                          fontSize: "0.75rem", color: theme.palette.text.secondary,
+                          transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                          display: "flex", alignItems: "center"
+                        }}>
+                          ▼
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      {group.map((t, idx) => (
-                        <div key={t.id} style={{
-                          padding: "14px 18px",
-                          borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                        }}>
-                          <div style={{ flex: 1, paddingRight: 16 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                              <span style={{
-                                fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
-                                background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
-                                color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
-                                textTransform: "uppercase"
-                              }}>
-                                {t.type}
-                              </span>
-                              <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
-                                {t.description || "—"}
-                              </span>
+                    {!isCollapsed && (
+                      <div>
+                        {group.map((t, idx) => (
+                          <div key={t.id} style={{
+                            padding: "14px 18px",
+                            borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                          }}>
+                            <div style={{ flex: 1, paddingRight: 16 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                                <span style={{
+                                  fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
+                                  background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                                  color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
+                                  textTransform: "uppercase"
+                                }}>
+                                  {t.type}
+                                </span>
+                                <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
+                                  {t.description || "—"}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{
+                              fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                              color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
+                              whiteSpace: "nowrap"
+                            }}>
+                              {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
-                          <div style={{
-                            fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
-                            color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
-                            whiteSpace: "nowrap"
-                          }}>
-                            {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN")}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
 
               {Object.keys(otherTxnsGroups).map(dateStr => {
                 const group = otherTxnsGroups[dateStr];
+                const isCollapsed = !!collapsedOrders[`other-${dateStr}`];
+                const totalOtherAmt = group.reduce((sum, t) => sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount)), 0);
+
                 return (
                   <div key={dateStr} style={{
                     border: `1px solid ${theme.palette.divider}`, borderRadius: 16,
                     background: theme.palette.background.default, overflow: 'hidden',
-                    marginTop: 8
+                    flexShrink: 0,
+                    marginTop: 8,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
                   }}>
-                    <div style={{
-                      padding: "12px 18px", borderBottom: `1px solid ${theme.palette.divider}`,
-                      background: theme.palette.background.paper, backdropFilter: "blur(12px)",
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      position: "sticky", top: 0, zIndex: 10
-                    }}>
-                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: theme.palette.text.primary }}>
-                        📋 Other Transactions
+                    <div
+                      onClick={() => toggleOrder(`other-${dateStr}`)}
+                      style={{
+                        padding: "14px 18px",
+                        borderBottom: isCollapsed ? "none" : `1px solid ${theme.palette.divider}`,
+                        background: theme.palette.background.paper, backdropFilter: "blur(12px)",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        cursor: "pointer", userSelect: "none"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 700, color: theme.palette.text.primary }}>
+                          📋 Other Transactions
+                        </div>
+                        <span style={{
+                          fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: 12,
+                          background: alpha(theme.palette.info?.main || "#0288d1", 0.08), color: theme.palette.info?.main || "#0288d1"
+                        }}>
+                          {group.length} {group.length === 1 ? 'transaction' : 'transactions'}
+                        </span>
                       </div>
-                      <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
-                        {dateStr}
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <div style={{ fontSize: "0.8rem", color: theme.palette.text.secondary, fontWeight: 500 }}>
+                          {dateStr}
+                        </div>
+                        <div style={{
+                          fontSize: "1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                          color: totalOtherAmt >= 0 ? theme.palette.success.main : theme.palette.error.main,
+                        }}>
+                          {totalOtherAmt >= 0 ? '+' : '-'}₹{Math.abs(totalOtherAmt).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div style={{
+                          fontSize: "0.75rem", color: theme.palette.text.secondary,
+                          transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                          display: "flex", alignItems: "center"
+                        }}>
+                          ▼
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      {group.map((t, idx) => (
-                        <div key={t.id} style={{
-                          padding: "14px 18px",
-                          borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                        }}>
-                          <div style={{ flex: 1, paddingRight: 16 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                              <span style={{
-                                fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
-                                background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
-                                color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
-                                textTransform: "uppercase"
-                              }}>
-                                {t.type}
-                              </span>
-                              <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
-                                {t.description || "—"}
-                              </span>
+                    {!isCollapsed && (
+                      <div>
+                        {group.map((t, idx) => (
+                          <div key={t.id} style={{
+                            padding: "14px 18px",
+                            borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                          }}>
+                            <div style={{ flex: 1, paddingRight: 16 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                                <span style={{
+                                  fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
+                                  background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                                  color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
+                                  textTransform: "uppercase"
+                                }}>
+                                  {t.type}
+                                </span>
+                                <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
+                                  {t.description || "—"}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{
+                              fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                              color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
+                              whiteSpace: "nowrap"
+                            }}>
+                              {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
-                          <div style={{
-                            fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
-                            color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
-                            whiteSpace: "nowrap"
-                          }}>
-                            {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN")}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -975,6 +1049,7 @@ export default function Wallet() {
   const [showModal, setShowModal] = useState(false);
   const [showTxnModal, setShowTxnModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const fetchWallet = useCallback(async () => {
     setWalletLoading(true);
@@ -1044,6 +1119,7 @@ export default function Wallet() {
   };
 
   const handleDownloadInvoice = async (id) => {
+    setDownloadingId(id);
     try {
       const res = await api.get(`${BASE}/${id}/invoice`);
       if (res.data && res.data.url) {
@@ -1062,7 +1138,9 @@ export default function Wallet() {
         window.URL.revokeObjectURL(blobUrl);
       }
     } catch (err) {
-      dispatch(showToast({ message: "Failed to download invoice", severity: "error" }));
+      dispatch(showToast({ message: err.response?.data?.message || "Failed to download invoice", severity: "error" }));
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -1273,20 +1351,26 @@ export default function Wallet() {
                           }
                         </td>
                         <td>
-                          <button
-                            onClick={() => handleDownloadInvoice(item.id)}
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: 4,
-                              border: `1px solid ${theme.palette.divider}`,
-                              background: theme.palette.background.default,
-                              cursor: "pointer",
-                              fontSize: "0.75rem",
-                              color: theme.palette.text.primary,
-                            }}
-                          >
-                            ⬇️ Download
-                          </button>
+                          {item.status === "completed" ? (
+                            <button
+                              onClick={() => handleDownloadInvoice(item.id)}
+                              disabled={downloadingId === item.id}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: 4,
+                                border: `1px solid ${theme.palette.divider}`,
+                                background: theme.palette.background.default,
+                                cursor: downloadingId === item.id ? "wait" : "pointer",
+                                fontSize: "0.75rem",
+                                color: theme.palette.text.primary,
+                                opacity: downloadingId === item.id ? 0.7 : 1,
+                              }}
+                            >
+                              {downloadingId === item.id ? "⏳ Downloading…" : "⬇️ Download"}
+                            </button>
+                          ) : (
+                            <span style={{ color: theme.palette.text.disabled, fontSize: "0.8rem" }}>—</span>
+                          )}
                         </td>
                       </tr>
                     );
