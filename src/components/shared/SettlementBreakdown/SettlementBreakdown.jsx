@@ -57,7 +57,7 @@ function formatINR(n) {
  * below if the names differ.
  */
 function useGatewaySettings() {
-  const [rates, setRates] = useState({ razorpayFeeRate: null, gstRate: null, tcsRate: 1 });
+  const [rates, setRates] = useState({ razorpayFeeRate: null, gstRate: null, tcsRate: 1, activeGateway: 'razorpay' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -69,7 +69,8 @@ function useGatewaySettings() {
         const razorpayFeeRate = Number(raw?.gatewayFee ?? 0);
         const gstRate = Number(raw?.gst ?? 0);
         const tcsRate = Number(raw?.tcsRate ?? 1);
-        setRates({ razorpayFeeRate, gstRate, tcsRate });
+        const activeGateway = raw?.activePaymentGateway || 'razorpay';
+        setRates({ razorpayFeeRate, gstRate, tcsRate, activeGateway });
       })
       .catch(() => {
         if (mounted) setError(true);
@@ -94,7 +95,7 @@ function useGatewaySettings() {
  */
 export default function SettlementBreakdown({ orderAmount, orderId, commission = 0, productGstRate = 0 }) {
   const theme = useTheme();
-  const { razorpayFeeRate, gstRate, tcsRate, loading, error } = useGatewaySettings();
+  const { razorpayFeeRate, gstRate, tcsRate, activeGateway, loading, error } = useGatewaySettings();
   const [tcsExpanded, setTcsExpanded] = useState(false);
 
   if (loading) {
@@ -117,9 +118,11 @@ export default function SettlementBreakdown({ orderAmount, orderId, commission =
 
   const s = calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission, productGstRate, tcsRate);
 
+   const gatewayLabel = activeGateway === 'cashfree' ? 'Cashfree' : 'Razorpay';
+
   const rows = [
     { label: "Order amount", value: s.orderAmount, isDeduction: false },
-    { label: `Razorpay gateway fee (${razorpayFeeRate}%)`, value: s.razorpayFee, isDeduction: true },
+    { label: `${gatewayLabel} gateway fee (${razorpayFeeRate}%)`, value: s.razorpayFee, isDeduction: true },
     { label: `GST on gateway fee (${gstRate}%)`, value: s.razorpayGst, isDeduction: true },
     { label: "Platform Fee", value: s.commission, isDeduction: true },
   ];
