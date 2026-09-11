@@ -103,14 +103,25 @@ export default function StoreInfo() {
         const fetchRealData = async () => {
             try {
                 const response = await getStoreInfoAPI();
-                if (response.success) {
+                if (response.success && response.data) {
                     const dbData = response.data;
+                    let parsedCategories = [];
+                    if (Array.isArray(dbData.categories)) {
+                        parsedCategories = dbData.categories;
+                    } else if (typeof dbData.categories === 'string') {
+                        try {
+                            const parsed = JSON.parse(dbData.categories);
+                            parsedCategories = Array.isArray(parsed) ? parsed : [dbData.categories];
+                        } catch {
+                            parsedCategories = dbData.categories.split(',').map((c) => c.trim()).filter(Boolean);
+                        }
+                    }
                     const formattedData = {
-                        storeName: dbData.storeName || "",
+                        storeName: dbData.storeName || dbData.businessName || "",
                         email: dbData.email || "",
                         description: dbData.description || "",
                         phone: dbData.phone || "",
-                        categories: Array.isArray(dbData.categories) ? dbData.categories : [],
+                        categories: parsedCategories,
                         shippingPreference: dbData.shippingPreference || "platform",
                         selfShippingRate: dbData.selfShippingRate || 0
                     };

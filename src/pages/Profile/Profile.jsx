@@ -69,13 +69,13 @@ const Profile = () => {
           <Card sx={{ textAlign: 'center', py: 3 }}>
             <CardContent>
               <Box sx={{ position: 'relative', display: 'inline-block', mb: 1.5 }}>
-                <Avatar src={user?.avatar} sx={{ 
-                  width: 100, 
-                  height: 100, 
-                  mx: 'auto', 
+                <Avatar src={user?.avatar} sx={{
+                  width: 100,
+                  height: 100,
+                  mx: 'auto',
                   background: 'linear-gradient(135deg, #0FB9B1 0%, #0B8457 100%)',
                   color: '#fff',
-                  fontSize: 36, 
+                  fontSize: 36,
                   fontWeight: 700
                 }}>
                   {user?.name?.[0]?.toUpperCase()}
@@ -104,7 +104,7 @@ const Profile = () => {
               {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
               <Box component="form" onSubmit={handleProfileSave}>
                 <TextField label="Name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} fullWidth sx={{ mb: 2 }} />
-                <TextField label="Email" value={user?.email || ''} disabled fullWidth sx={{ mb: 2 }}  />
+                <TextField label="Email" value={user?.email || ''} disabled fullWidth sx={{ mb: 2 }} />
                 <TextField label="Phone" value={user?.phone || ''} disabled fullWidth sx={{ mb: 2 }} />
                 <Button type="submit" variant="contained" disabled={saving} sx={gradientButtonStyle}>{saving ? 'Saving...' : 'Save Changes'}</Button>
               </Box>

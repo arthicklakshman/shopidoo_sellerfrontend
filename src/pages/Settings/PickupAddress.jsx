@@ -42,7 +42,7 @@ export default function PickupAddress() {
         const response = await getPickupAddressAPI();
         if (response.success && response.data) {
           const dbData = {
-            address1: response.data.addressLine1 || "",
+            address1: response.data.addressLine1 || response.data.pickupAddress || "",
             address2: response.data.addressLine2 || "",
             city: response.data.city || "",
             state: response.data.state || "",

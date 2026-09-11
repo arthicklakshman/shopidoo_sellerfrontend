@@ -890,12 +890,36 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions 
 
   const available = Number(wallet?.available_balance ?? 0);
 
+  useEffect(() => {
+    if (wallet?.accountNumber) setBankAcc(wallet.accountNumber);
+    if (wallet?.storeName) setStoreName(wallet.storeName);
+  }, [wallet?.accountNumber, wallet?.storeName]);
+
+  useEffect(() => {
+    const fetchLatestDetails = async () => {
+      try {
+        const sellerUser = JSON.parse(localStorage.getItem("sellerUser") || "{}");
+        const sellerId = sellerUser?.id;
+        if (sellerId) {
+          const sellerRes = await api.get(`/seller/${sellerId}`);
+          const sName = sellerRes.data?.data?.storeName || sellerRes.data?.data?.businessName || sellerRes.data?.data?.name || "";
+          const accNum = sellerRes.data?.data?.accountNumber || "";
+          if (sName) setStoreName(sName);
+          if (accNum) setBankAcc(accNum);
+        }
+      } catch (e) {
+        console.error("Failed to load seller details in payout modal:", e);
+      }
+    };
+    fetchLatestDetails();
+  }, []);
+
   const handleConfirm = () => {
     setError("");
     const num = available;
     if (available <= 0) { setError("You have no available balance to withdraw."); return; }
-    if (!storeName.trim()) { setError("Please enter your store name"); return; }
-    if (!bankAcc.trim()) { setError("Please enter your bank account number"); return; }
+    if (!storeName.trim()) { setError("Store name is missing. Please set your store name in Settings > Store Info."); return; }
+    if (!bankAcc.trim()) { setError("Bank account number is missing. Please configure your bank details in Settings > Bank Details."); return; }
     onSubmit({ amount: String(num), bank_account: bankAcc.trim(), store_name: storeName.trim() });
   };
 
@@ -906,6 +930,14 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions 
     boxSizing: "border-box", background: theme.palette.background.paper,
     transition: "border-color 0.2s, box-shadow 0.2s",
     fontFamily: "'DM Sans', sans-serif",
+  };
+
+  const readOnlyStyle = {
+    ...inputStyle,
+    background: theme.palette.action.hover,
+    cursor: "not-allowed",
+    color: theme.palette.text.primary,
+    WebkitTextFillColor: theme.palette.text.primary,
   };
 
   const focus = e => { e.target.style.borderColor = "#0b8457"; e.target.style.boxShadow = "0 0 0 3px rgba(11,132,87,0.1)"; };
@@ -979,18 +1011,22 @@ function WithdrawModal({ wallet, onClose, onSubmit, loading, onViewTransactions 
 
         <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Store Name *</label>
         <input
-          type="text" placeholder="Your store name" value={storeName}
-          onChange={e => setStoreName(e.target.value)}
-          onFocus={focus} onBlur={blur}
-          style={{ ...inputStyle, marginBottom: 16 }}
+          type="text"
+          placeholder="Store name"
+          value={storeName}
+          readOnly
+          tabIndex={-1}
+          style={{ ...readOnlyStyle, marginBottom: 16 }}
         />
 
         <label style={{ fontSize: "0.78rem", fontWeight: 600, color: theme.palette.text.primary, display: "block", marginBottom: 6 }}>Bank Account Number *</label>
         <input
-          type="text" placeholder="e.g. 1234567890" value={bankAcc}
-          onChange={e => setBankAcc(e.target.value)}
-          onFocus={focus} onBlur={blur}
-          style={{ ...inputStyle, marginBottom: 16, fontFamily: "'DM Mono', monospace" }}
+          type="text"
+          placeholder="Bank account number"
+          value={bankAcc}
+          readOnly
+          tabIndex={-1}
+          style={{ ...readOnlyStyle, marginBottom: 16, fontFamily: "'DM Mono', monospace" }}
         />
 
         <div style={{
@@ -1063,7 +1099,7 @@ export default function Wallet() {
         const sellerId = sellerUser?.id;
         if (sellerId) {
           const sellerRes = await api.get(`/seller/${sellerId}`);
-          storeName = sellerRes.data?.data?.storeName || sellerRes.data?.data?.name || "";
+          storeName = sellerRes.data?.data?.storeName || sellerRes.data?.data?.businessName || sellerRes.data?.data?.name || "";
           accountNumber = sellerRes.data?.data?.accountNumber || "";
         }
       } catch (e) {

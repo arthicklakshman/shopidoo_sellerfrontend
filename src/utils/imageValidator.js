@@ -10,6 +10,14 @@ export const IMAGE_RULES = {
     maxHeight: 10000,
     requireSquare: true,
   },
+  banner: {
+    minSize: 0,
+    maxSize: 10 * 1024 * 1024,
+    minWidth: 10,
+    minHeight: 10,
+    maxWidth: 20000,
+    maxHeight: 20000,
+  },
   brandStore_bg_banner: {
     minSize: 0,
     maxSize: 10 * 1024 * 1024, // 10 MB

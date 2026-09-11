@@ -8,8 +8,12 @@ import {
   TextField,
   InputLabel,
   useTheme,
-  alpha
+  alpha,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 
 // ✅ Custom Helper Imports 
 import { getBankDetailsAPI, updateBankDetailsAPI } from '../../features/settings/settings.service';
@@ -51,6 +55,7 @@ const getCustomInputStyles = (isEditing) => ({
 export default function BankDetails() {
   const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
+  const [showAccountNumber, setShowAccountNumber] = useState(false);
 
   const [savedData, setSavedData] = useState({
     accountName: "",
@@ -68,11 +73,11 @@ export default function BankDetails() {
     const fetchBankDetails = async () => {
       try {
         const response = await getBankDetailsAPI();
-        if (response.success) {
+        if (response.success && response.data) {
           const dbData = {
             accountName: response.data.accountName || "",
             accountNumber: response.data.accountNumber || "",
-            routingNumber: response.data.routingNumber || "", 
+            routingNumber: response.data.routingNumber || response.data.ifscCode || "", 
             swiftCode: "" 
           };
           setSavedData(dbData);
@@ -86,7 +91,12 @@ export default function BankDetails() {
   }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ 
+      ...form, 
+      [name]: name === 'routingNumber' ? value.toUpperCase() : value 
+    });
+    if (errors[name]) setErrors({ ...errors, [name]: null });
   };
 
   const validate = () => {
@@ -192,12 +202,26 @@ export default function BankDetails() {
               onChange={handleChange}
               disabled={!isEditing}
               placeholder="Enter account number"
-              type="password"
+              type={showAccountNumber ? "text" : "password"}
               variant="outlined"
               size="small"
               sx={getCustomInputStyles(isEditing)}
               error={!!errors.accountNumber}
               helperText={errors.accountNumber}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowAccountNumber(!showAccountNumber)}
+                      edge="end"
+                      size="small"
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      {showAccountNumber ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
           </Grid>
 
