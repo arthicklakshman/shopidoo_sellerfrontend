@@ -12,5 +12,6 @@ export const shipmentService = {
   readyToShip: (id) => api.post(`/shipments/${id}/ready-to-ship`),
   selfShip: (id, data) => api.post(`/shipments/${id}/self-ship`, data),
   markInTransit: (id) => api.post(`/shipments/${id}/mark-in-transit`),
+  markOutForDelivery: (id) => api.post(`/shipments/${id}/mark-out-for-delivery`),
   markDelivered: (id) => api.post(`/shipments/${id}/mark-delivered`),
 };

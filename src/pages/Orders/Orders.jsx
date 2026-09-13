@@ -158,6 +158,10 @@ const DELIVERY_COLORS = (theme) => ({
   delivered: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
   cancelled: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
   shipped: { bg: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark },
+  in_transit: { bg: alpha(theme.palette.info.main, 0.15), color: theme.palette.info.dark },
+  out_for_delivery: { bg: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.dark },
+  failed: { bg: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark },
+  rto: { bg: alpha(theme.palette.error.main, 0.15), color: theme.palette.error.dark },
   processing: { bg: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark },
   confirmed: { bg: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark },
   pending: { bg: theme.palette.action.hover, color: theme.palette.text.secondary },
@@ -172,7 +176,7 @@ const DELIVERY_COLORS = (theme) => ({
 const StatusBadge = ({ label, colorMap }) => {
   return (
     <Box component="span" sx={{ px: 1.5, py: 0.4, borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize', bgcolor: colorMap[label]?.bg || 'action.hover', color: colorMap[label]?.color || 'text.secondary' }}>
-      {label}
+      {(label || '').replace(/_/g, ' ')}
     </Box>
   );
 };
@@ -186,7 +190,8 @@ const getNextStatuses = (currentStatus, isSelf = false) => {
   if (s === "processing") return ["shipped"];
   if (s === "ready_to_ship") return []; // Platform shipments stop manual updates here
   if (s === "shipped") return isSelf ? ["in_transit"] : [];
-  if (s === "in_transit") return isSelf ? ["delivered"] : [];
+  if (s === "in_transit") return isSelf ? ["out_for_delivery"] : [];
+  if (s === "out_for_delivery") return isSelf ? ["delivered"] : [];
   if (s === "return_requested") return [];
   return [];
 };
@@ -240,6 +245,8 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
     try {
       if (isSelfShipping && newStatus === 'in_transit') {
         await shipmentService.markInTransit(shipment.id);
+      } else if (isSelfShipping && newStatus === 'out_for_delivery') {
+        await shipmentService.markOutForDelivery(shipment.id);
       } else if (isSelfShipping && newStatus === 'delivered') {
         await shipmentService.markDelivered(shipment.id);
       } else if (!isSelfShipping && newStatus === 'ready_to_ship') {
@@ -814,7 +821,7 @@ const openDocumentUrl = (url) => {
             }}
           >
             {getNextStatuses(isSelfShipping ? (shipment?.status || order?.status) : order?.status, isSelfShipping).map((status) => {
-              const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace('_', ' ');
+              const label = status === 'ready_to_ship' ? 'Ready For Pickup' : status.replace(/_/g, ' ');
               return (
                 <MenuItem
                   key={status}
