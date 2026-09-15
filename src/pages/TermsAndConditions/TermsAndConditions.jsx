@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
 import api from '../../services/api';
 import SEO from '../../components/SEO/SEO';
+import DOMPurify from 'dompurify';
 
 // Icons
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
@@ -418,7 +419,7 @@ export default function TermsAndConditions() {
               {/* Render HTML or Markdown */}
               {isHtml ? (
                 <Box
-                  dangerouslySetInnerHTML={{ __html: processedHtml }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(processedHtml) }}
                   sx={{
                     color: '#334155',
                     fontSize: '14.5px',
