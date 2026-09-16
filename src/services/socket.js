@@ -5,6 +5,9 @@ const socket = io(
   {
     transports: ['websocket'],
     withCredentials: true,
+    auth: (cb) => {
+      cb({ token: localStorage.getItem('sellerAccessToken') });
+    },
   }
 );
 
