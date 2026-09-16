@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Typography, IconButton, Tooltip, Pagination, Rating, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
+  Dialog, DialogTitle, DialogContent, DialogActions,
   Avatar, Stack, TextField,
 } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ReplyIcon from '@mui/icons-material/Reply';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -25,7 +24,7 @@ const SkeletonRow = () => (
   </TableRow>
 );
 
-const ReviewRow = ({ review, onReply, onDelete }) => {
+const ReviewRow = ({ review, onReply }) => {
   const [expanded, setExpanded] = useState(false);
   const hasReply = !!review.seller_reply;
   const isLongComment = review.comment?.length > 80;
@@ -110,11 +109,6 @@ const ReviewRow = ({ review, onReply, onDelete }) => {
         <Tooltip title={hasReply ? 'Edit reply' : 'Reply'}>
           <IconButton size="small" color="primary" onClick={() => onReply(review)}>
             <ReplyIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton size="small" color="error" onClick={() => onDelete(review)}>
-            <DeleteOutlineIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </TableCell>
@@ -202,24 +196,6 @@ const ReplyDialog = ({ open, review, onClose, onSubmit, loading }) => {
   );
 };
 
-// ─── Delete Dialog ────────────────────────────────────────────────────────────
-const DeleteDialog = ({ open, onClose, onConfirm, loading }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-    <DialogTitle>Delete review?</DialogTitle>
-    <DialogContent>
-      <DialogContentText>
-        This review will be permanently removed from your product. This action cannot be undone.
-      </DialogContentText>
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} disabled={loading}>Cancel</Button>
-      <Button variant="contained" color="error" onClick={onConfirm} disabled={loading}>
-        {loading ? 'Deleting…' : 'Delete'}
-      </Button>
-    </DialogActions>
-  </Dialog>
-);
-
 // ─── Summary Card ─────────────────────────────────────────────────────────────
 const SummaryCard = ({ label, value, color = 'text.primary' }) => (
   <Card variant="outlined" sx={{ p: 2, minWidth: 120, flex: 1 }}>
@@ -236,7 +212,6 @@ const SellerReviews = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [replyDialog, setReplyDialog] = useState({ open: false, review: null });
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, review: null });
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = () => {
@@ -270,20 +245,7 @@ const SellerReviews = () => {
     } finally { setActionLoading(false); }
   };
 
-  const openDelete = (review) => setDeleteDialog({ open: true, review });
-  const closeDelete = () => setDeleteDialog({ open: false, review: null });
 
-  const handleDeleteConfirm = async () => {
-    setActionLoading(true);
-    try {
-      await sellerService.deleteReview(deleteDialog.review.id);
-      dispatch(showToast({ message: 'Review deleted.', severity: 'success' }));
-      closeDelete();
-      load();
-    } catch {
-      dispatch(showToast({ message: 'Failed to delete review.', severity: 'error' }));
-    } finally { setActionLoading(false); }
-  };
 
   // ── Derived stats ──
   const avgRating = reviews.length
@@ -331,7 +293,6 @@ const SellerReviews = () => {
                       key={r.id}
                       review={r}
                       onReply={openReply}
-                      onDelete={openDelete}
                     />
                   ))
               }
@@ -356,12 +317,6 @@ const SellerReviews = () => {
         review={replyDialog.review}
         onClose={closeReply}
         onSubmit={handleReplySubmit}
-        loading={actionLoading}
-      />
-      <DeleteDialog
-        open={deleteDialog.open}
-        onClose={closeDelete}
-        onConfirm={handleDeleteConfirm}
         loading={actionLoading}
       />
     </Box>

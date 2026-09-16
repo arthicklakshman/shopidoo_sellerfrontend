@@ -13,8 +13,6 @@ export const sellerService = {
   replyToReview: (reviewId, reply) =>
   api.post(`/seller/reviews/${reviewId}/reply`, { reply }),
 
-  deleteReview: (reviewId) =>
-  api.delete(`/seller/reviews/${reviewId}`),
   getOrders: (params) => api.get('/seller/orders', { params }),
   getSupportTickets: () => api.get('/support'),
   getSupportTicket: (id) => api.get(`/support/${id}`),
