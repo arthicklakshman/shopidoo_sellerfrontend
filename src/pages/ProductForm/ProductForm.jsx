@@ -731,14 +731,14 @@ const ProductForm = () => {
 
   const handleChange = (key) => (e) => {
     let value = e.target.value;
-    if (key === 'name') {
-      if (/[^a-zA-Z\s]/.test(value)) {
-        setNameError('Only letters and spaces are allowed. Numbers and special characters are not allowed.');
-        value = value.replace(/[^a-zA-Z\s]/g, '');
-      } else {
-        setNameError('');
-      }
-    }
+  if (key === 'name') {
+  if (/[^a-zA-Z0-9\s]/.test(value)) {
+    setNameError('Only letters, numbers and spaces are allowed.');
+    value = value.replace(/[^a-zA-Z0-9\s]/g, '');
+  } else {
+    setNameError('');
+  }
+}
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -1311,7 +1311,7 @@ const ProductForm = () => {
 
     if (mrpWarning) { setError(mrpWarning); return; }
     if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
-    if (/[^a-zA-Z\s]/.test(form.name.trim())) { setError('Product name can only contain letters and spaces.'); return; }
+   if (/[^a-zA-Z0-9\s]/.test(form.name.trim())) { setError('Product name can only contain letters, numbers and spaces.'); return; } 
     if (!form.category_id) { setError('Please select a category.'); return; }
     if (form.category_id === 'other') {
       if (!form.custom_category?.trim()) {
@@ -1329,6 +1329,21 @@ const ProductForm = () => {
         return;
       }
     }
+
+    if (form.category_id && form.category_id !== 'other') {
+  const hasSubcategories = categories.filter(c => c.parent_id === Number(form.category_id)).length > 0;
+  if (hasSubcategories && !form.subcategory_id) {
+    setError('Please select a subcategory.');
+    return;
+  }
+  if (form.subcategory_id) {
+    const hasProductTypes = categories.filter(c => c.parent_id === Number(form.subcategory_id)).length > 0;
+    if (hasProductTypes && !productTypeId) {
+      setError('Please select a product type.');
+      return;
+    }
+  }
+}
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
 
@@ -1732,13 +1747,13 @@ const ProductForm = () => {
 
 
                     {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel id="subcat-label">Subcategory</InputLabel>
-                          <Select
-                            labelId="subcat-label"
-                            label="Subcategory"
-                            value={form.subcategory_id}
+                    <Grid item xs={12} sm={6}>
+                     <FormControl fullWidth required>
+                      <InputLabel id="subcat-label">Subcategory </InputLabel>
+                      <Select
+                        labelId="subcat-label"
+                        label="Subcategory "
+                        value={form.subcategory_id}
                             onChange={(e) => {
                               const val = e.target.value;
 
@@ -1757,7 +1772,7 @@ const ProductForm = () => {
                             }}
                             MenuProps={menuPropsDownward}
                           >
-                            <MenuItem value="">None</MenuItem>
+                            <MenuItem value="">Select Subcategory</MenuItem>
                             {categories.filter(c => c.parent_id === Number(form.category_id)).map(c => (
                               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                             ))}
@@ -1767,13 +1782,13 @@ const ProductForm = () => {
                     )}
 
                     {form.subcategory_id && categories.filter(c => c.parent_id === Number(form.subcategory_id)).length > 0 && (
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel id="type-label">Product Type</InputLabel>
-                          <Select
-                            labelId="type-label"
-                            label="Product Type"
-                            value={productTypeId}
+  <Grid item xs={12} sm={6}>
+    <FormControl fullWidth required>
+      <InputLabel id="type-label">Product Type </InputLabel>
+      <Select
+        labelId="type-label"
+        label="Product Type "
+        value={productTypeId}
                             onChange={(e) => {
                               const val = e.target.value;
 
@@ -1788,7 +1803,7 @@ const ProductForm = () => {
                             }}
                             MenuProps={menuPropsDownward}
                           >
-                            <MenuItem value="">None</MenuItem>
+                            <MenuItem value="">Select Product Type</MenuItem>
                             {categories.filter(c => c.parent_id === Number(form.subcategory_id)).map(c => (
                               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                             ))}
