@@ -1159,10 +1159,15 @@ export default function Wallet() {
     try {
       const res = await api.get(`${BASE}/${id}/invoice`);
       if (res.data && res.data.url) {
-        // Fetch the PDF as a blob and trigger a real file save (same as the
-        // order invoice's jsPDF doc.save()) instead of opening it in a new tab.
-        const fileRes = await fetch(res.data.url, { credentials: "include" });
-        if (!fileRes.ok) throw new Error("Invoice fetch failed");
+        // Fetch the PDF as a blob and trigger a real file save.
+        // Attach Authorization header so secureUploads middleware permits the file download.
+        const token = localStorage.getItem("sellerAccessToken");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const fileRes = await fetch(res.data.url, { credentials: "include", headers });
+        if (!fileRes.ok) {
+          const errData = await fileRes.json().catch(() => null);
+          throw new Error(errData?.message || "Invoice fetch failed");
+        }
         const blob = await fileRes.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -1174,7 +1179,7 @@ export default function Wallet() {
         window.URL.revokeObjectURL(blobUrl);
       }
     } catch (err) {
-      dispatch(showToast({ message: err.response?.data?.message || "Failed to download invoice", severity: "error" }));
+      dispatch(showToast({ message: err.response?.data?.message || err.message || "Failed to download invoice", severity: "error" }));
     } finally {
       setDownloadingId(null);
     }
