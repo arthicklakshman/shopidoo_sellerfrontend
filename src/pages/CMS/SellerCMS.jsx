@@ -267,7 +267,8 @@ const SellerCMS = () => {
       loadBanners();
     } catch (err) {
       console.error("Save error:", err);
-      setSaveError("Failed to save banner. Please try again.");
+      const errMsg = err.response?.data?.message || err.message || "Failed to save banner. Please try again.";
+      setSaveError(errMsg);
     }
   };
 
