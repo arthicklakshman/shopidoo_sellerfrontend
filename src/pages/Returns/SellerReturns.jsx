@@ -33,6 +33,7 @@ import { showToast } from '../../features/ui/uiSlice';
 import { returnService } from '../../services/return.service';
 import { formatDate } from '../../utils/formatDate';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { safeHref } from '../../utils/safeHref';
 
 const STATUS_COLORS = {
   pending: 'warning',
@@ -686,7 +687,7 @@ const SellerReturns = () => {
                         variant="outlined"
                         size="small"
                         component="a"
-                        href={selectedReturn.return_receipt_url}
+                        href={safeHref(selectedReturn.return_receipt_url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{
