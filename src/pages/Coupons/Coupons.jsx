@@ -397,6 +397,7 @@ const Coupons = () => {
             <TableCell>Title</TableCell>
             <TableCell>Discount</TableCell>
             <TableCell>Min Purchase</TableCell>
+            <TableCell>Max Discount</TableCell>
             <TableCell>Valid Range</TableCell>
             <TableCell>Usage</TableCell>
             <TableCell>Status</TableCell>
@@ -407,7 +408,7 @@ const Coupons = () => {
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                 <Typography color="text.secondary">
                   Loading coupons...
                 </Typography>
@@ -415,7 +416,7 @@ const Coupons = () => {
             </TableRow>
           ) : coupons.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                 <Typography color="text.secondary">
                   No coupons found.
                 </Typography>
@@ -424,11 +425,16 @@ const Coupons = () => {
           ) : (
             coupons.map((coupon) => (
               <TableRow key={coupon.id}>
-                <TableCell>{coupon.code}</TableCell>
+                               <TableCell>{coupon.code}</TableCell>
                 <TableCell>{coupon.title || '-'}</TableCell>
                 <TableCell>{formatDiscount(coupon)}</TableCell>
-                  <TableCell>
+                <TableCell>
                   {formatCurrency(coupon.min_purchase_amount)}
+                </TableCell>
+                <TableCell>
+                  {coupon.max_discount_amount
+                    ? formatCurrency(coupon.max_discount_amount)
+                    : '-'}
                 </TableCell>
                 <TableCell>
                   {coupon.valid_from || '-'} to {coupon.valid_until || '-'}
