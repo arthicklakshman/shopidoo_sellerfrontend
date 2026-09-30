@@ -49,15 +49,25 @@ function wrap(doc, text, maxWidth) {
   return doc.splitTextToSize(String(text ?? ''), maxWidth);
 }
 
-// Bold grey label followed by the value on the same line — value never wraps below the label.
-function labelValueLine(doc, label, value, x, y) {
+function labelValueLine(doc, label, value, x, y, valueColor = DARK, valueStyle = 'normal') {
   sf(doc, 'bold', 7.5);
   doc.setTextColor(...GREY_TX);
   doc.text(label, x, y);
   const labelW = doc.getTextWidth(label) + 1.5;
-  sf(doc, 'normal', 8);
-  doc.setTextColor(...DARK);
+  sf(doc, valueStyle, 8);
+  doc.setTextColor(...valueColor);
   doc.text(String(value ?? ''), x + labelW, y);
+}
+function statusInfo(status) {
+  const s = String(status || '').toLowerCase().trim();
+  if (!s) return null;
+  const label = s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  let color = DARK;
+  if (s === 'cancelled') color = [200, 30, 30];                    // red
+  else if (['return_requested', 'returned', 'refunded', 'replacement_sent'].includes(s))
+    color = [217, 119, 6];                                          // orange
+  else if (s === 'delivered') color = [22, 130, 80];                // green
+  return { label, color };
 }
 
 function fmtDate(val) {
@@ -152,6 +162,7 @@ function getOrderData(data, isSeller) {
     const addr = order.address || data.address;
     return {
       orderNumber: order.order_number || `ORD${String(data.id || '').padStart(5, '0')}`,
+      status: data.status || order.status || '',
       orderDate: data.created_at || order.created_at,
       invoiceDate: data.created_at || order.created_at,
       customer: order.user?.name || 'Customer',
@@ -343,6 +354,9 @@ function drawBoxes(doc, startY, seller, od) {
   txt(doc, 'Order Details', lX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
   labelValueLine(doc, 'Order Number :', od.orderNumber, lX + 3, row3Y + 12);
   labelValueLine(doc, 'Order Date :', fmtDate(od.orderDate), lX + 3, row3Y + 18);
+
+    const st = statusInfo(od.status);
+  if (st) labelValueLine(doc, 'Order Status :', st.label, lX + 3, row3Y + 24, st.color, 'bold');
 
   box(doc, rX, row3Y, COL_W, smH);
   txt(doc, 'Invoice Details', rX + 3, row3Y + 5, { color: GREY_TX, size: 7 });
