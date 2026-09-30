@@ -313,14 +313,24 @@ const OrderDetailDialog = ({ open, onClose, order, onStatusUpdate }) => {
 
 const openDocumentUrl = (url) => {
   if (!url) return;
+  const token = localStorage.getItem('sellerAccessToken');
+  let target = url;
+
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    window.open(url, '_blank');
+    if (token && (url.includes('localhost:5001') || url.includes('shopidoo.in')) && !url.includes('token=')) {
+      target = `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    }
   } else {
     const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
     const backendBase = isLocalhost ? 'http://localhost:5001' : 'https://shopidoo.in';
-    const fullUrl = `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
-    window.open(fullUrl, '_blank');
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    target = `${backendBase}${cleanUrl}`;
+    if (token && !target.includes('token=')) {
+      target = `${target}${target.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    }
   }
+
+  window.open(target, '_blank');
 };
 
   const handleAction = async (actionType) => {

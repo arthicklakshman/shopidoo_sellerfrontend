@@ -27,6 +27,13 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   config.headers['x-auth-role'] = 'seller';
+
+  // If sending FormData, delete Content-Type to let browser/Axios set boundary automatically
+  if (config.data instanceof FormData) {
+    if (config.headers && config.headers['Content-Type']) {
+      delete config.headers['Content-Type'];
+    }
+  }
   
   return config;
 });
