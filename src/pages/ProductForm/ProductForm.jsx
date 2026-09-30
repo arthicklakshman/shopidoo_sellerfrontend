@@ -731,14 +731,9 @@ const ProductForm = () => {
 
   const handleChange = (key) => (e) => {
     let value = e.target.value;
-  if (key === 'name') {
-  if (/[^a-zA-Z0-9\s]/.test(value)) {
-    setNameError('Only letters, numbers and spaces are allowed.');
-    value = value.replace(/[^a-zA-Z0-9\s]/g, '');
-  } else {
-    setNameError('');
-  }
-}
+   if (key === 'name') {
+      setNameError('');
+    }
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -1312,7 +1307,6 @@ const ProductForm = () => {
     if (mrpWarning) { setError(mrpWarning); return; }
     if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
    if (/[^a-zA-Z0-9\s]/.test(form.name.trim())) { setError('Product name can only contain letters, numbers and spaces.'); return; } 
-    if (!form.category_id) { setError('Please select a category.'); return; }
     if (form.category_id === 'other') {
       if (!form.custom_category?.trim()) {
         setError('Please specify a custom category.');
@@ -1538,7 +1532,7 @@ const ProductForm = () => {
                     fullWidth required
                     placeholder="e.g. Running Shoes"
                     error={!!nameError}
-                    helperText={nameError || "Only letters and spaces are allowed"}
+                    helperText={nameError}
                     FormHelperTextProps={{
                       sx: { color: nameError ? 'error.main' : 'text.secondary', fontWeight: nameError ? 600 : 400 }
                     }}

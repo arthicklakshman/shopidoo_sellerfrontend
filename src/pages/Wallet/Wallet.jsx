@@ -527,7 +527,8 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
   const toggleOrder = (key) => {
     setCollapsedOrders(prev => ({ ...prev, [key]: !prev[key] }));
   };
-
+  const isPenaltyTxn = (t) =>
+    t.reference_type === 'return_penalty' || /penalty/i.test(t.description || '');
   useEffect(() => {
     const fetchTxns = async () => {
       try {
@@ -573,6 +574,9 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
   });
 
   const displayedTxns = filteredTxns.slice(0, displayLimit);
+    const returnOrders = new Set(
+    txns.filter(isPenaltyTxn).map(t => t.order_number).filter(Boolean)
+  );
 
   const orderGroups = {};
   const otherTxns = [];
@@ -587,8 +591,11 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
       otherTxns.push(t);
     }
   });
-
+  Object.keys(orderGroups).forEach(k => {
+    orderGroups[k].sort((a, b) => Number(isPenaltyTxn(b)) - Number(isPenaltyTxn(a)));
+  });
   const otherTxnsGroups = {};
+
   otherTxns.forEach(t => {
     const dStr = formatDate(t.createdAt || t.created_at);
     if (!otherTxnsGroups[dStr]) otherTxnsGroups[dStr] = [];
@@ -680,7 +687,10 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
                 const group = orderGroups[orderNum];
                 const dateStr = formatDate(group[0]?.createdAt || group[0]?.created_at);
                 const isCollapsed = !!collapsedOrders[orderNum];
-                const totalOrderAmt = group.reduce((sum, t) => sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount)), 0);
+                const hasReturn = returnOrders.has(orderNum);
+                const totalOrderAmt = group
+                  .filter(t => !hasReturn || isPenaltyTxn(t))
+                  .reduce((sum, t) => sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount)), 0);
 
                 return (
                   <div key={orderNum} style={{
@@ -730,40 +740,49 @@ function TransactionsModal({ onClose, payoutRequests = [] }) {
                         </div>
                       </div>
                     </div>
-                    {!isCollapsed && (
+                                 {!isCollapsed && (
                       <div>
-                        {group.map((t, idx) => (
-                          <div key={t.id} style={{
-                            padding: "14px 18px",
-                            borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
-                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                          }}>
-                            <div style={{ flex: 1, paddingRight: 16 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                                <span style={{
-                                  fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
-                                  background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
-                                  color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
-                                  textTransform: "uppercase"
-                                }}>
-                                  {t.type}
-                                </span>
-                                <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600 }}>
-                                  {t.description || "—"}
-                                </span>
+                        {group.map((t, idx) => {
+                          const penalty = isPenaltyTxn(t);
+                          const notAdded = hasReturn && !penalty;
+                          const desc = penalty
+                            ? `Return shipment - ${t.description || "—"}`
+                            : (t.description || "—");
+                          const strike = notAdded ? { textDecoration: "line-through", opacity: 0.6 } : {};
+
+                          return (
+                            <div key={t.id} style={{
+                              padding: "14px 18px",
+                              borderBottom: idx < group.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
+                              display: "flex", justifyContent: "space-between", alignItems: "center",
+                            }}>
+                              <div style={{ flex: 1, paddingRight: 16 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                                  <span style={{
+                                    fontSize: "0.7rem", fontWeight: 700, padding: "3px 8px", borderRadius: 10,
+                                    background: t.type === 'credit' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                                    color: t.type === 'credit' ? theme.palette.success.dark : theme.palette.error.dark,
+                                    textTransform: "uppercase", ...strike
+                                  }}>
+                                    {t.type}
+                                  </span>
+                                  <span style={{ fontSize: "0.9rem", color: theme.palette.text.primary, fontWeight: 600, ...strike }}>
+                                    {desc}
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{
+                                fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                                color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
+                                whiteSpace: "nowrap", ...strike
+                              }}>
+                                {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                             </div>
-                            <div style={{
-                              fontSize: "1.1rem", fontWeight: 800, fontFamily: "'DM Mono', monospace",
-                              color: t.type === 'credit' ? theme.palette.success.main : theme.palette.error.main,
-                              whiteSpace: "nowrap"
-                            }}>
-                              {t.type === 'credit' ? '+' : '-'}₹{Number(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
-                    )}
+                                   )}
                   </div>
                 );
               })}
