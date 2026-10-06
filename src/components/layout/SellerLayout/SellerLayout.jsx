@@ -48,6 +48,7 @@ import CircleIcon from '@mui/icons-material/Circle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
+import CloseIcon from '@mui/icons-material/Close';
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
 import { logoutSeller, fetchMe } from '../../../features/auth/authSlice';
@@ -271,35 +272,54 @@ const SellerLayout = () => {
   const DrawerContent = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box 
-        onClick={() => navigate('/login')}
-        sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+        sx={{
+          p: 2.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
       >
-        <Avatar
-          sx={{
-            background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-            width: 36,
-            height: 36,
-          }}
+        <Box
+          onClick={() => navigate('/login')}
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
         >
-          <StorefrontIcon fontSize="small" />
-        </Avatar>
-        <Box>
-          <Typography
-            variant="subtitle2"
-            fontWeight={800}
+          <Avatar
             sx={{
               background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              width: 36,
+              height: 36,
             }}
           >
-            Shopidoo
-          </Typography>
+            <StorefrontIcon fontSize="small" />
+          </Avatar>
+          <Box>
+            <Typography
+              variant="subtitle2"
+              fontWeight={800}
+              sx={{
+                background: 'linear-gradient(90deg, #0FB9B1 12%, #0B8457 88%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Shopidoo
+            </Typography>
 
-          <Typography variant="caption" color="text.secondary">
-            Seller Panel
-          </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Seller Panel
+            </Typography>
+          </Box>
         </Box>
+
+        {isMobile && (
+          <IconButton
+            onClick={() => setMobileOpen(false)}
+            size="small"
+            sx={{ color: 'text.secondary' }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        )}
       </Box>
 
       <Divider />
@@ -419,6 +439,7 @@ const SellerLayout = () => {
           disableScrollLock
           sx={{
             display: { xs: 'block', md: 'none' },
+            zIndex: (theme) => theme.zIndex.modal + 10,
             '& .MuiDrawer-paper': {
               width: DRAWER_WIDTH,
               boxSizing: 'border-box',
@@ -460,7 +481,10 @@ const SellerLayout = () => {
           elevation={0}
           sx={{
             top: 0,
-            zIndex: theme.zIndex.drawer + 1,
+            zIndex: (theme) => ({
+              xs: theme.zIndex.appBar,
+              md: theme.zIndex.drawer + 1,
+            }),
             bgcolor: 'background.paper',
             color: 'text.primary',
             borderBottom: `1px solid ${theme.palette.divider}`,
