@@ -29,7 +29,25 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutSeller } from '../../features/auth/authSlice';
 
-const USER_FRONTEND_URL = import.meta.env.VITE_USER_FRONTEND_URL || 'http://localhost:5173/';
+const getUserFrontendUrl = () => {
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.includes('localhost'));
+
+  if (isLocalhost) {
+    return import.meta.env.VITE_USER_FRONTEND_URL || 'http://localhost:5173/';
+  }
+
+  // Live / Production environment
+  const envUrl = import.meta.env.VITE_USER_FRONTEND_URL;
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+
+  return 'https://shopidoo.in/';
+};
 
 // Helper component for the "What Happens Next" list
 const StepItem = ({ num, title, desc }) => (
@@ -77,7 +95,7 @@ export default function RegistrationSuccess() {
   const { user } = useSelector((s) => s.auth);
 
   const handleReturnToShop = () => {
-    window.location.assign(USER_FRONTEND_URL);
+    window.location.assign(getUserFrontendUrl());
   };
 
   return (

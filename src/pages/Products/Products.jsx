@@ -522,14 +522,15 @@ const Products = () => {
         {fetchError && <Alert severity="error" sx={{ mx: 3, mb: 2 }}>{fetchError}</Alert>}
 
         <TableContainer sx={{ overflowX: 'auto', px: { xs: 1, md: 2 }, pb: 2 }}>
-          <Table sx={{ minWidth: 920 }}>
+          <Table sx={{ minWidth: 980 }}>
             <TableHead>
               <TableRow>
-                {['Product', 'Category', 'Price', 'Stock', 'Status', 'Visible', 'Actions'].map((header) => (
+                {['S.No.', 'Product', 'Category', 'Price', 'Stock', 'Status', 'Visible', 'Actions'].map((header) => (
                   <TableCell
                     key={header}
                     sx={{
                       ...tableHeaderCellSx,
+                      ...(header === 'S.No.' ? { width: 70, minWidth: 60 } : {}),
                       ...(header === 'Product' ? { width: 280, minWidth: 240, maxWidth: 300 } : {}),
                     }}
                   >
@@ -542,15 +543,16 @@ const Products = () => {
               {loading
                 ? Array.from({ length: 5 }).map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {Array.from({ length: 7 }).map((__, cellIndex) => (
+                    {Array.from({ length: 8 }).map((__, cellIndex) => (
                       <TableCell key={cellIndex} sx={tableBodyCellSx}>
                         <Skeleton variant="rounded" height={32} />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
-                : products.map((product) => {
+                : products.map((product, index) => {
                   const commission = commissionMap[product.id] ?? 0;
+                  const serialNumber = (page - 1) * (pagination?.limit || 10) + index + 1;
 
                   return (
                     <TableRow
@@ -561,6 +563,19 @@ const Products = () => {
                         '&:hover': { bgcolor: 'action.hover' },
                       }}
                     >
+                      {/* S.No. */}
+                      <TableCell
+                        sx={{
+                          ...tableBodyCellSx,
+                          width: 70,
+                          minWidth: 60,
+                          color: 'text.secondary',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {serialNumber}
+                      </TableCell>
+
                       {/* Product */}
                       <TableCell
                         sx={{
@@ -746,7 +761,7 @@ const Products = () => {
 
               {!loading && products.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', borderBottom: 0 }}>
+                  <TableCell colSpan={8} sx={{ py: 8, textAlign: 'center', borderBottom: 0 }}>
                     <EmptyState
                       icon={InventoryIcon}
                       title="No products found"
