@@ -17,6 +17,7 @@ const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
 const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
 const RegistrationSuccess = lazy(() => import('../pages/Onboarding/RegistrationSuccess'));
+const OnboardingRedirect = lazy(() => import('../pages/Onboarding/OnboardingRedirect'));
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'));
 const Products = lazy(() => import('../pages/Products/Products'));
 const ProductForm = lazy(() => import('../pages/ProductForm/ProductForm'));
@@ -84,11 +85,12 @@ const AppRouter = () => (
           path="/onboarding/success"
           element={<RegistrationSuccess />}
           />
+   
 
           {/* 🌟 ADDED: Handle the base /onboarding URL by redirecting to Step 1 */}
           <Route 
             path="/onboarding" 
-            element={<Navigate to="/onboarding/1" replace />} 
+             element={<OnboardingRedirect />}
           />
 
           <Route

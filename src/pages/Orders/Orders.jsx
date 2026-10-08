@@ -1108,10 +1108,10 @@ const Orders = () => {
       </Box>
       <Card>
         <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 900 }}>
+          <Table sx={{ minWidth: 960 }}>
             <TableHead>
               <TableRow>
-                {['Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'View'].map((h) => (
+              {['S.No.', 'Order #', 'Product', 'Customer', 'Qty', 'Amount', 'Date', 'Status', 'View'].map((h) => (
                   <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -1120,23 +1120,29 @@ const Orders = () => {
               {loading
                 ? Array(5).fill(0).map((_, i) => (
                   <TableRow key={i}>
-                    {Array(8).fill(0).map((__, j) => <TableCell key={j}><Box sx={{ height: 20, bgcolor: 'action.hover', borderRadius: 1 }} /></TableCell>)}
+                   {Array(9).fill(0).map((__, j) => <TableCell key={j}><Box sx={{ height: 20, bgcolor: 'action.hover', borderRadius: 1 }} /></TableCell>)}
                   </TableRow>
                 ))
                 : orders.length === 0
                   ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                         <Typography color="text.secondary">No orders yet.</Typography>
                       </TableCell>
                     </TableRow>
                   )
-                  : orders.map((item) => {
+                  : orders.map((item, index) => {
                     const shipmentForStatus = item.Order?.shipments?.[0] || item.order?.shipments?.[0] || null;
                     const displayStatus = shipmentForStatus?.status === 'in_transit' ? 'in_transit' : item.status;
+                    const serialNumber = (page - 1) * (pagination?.limit || 15) + index + 1;
 
                     return (
                       <TableRow key={item.id} hover>
+                         <TableCell>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                            {serialNumber}
+                          </Typography>
+                        </TableCell>
                         <TableCell>
                           <Typography variant="body2" fontWeight={600}>
                             {(item.Order || item.order)?.order_number || `ORD${String(item.id).padStart(5, '0')}`}
