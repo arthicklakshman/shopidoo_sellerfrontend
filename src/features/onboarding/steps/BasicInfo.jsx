@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box, Typography, Card, CardContent, Grid, TextField, Button,
   InputAdornment, IconButton, MenuItem, InputLabel, FormHelperText
@@ -63,7 +63,10 @@ const VerifyButton = ({ onClick, isVerified }) => (
   </GradientButton>
 );
 
-export default function BasicInformation({ onNext, sellerId }) {
+export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
+  const authUser = useSelector((s) => s.auth.user);
+  const hasSession = !!localStorage.getItem('sellerAccessToken') && authUser?.role === 'seller';
+  const sellerId = hasSession ? authUser.id : sellerIdProp;
   const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -111,62 +114,47 @@ export default function BasicInformation({ onNext, sellerId }) {
     localStorage.setItem('onboarding_step_1', JSON.stringify(formData));
   }, [formData]);
 
-  // 🌟 NEW: Dynamic DB verification checks on type
+ // Load the saved profile from the server, so a phone/email that is already verified
+  // shows as "verified" instead of asking for the OTP again.
+  // (This replaces the old "checkExists" effects. The server no longer answers those
+  //  calls on purpose, so they only ever reset the verified state.)
   useEffect(() => {
-    const checkEmail = async () => {
-      if (formData.email && formData.email.includes('@')) {
-        try {
-          const response = await onboardingService.checkExists({ email: formData.email, role: 'seller' });
-          if (response?.data?.data?.exists) {
-             const { email_verified, isRegistered } = response.data.data;
-             setFormData(prev => ({ ...prev, isRegistered }));
-             if (email_verified) {
-               setFormData(prev => ({ ...prev, email_verified: 1, verifiedEmailValue: formData.email }));
-               setIsEmailVerified(true);
-             } else {
-               setIsEmailVerified(false);
-               setFormData(prev => ({ ...prev, email_verified: 0, verifiedEmailValue: '' }));
-             }
-          } else {
-             setFormData(prev => ({ ...prev, isRegistered: null }));
-             if (!isEmailVerified) {
-               setFormData(prev => ({ ...prev, email_verified: 0, verifiedEmailValue: '' }));
-             }
-          }
-        } catch (e) { console.error('Check exists failed:', e); }
-      }
-    };
-    const delayDebounceFn = setTimeout(() => { checkEmail(); }, 600);
-    return () => clearTimeout(delayDebounceFn);
-  }, [formData.email, isEmailVerified]);
+    if (!hasSession) return undefined;
+    let cancelled = false;
 
-  useEffect(() => {
-    const checkPhone = async () => {
-      if (formData.phone && formData.phone.length >= 10) {
-        try {
-          const response = await onboardingService.checkExists({ phone: formData.phone, role: 'seller' });
-          if (response?.data?.data?.exists) {
-             const { phone_verified, isRegistered } = response.data.data;
-             setFormData(prev => ({ ...prev, isRegistered }));
-             if (phone_verified) {
-               setFormData(prev => ({ ...prev, phone_verified: 1, verifiedPhoneValue: formData.phone }));
-               setIsMobileVerified(true);
-             } else {
-               setIsMobileVerified(false);
-               setFormData(prev => ({ ...prev, phone_verified: 0, verifiedPhoneValue: '' }));
-             }
-          } else {
-             setFormData(prev => ({ ...prev, isRegistered: null }));
-             if (!isMobileVerified) {
-               setFormData(prev => ({ ...prev, phone_verified: 0, verifiedPhoneValue: '' }));
-             }
-          }
-        } catch (e) { console.error('Check exists failed:', e); }
+    const loadProfile = async () => {
+      try {
+        const token = localStorage.getItem('sellerAccessToken');
+        const res = await onboardingService.getProfile({
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const me = res?.data?.data || res?.data;
+        if (cancelled || !me) return;
+
+        const emailOk = Boolean(me.email_verified);
+        const phoneOk = Boolean(me.phone_verified);
+
+        setFormData((prev) => ({
+          ...prev,
+          fullName: me.fullName || me.name || '',
+          phone: me.phone || '',
+          email: me.email || '',
+          businessType: me.businessType || '',
+          email_verified: emailOk ? 1 : 0,
+          phone_verified: phoneOk ? 1 : 0,
+          verifiedEmailValue: emailOk ? me.email : '',
+          verifiedPhoneValue: phoneOk ? me.phone : '',
+        }));
+        setIsEmailVerified(emailOk);
+        setIsMobileVerified(phoneOk);
+      } catch (e) {
+        console.error('Failed to load profile for Basic Info', e);
       }
     };
-    const delayDebounceFn = setTimeout(() => { checkPhone(); }, 600);
-    return () => clearTimeout(delayDebounceFn);
-  }, [formData.phone, isMobileVerified]);
+
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [hasSession, authUser?.id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -180,42 +168,62 @@ export default function BasicInformation({ onNext, sellerId }) {
   };
 
 
-const handleSendOtp = async (type) => {
+// In shopidoo_sellerfrontend/src/features/onboarding/steps/BasicInfo.jsx
+  // Replace the whole existing `handleSendOtp` function with this one.
+  // (From `const handleSendOtp = async (type) => {` down to its closing `};`,
+  //  right before the comment `// 🌟 REAL BACKEND CALL: Verify OTP`.)
+
+  const handleSendOtp = async (type) => {
     setOtpError('');
-    if (type === 'mobile') {
-      const err = validateMobile(formData.phone);
-      if (err) return setErrors((prev) => ({ ...prev, phone: err }));
-      
+
+    const isMobile = type === 'mobile';
+    const value = isMobile ? formData.phone : formData.email;
+    const fieldName = isMobile ? 'phone' : 'email';
+
+    const validationError = isMobile ? validateMobile(value) : validateEmail(value);
+    if (validationError) {
+      return setErrors((prev) => ({ ...prev, [fieldName]: validationError }));
+    }
+
+    // Is this email / phone already registered as a seller? If yes, stop here and tell the user.
+    // (A logged-in seller keeping their own current value is not a duplicate.)
+    const ownValue = isMobile ? authUser?.phone : authUser?.email;
+    if (!hasSession || value !== ownValue) {
       try {
-        // 🌟 Passing the 'register' type to ensure the correct MSG91 DLT Template triggers
-        await onboardingService.sendMobileOtp(formData.phone, 'register');
-        setOtpModal({ isOpen: true, type: 'mobile', targetValue: formData.phone });
-      } catch (error) {
-        setErrors((prev) => ({ 
-          ...prev, 
-          phone: error.response?.data?.message || 'Failed to send SMS.' 
-        }));
-      }
-      
-    } else if (type === 'email') {
-      const err = validateEmail(formData.email);
-      if (err) return setErrors((prev) => ({ ...prev, email: err }));
-      
-      try {
-        // 🌟 Passing the 'register' type here as well (even though email currently ignores it, it's good practice)
-        await onboardingService.sendEmailOtp(formData.email, 'register');
-        
-        // Only open the modal if the email successfully sent
-        setOtpModal({ isOpen: true, type: 'email', targetValue: formData.email });
-      } catch (error) {
-        setErrors((prev) => ({ 
-          ...prev, 
-          email: error.response?.data?.message || 'Failed to send OTP. Please try again.' 
-        }));
+        const res = await onboardingService.checkExists(
+          isMobile ? { phone: value, role: 'seller' } : { email: value, role: 'seller' }
+        );
+        if (res?.data?.data?.exists) {
+          return setErrors((prev) => ({
+            ...prev,
+            [fieldName]: isMobile
+              ? 'This mobile number is already registered. Please log in instead.'
+              : 'This email is already registered. Please log in instead.',
+          }));
+        }
+      } catch (e) {
+        console.error('Check exists failed:', e);
       }
     }
-  };
 
+    try {
+      if (isMobile) {
+        // 'register' makes sure the correct MSG91 DLT template is used
+        await onboardingService.sendMobileOtp(value, 'register');
+      } else {
+        await onboardingService.sendEmailOtp(value, 'register');
+      }
+      // Only open the OTP window if the code was sent
+      setOtpModal({ isOpen: true, type, targetValue: value });
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        [fieldName]:
+          error.response?.data?.message ||
+          (isMobile ? 'Failed to send SMS.' : 'Failed to send OTP. Please try again.'),
+      }));
+    }
+  };
   // 🌟 REAL BACKEND CALL: Verify OTP
   const handleVerifyOtp = async (otpValue) => {
     setOtpLoading(true);

@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logoutSeller } from '../../features/auth/authSlice';
 
 // Icons
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -41,6 +43,17 @@ const steps = [
 
 export default function OnboardingEntry() {
     const navigate = useNavigate();
+        const dispatch = useDispatch();
+
+    // Start Registration = a brand new seller: log out the old session and wipe saved form data
+    const handleStartRegistration = async () => {
+        await dispatch(logoutSeller());
+        Object.keys(localStorage)
+            .filter((k) => k.startsWith('onboarding_'))
+            .forEach((k) => localStorage.removeItem(k));
+        ['sellerId', 'sellerRefreshToken', 'accessToken', 'user'].forEach((k) => localStorage.removeItem(k));
+        navigate('/onboarding/1');
+    };
 
     return (
         <Box
@@ -167,7 +180,7 @@ export default function OnboardingEntry() {
                             {/* BRANDED BUTTON */}
                             <GradientButton
                                 fullWidth
-                                onClick={() => navigate('/onboarding/1')}
+                               onClick={handleStartRegistration} 
                                 endIcon={<ArrowRightAltIcon sx={{ color: '#000' }} />}
                             >
                                 Start Registration
