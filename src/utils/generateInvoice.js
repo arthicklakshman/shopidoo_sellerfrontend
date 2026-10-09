@@ -255,7 +255,8 @@ function getLineItems(data, isSeller, { sameState = false, discountAmount = 0 } 
       remainingDiscount = parseFloat((remainingDiscount - discount).toFixed(2));
     }
     const lineTotal = parseFloat((d.gross - discount).toFixed(2));
-    const { net, tax } = calc(d.gross, d.taxRate);
+    const taxableAmount = Math.max(0, lineTotal);
+    const { net, tax } = calc(taxableAmount, d.taxRate);
     return {
       name: d.prod.name || d.item.product?.name || 'Product',
       hsn: String(d.hsn).trim(),
