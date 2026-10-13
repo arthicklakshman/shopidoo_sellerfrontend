@@ -60,9 +60,11 @@ const App = () => {
             transform: { xs: 'none', md: `scale(${APP_SCALE})` },
             transformOrigin: 'top left',
             width: { xs: '100%', md: `${100 / APP_SCALE}%` },
-            height: { xs: '100vh', md: `${100 / APP_SCALE}vh` },
+            minHeight: { xs: '100vh', md: `${100 / APP_SCALE}vh` },
+            height: { xs: '100%', md: `${100 / APP_SCALE}%` },
             overflowY: 'auto',
             overflowX: 'hidden',
+            boxSizing: 'border-box',
           }}
         >
           <AppRouter />

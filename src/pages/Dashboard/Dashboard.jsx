@@ -180,8 +180,8 @@ const Dashboard = () => {
 
       <Grid container spacing={3}>
         {/* ── Monthly Revenue Chart ── */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+          <Card sx={{ minWidth: 0 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
                 <Box>
@@ -190,30 +190,32 @@ const Dashboard = () => {
                 </Box>
                 <MonthFilter active={revenueMonths} onChange={setRevenueMonths} />
               </Box>
-              <ResponsiveContainer width="100%" height={270}>
-                <ComposedChart key={revenueMonths} data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="rev" orientation="left" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#1B5E20' }} axisLine={false} tickLine={false} width={52} />
-                  <YAxis yAxisId="ord" orientation="right" tick={{ fontSize: 11, fill: '#059669' }} axisLine={false} tickLine={false} width={36} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend formatter={(value) => (
-                    <span style={{ fontSize: 12, color: '#374151' }}>
-                      {value === 'revenue' ? 'Revenue (₹)' : 'Orders'}
-                    </span>
-                  )} />
-                  <Bar yAxisId="rev" dataKey="revenue" fill="#BBF7D0" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Line yAxisId="rev" type="monotone" dataKey="revenue" stroke="#1B5E20" strokeWidth={2.5} dot={{ r: 3, fill: '#1B5E20' }} activeDot={{ r: 5 }} legendType="none" />
-                  <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="#059669" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <Box sx={{ width: '100%', minWidth: 0, height: 270, overflow: 'hidden' }}>
+                <ResponsiveContainer width="100%" height={270} minWidth={0} debounce={50}>
+                  <ComposedChart key={revenueMonths} data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="rev" orientation="left" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#1B5E20' }} axisLine={false} tickLine={false} width={52} />
+                    <YAxis yAxisId="ord" orientation="right" tick={{ fontSize: 11, fill: '#059669' }} axisLine={false} tickLine={false} width={36} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend formatter={(value) => (
+                      <span style={{ fontSize: 12, color: '#374151' }}>
+                        {value === 'revenue' ? 'Revenue (₹)' : 'Orders'}
+                      </span>
+                    )} />
+                    <Bar yAxisId="rev" dataKey="revenue" fill="#BBF7D0" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Line yAxisId="rev" type="monotone" dataKey="revenue" stroke="#1B5E20" strokeWidth={2.5} dot={{ r: 3, fill: '#1B5E20' }} activeDot={{ r: 5 }} legendType="none" />
+                    <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="#059669" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
         {/* ── Monthly Orders Chart ── */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+          <Card sx={{ minWidth: 0 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
                 <Box>
@@ -222,23 +224,25 @@ const Dashboard = () => {
                 </Box>
                 <MonthFilter active={ordersMonths} onChange={setOrdersMonths} />
               </Box>
-              <ResponsiveContainer width="100%" height={270}>
-                <ComposedChart key={ordersMonths} data={ordersData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="ord" orientation="left" tick={{ fontSize: 11, fill: '#059669' }} axisLine={false} tickLine={false} width={40} />
-                  <YAxis yAxisId="rev" orientation="right" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#1B5E20' }} axisLine={false} tickLine={false} width={52} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend formatter={(value) => (
-                    <span style={{ fontSize: 12, color: '#374151' }}>
-                      {value === 'orders' ? 'Orders' : 'Revenue (₹)'}
-                    </span>
-                  )} />
-                  <Bar yAxisId="ord" dataKey="orders" fill="#A7F3D0" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="#059669" strokeWidth={2.5} dot={{ r: 3, fill: '#059669' }} activeDot={{ r: 5 }} legendType="none" />
-                  <Line yAxisId="rev" type="monotone" dataKey="revenue" stroke="#1B5E20" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <Box sx={{ width: '100%', minWidth: 0, height: 270, overflow: 'hidden' }}>
+                <ResponsiveContainer width="100%" height={270} minWidth={0} debounce={50}>
+                  <ComposedChart key={ordersMonths} data={ordersData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="ord" orientation="left" tick={{ fontSize: 11, fill: '#059669' }} axisLine={false} tickLine={false} width={40} />
+                    <YAxis yAxisId="rev" orientation="right" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#1B5E20' }} axisLine={false} tickLine={false} width={52} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend formatter={(value) => (
+                      <span style={{ fontSize: 12, color: '#374151' }}>
+                        {value === 'orders' ? 'Orders' : 'Revenue (₹)'}
+                      </span>
+                    )} />
+                    <Bar yAxisId="ord" dataKey="orders" fill="#A7F3D0" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="#059669" strokeWidth={2.5} dot={{ r: 3, fill: '#059669' }} activeDot={{ r: 5 }} legendType="none" />
+                    <Line yAxisId="rev" type="monotone" dataKey="revenue" stroke="#1B5E20" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

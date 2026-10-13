@@ -27,22 +27,24 @@ const Analytics = () => {
     <Box>
       <Typography variant="h5" fontWeight={700} gutterBottom>Analytics</Typography>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
+        <Grid item xs={12} md={8} sx={{ minWidth: 0 }}>
+          <Card sx={{ minWidth: 0 }}>
             <CardContent>
               <Typography variant="h6" fontWeight={700} gutterBottom>Revenue — Last 6 Months</Typography>
               {monthly.length === 0
                 ? <Typography color="text.secondary">No data available yet.</Typography>
                 : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={monthly}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
-                      <Bar dataKey="revenue" fill="#7C3AED" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Box sx={{ width: '100%', minWidth: 0, height: 300, overflow: 'hidden' }}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
+                      <BarChart data={monthly}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(v) => [formatCurrency(v), 'Revenue']} />
+                        <Bar dataKey="revenue" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
                 )}
             </CardContent>
           </Card>

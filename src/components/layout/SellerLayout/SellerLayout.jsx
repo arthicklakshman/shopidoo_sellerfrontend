@@ -1,6 +1,5 @@
 
 import { useEffect, useState, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import socket from '../../../services/socket';
@@ -269,7 +268,7 @@ const SellerLayout = () => {
     navigate('/login');
   };
 
-  const DrawerContent = () => (
+  const renderDrawerContent = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box 
         sx={{
@@ -324,7 +323,7 @@ const SellerLayout = () => {
 
       <Divider />
 
-      <List sx={{ flex: 1, pt: 1 }}>
+      <List sx={{ flex: 1, pt: 1, overflowY: 'auto' }}>
         {NAV_ITEMS.map(({ label, icon: Icon, path }) => {
           const active = location.pathname === path;
           return (
@@ -448,7 +447,7 @@ const SellerLayout = () => {
             },
           }}
         >
-          <DrawerContent />
+          {renderDrawerContent()}
         </Drawer>
         
         <Drawer
@@ -464,7 +463,7 @@ const SellerLayout = () => {
           }}
           open
         >
-          <DrawerContent />
+          {renderDrawerContent()}
         </Drawer>
       </Box>
 
@@ -474,6 +473,7 @@ const SellerLayout = () => {
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          minWidth: 0,
         }}
       >
         <AppBar
@@ -557,6 +557,7 @@ const SellerLayout = () => {
               PaperProps={{
                 sx: {
                   width: 360,
+                  maxWidth: '95vw',
                   borderRadius: 3,
                   overflow: 'hidden',
                 },
