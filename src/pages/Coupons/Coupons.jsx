@@ -365,7 +365,7 @@ const Coupons = () => {
       </Button>
     </Stack>
 
-    <Grid container spacing={3} mb={4}>
+    <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} mb={4}>
       {[
         { label: 'Total Coupons', val: stats.totalCoupons },
         { label: 'Active Coupons', val: stats.activeCoupons },
@@ -375,14 +375,18 @@ const Coupons = () => {
           val: formatCurrency(stats.totalDiscountValue),
         },
       ].map((stat) => (
-        <Grid item xs={12} sm={6} md={3} key={stat.label}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2">{stat.label}</Typography>
-                <LocalOffer fontSize="small" />
+        <Grid item xs={6} sm={6} md={3} key={stat.label}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Typography variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600, color: 'text.secondary', lineHeight: 1.25 }}>
+                  {stat.label}
+                </Typography>
+                <LocalOffer sx={{ fontSize: { xs: 18, sm: 20 }, color: 'text.secondary', flexShrink: 0 }} />
               </Stack>
-              <Typography variant="h4">{stat.val}</Typography>
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2.125rem' }, fontWeight: 800, mt: { xs: 1, sm: 1.5 }, wordBreak: 'break-word', lineHeight: 1.2 }}>
+                {stat.val}
+              </Typography>
             </CardContent>
           </Card>
         </Grid>

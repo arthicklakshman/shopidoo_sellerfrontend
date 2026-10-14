@@ -854,16 +854,16 @@ const openDocumentUrl = (url) => {
 
 const StatCard = ({ title, value, icon, color, loading }) => {
   return (
-    <Card sx={{ p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', minHeight: 100 }}>
-      <Box>
-        <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>{title}</Typography>
+    <Card sx={{ p: { xs: 1.5, sm: 2, md: 2.5 }, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', minHeight: { xs: 80, sm: 100 }, height: '100%' }}>
+      <Box sx={{ minWidth: 0, flex: 1, mr: 1 }}>
+        <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, lineHeight: 1.2 }}>{title}</Typography>
         {loading ? (
           <CircularProgress size={20} />
         ) : (
-          <Typography variant="h4" fontWeight={800} color="text.primary">{value}</Typography>
+          <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem', lg: '2.125rem' }, lineHeight: 1.2 }}>{value}</Typography>
         )}
       </Box>
-      <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(color, 0.1), color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ p: { xs: 1, sm: 1.5 }, borderRadius: 2, bgcolor: alpha(color, 0.1), color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, '& svg': { fontSize: { xs: 20, sm: 24 } } }}>
         {icon}
       </Box>
     </Card>
@@ -966,8 +966,8 @@ const Orders = () => {
       <Typography variant="h5" fontWeight={700} gutterBottom>Orders</Typography>
 
       {/* StatCards Row */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: 4 }}>
+        <Grid item xs={6} sm={6} md={2.4}>
           <StatCard
             title="Total Shipments"
             value={analytics?.totalShipments || 0}
@@ -976,7 +976,7 @@ const Orders = () => {
             loading={analyticsLoading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={6} sm={6} md={2.4}>
           <StatCard
             title="Active Shipments"
             value={
@@ -990,7 +990,7 @@ const Orders = () => {
             loading={analyticsLoading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={6} sm={6} md={2.4}>
           <StatCard
             title="Delivered"
             value={analytics?.statusBreakdown?.delivered || 0}
@@ -999,7 +999,7 @@ const Orders = () => {
             loading={analyticsLoading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={6} sm={6} md={2.4}>
           <StatCard
             title="Delayed SLA"
             value={analytics?.delayedCount || 0}
@@ -1008,7 +1008,7 @@ const Orders = () => {
             loading={analyticsLoading}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={6} sm={6} md={2.4}>
           <StatCard
             title="Failed / RTO"
             value={analytics?.rtoCount || 0}

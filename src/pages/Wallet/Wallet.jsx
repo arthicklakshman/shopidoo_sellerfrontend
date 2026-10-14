@@ -1286,7 +1286,16 @@ export default function Wallet() {
         .wl-spinner { width: 22px; height: 22px; border: 2.5px solid ${theme.palette.divider}; border-top-color: #0b8457; border-radius: 50%; animation: wl-spin 0.7s linear infinite; margin: 0 auto 10px; }
         @keyframes wl-spin { to { transform: rotate(360deg); } }
 
-        @media (max-width: 600px) { .wl-grid { grid-template-columns: 1fr; } .wl-wrap { padding: 20px 16px; } }
+        @media (max-width: 600px) {
+          .wl-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .wl-stat { padding: 14px; }
+          .wl-stat-value { font-size: 1.15rem; word-break: break-word; }
+          .wl-stat-icon { width: 34px; height: 34px; font-size: 0.95rem; margin-bottom: 8px; }
+          .wl-stat-label { font-size: 0.65rem; }
+          .wl-stat-sub { font-size: 0.7rem; }
+          .wl-withdraw-btn { height: 36px; font-size: 0.78rem; margin-top: 10px; }
+          .wl-wrap { padding: 20px 14px; }
+        }
       `}</style>
 
       <div className="wl-wrap">

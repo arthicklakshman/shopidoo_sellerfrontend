@@ -11,7 +11,7 @@ import { sellerService } from '../../services/seller.service';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useSelector } from 'react-redux';
 
-const cardLinkStyle = { textDecoration: 'none', display: 'block', cursor: 'pointer' };
+const cardLinkStyle = { textDecoration: 'none', display: 'block', cursor: 'pointer', height: '100%' };
 
 // ─── Month Filter Buttons ─────────────────────────────────────────────────────
 const MONTH_FILTERS = [
@@ -128,8 +128,12 @@ const Dashboard = () => {
   if (loading) return (
     <Box>
       <Skeleton height={40} width={200} sx={{ mb: 3 }} />
-      <Grid container spacing={3}>
-        {Array(4).fill(0).map((_, i) => <Grid item xs={12} sm={6} md={3} key={i}><Skeleton height={120} sx={{ borderRadius: 2 }} /></Grid>)}
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
+        {Array(5).fill(0).map((_, i) => (
+          <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }} key={i}>
+            <Skeleton height={120} sx={{ borderRadius: 2 }} />
+          </Grid>
+        ))}
       </Grid>
     </Box>
   );
@@ -139,18 +143,18 @@ const Dashboard = () => {
       <Typography variant="h5" fontWeight={700} gutterBottom>Welcome back, {user?.name}! 👋</Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>Here's what's happening with your store today.</Typography>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: 4 }}>
+        <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
           <Link to="/products" style={cardLinkStyle}>
             <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={InventoryIcon} color="primary" />
           </Link>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
+        <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
           <Link to="/orders" style={cardLinkStyle}>
             <StatCard title="Total Orders" value={stats?.totalOrders || 0} icon={ShoppingBagIcon} color="secondary" />
           </Link>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
+        <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
           <Link to="/orders" style={cardLinkStyle}>
             <StatCard 
               title="Total Revenue" 
@@ -160,12 +164,12 @@ const Dashboard = () => {
             />
           </Link>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
+        <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
           <Link to="/orders" style={cardLinkStyle}>
             <StatCard title="Pending Orders" value={stats?.pendingOrders || 0} icon={PendingIcon} color="warning" />
           </Link>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
+        <Grid item xs={6} sm={6} md={4} sx={{ '@media (min-width: 900px)': { flexBasis: '20%', maxWidth: '20%' } }}>
           <Link to="/returns" style={cardLinkStyle}>
             <StatCard 
               title="Total Returns" 

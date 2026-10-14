@@ -88,21 +88,23 @@ const normalizeTicket = (ticket = {}) => ({
 
 const SummaryCard = ({ title, value, icon: Icon, tint }) => (
   <Card sx={{ borderRadius: 4, height: '100%' }}>
-    <CardContent sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-        <Box>
-          <Typography color="text.secondary" sx={{ mb: 1 }}>{title}</Typography>
-          <Typography variant="h4" fontWeight={700}>{value}</Typography>
+    <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 }, '&:last-child': { pb: { xs: 1.5, sm: 2, md: 3 } }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600, mb: { xs: 0.5, sm: 1 }, lineHeight: 1.2 }}>{title}</Typography>
+          <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2.125rem' }, lineHeight: 1.2 }}>{value}</Typography>
         </Box>
         <Box
           sx={{
-            width: 68,
-            height: 68,
-            borderRadius: 3,
+            width: { xs: 38, sm: 50, md: 68 },
+            height: { xs: 38, sm: 50, md: 68 },
+            borderRadius: { xs: 2, md: 3 },
             display: 'grid',
             placeItems: 'center',
             bgcolor: tint.bg,
             color: tint.color,
+            flexShrink: 0,
+            '& svg': { fontSize: { xs: 20, sm: 24, md: 28 } },
           }}
         >
           <Icon />
@@ -370,15 +372,15 @@ const Support = () => {
 </Button>
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: 4 }}>
         {loading
           ? Array.from({ length: 3 }).map((_, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Skeleton variant="rounded" height={148} />
+            <Grid item xs={6} sm={6} md={4} key={index}>
+              <Skeleton variant="rounded" height={148} sx={{ borderRadius: 4 }} />
             </Grid>
           ))
           : stats.map((stat) => (
-            <Grid item xs={12} md={4} key={stat.title}>
+            <Grid item xs={6} sm={6} md={4} key={stat.title}>
               <SummaryCard {...stat} />
             </Grid>
           ))}

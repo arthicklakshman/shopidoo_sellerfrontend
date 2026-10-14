@@ -323,43 +323,43 @@ const Inventory = () => {
         sx={{ mb: 3 }}
       />
 
-      <Grid container spacing={2} mb={3}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
-            <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Box>
-                <Typography color="text.secondary" variant="body2">Total Items</Typography>
-                <Typography variant="h5" color="text.primary" fontWeight={700}>{data.totalProducts}</Typography>
+      <Grid container spacing={{ xs: 1.5, sm: 2 }} mb={3}>
+        <Grid item xs={6} sm={6} md={4}>
+          <Card sx={{ height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } }, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography color="text.secondary" variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600, lineHeight: 1.25 }}>Total Items</Typography>
+                <Typography variant="h5" color="text.primary" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{data.totalProducts}</Typography>
               </Box>
-              <Inventory2Icon color="success" />
+              <Inventory2Icon color="success" sx={{ fontSize: { xs: 20, sm: 24 }, flexShrink: 0 }} />
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
-            <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Box>
-                <Typography color="text.secondary" variant="body2">Low Stock</Typography>
-                <Typography variant="h5" color="warning.main" fontWeight={700}>
+        <Grid item xs={6} sm={6} md={4}>
+          <Card sx={{ height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } }, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography color="text.secondary" variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600, lineHeight: 1.25 }}>Low Stock</Typography>
+                <Typography variant="h5" color="warning.main" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>
                   {data.lowStockCount}
                 </Typography>
               </Box>
-              <WarningIcon color="warning" />
+              <WarningIcon color="warning" sx={{ fontSize: { xs: 20, sm: 24 }, flexShrink: 0 }} />
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
-            <CardContent sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Box>
-                <Typography color="text.secondary" variant="body2">Out of Stock</Typography>
-                <Typography variant="h5" color="error.main" fontWeight={700}>
+        <Grid item xs={6} sm={6} md={4}>
+          <Card sx={{ height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', boxShadow: 'none' }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } }, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography color="text.secondary" variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600, lineHeight: 1.25 }}>Out of Stock</Typography>
+                <Typography variant="h5" color="error.main" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>
                   {data.outOfStockCount}
                 </Typography>
               </Box>
-              <TrendingDownIcon color="error" />
+              <TrendingDownIcon color="error" sx={{ fontSize: { xs: 20, sm: 24 }, flexShrink: 0 }} />
             </CardContent>
           </Card>
         </Grid>

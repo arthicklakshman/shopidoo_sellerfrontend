@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Box, Card, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Typography, IconButton, Tooltip, Pagination, Rating, Button,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Avatar, Stack, TextField,
@@ -198,9 +198,9 @@ const ReplyDialog = ({ open, review, onClose, onSubmit, loading }) => {
 
 // ─── Summary Card ─────────────────────────────────────────────────────────────
 const SummaryCard = ({ label, value, color = 'text.primary' }) => (
-  <Card variant="outlined" sx={{ p: 2, minWidth: 120, flex: 1 }}>
-    <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
-    <Typography variant="h5" fontWeight={700} color={color}>{value ?? '—'}</Typography>
+  <Card variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: { xs: '0.72rem', sm: '0.75rem' } }}>{label}</Typography>
+    <Typography variant="h5" fontWeight={700} color={color} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{value ?? '—'}</Typography>
   </Card>
 );
 
@@ -261,11 +261,17 @@ const SellerReviews = () => {
       </Typography>
 
       {/* Summary cards */}
-      <Stack direction="row" gap={1.5} sx={{ mb: 3, flexWrap: 'wrap' }}>
-        <SummaryCard label="Avg. rating" value={avgRating ? `⭐ ${avgRating}` : '—'} />
-        <SummaryCard label="Total Reviews" value={reviews.length} color="primary.main" />
-        <SummaryCard label="Replied" value={repliedCount} color="success.main" />
-      </Stack>
+      <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
+        <Grid item xs={6} sm={4}>
+          <SummaryCard label="Avg. rating" value={avgRating ? `⭐ ${avgRating}` : '—'} />
+        </Grid>
+        <Grid item xs={6} sm={4}>
+          <SummaryCard label="Total Reviews" value={reviews.length} color="primary.main" />
+        </Grid>
+        <Grid item xs={6} sm={4}>
+          <SummaryCard label="Replied" value={repliedCount} color="success.main" />
+        </Grid>
+      </Grid>
 
       <Card>
         <TableContainer sx={{ overflowX: 'auto' }}>

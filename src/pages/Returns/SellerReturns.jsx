@@ -260,11 +260,15 @@ const SellerReturns = () => {
 
       {/* Performance Metrics Panel */}
       {metrics && metrics.enabled !== false && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: 4 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{
-              p: 2.5,
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               borderRadius: 3,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bbf7d0',
@@ -272,25 +276,31 @@ const SellerReturns = () => {
               transition: 'transform 0.2s',
               '&:hover': { transform: 'translateY(-4px)' }
             }}>
-              <Typography variant="caption" fontWeight={700} color={isDark ? 'success.light' : 'success.dark'} sx={{ textTransform: 'uppercase' }}>
-                Return Quality Score
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 1.5 }}>
-                <Typography variant="h4" fontWeight={800} color={isDark ? '#fff' : 'success.dark'}>
-                  {metrics.sellerReturnScore !== undefined ? Math.round(metrics.sellerReturnScore) : 100}
+              <Box>
+                <Typography variant="caption" fontWeight={700} color={isDark ? 'success.light' : 'success.dark'} sx={{ textTransform: 'uppercase', fontSize: { xs: '0.68rem', sm: '0.75rem' }, lineHeight: 1.2, display: 'block' }}>
+                  Return Quality Score
                 </Typography>
-                <Typography variant="body2" color="text.secondary">/100</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: { xs: 1, sm: 1.5 } }}>
+                  <Typography variant="h4" fontWeight={800} color={isDark ? '#fff' : 'success.dark'} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2.125rem' } }}>
+                    {metrics.sellerReturnScore !== undefined ? Math.round(metrics.sellerReturnScore) : 100}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">/100</Typography>
+                </Box>
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
                 {metrics.sellerReturnScore >= 90 ? 'Excellent performance' : metrics.sellerReturnScore >= 75 ? 'Good performance' : 'Action required'}
               </Typography>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{
-              p: 2.5,
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               borderRadius: 3,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fefafd, #fae8ff)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#f5d0fe',
@@ -298,25 +308,31 @@ const SellerReturns = () => {
               transition: 'transform 0.2s',
               '&:hover': { transform: 'translateY(-4px)' }
             }}>
-              <Typography variant="caption" fontWeight={700} color={isDark ? 'secondary.light' : 'secondary.dark'} sx={{ textTransform: 'uppercase' }}>
-                Response Speed
-              </Typography>
-              <Box sx={{ mt: 1.5 }}>
-                <Typography variant="h5" fontWeight={800}>
-                  {metrics.firstResponseTime ? `${metrics.firstResponseTime} hrs` : '0 hrs'}
+              <Box>
+                <Typography variant="caption" fontWeight={700} color={isDark ? 'secondary.light' : 'secondary.dark'} sx={{ textTransform: 'uppercase', fontSize: { xs: '0.68rem', sm: '0.75rem' }, lineHeight: 1.2, display: 'block' }}>
+                  Response Speed
                 </Typography>
-                <Typography variant="caption" color="text.secondary">Avg First Response Time</Typography>
+                <Box sx={{ mt: { xs: 1, sm: 1.5 } }}>
+                  <Typography variant="h5" fontWeight={800} sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem', md: '1.5rem' } }}>
+                    {metrics.firstResponseTime ? `${metrics.firstResponseTime} hrs` : '0 hrs'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>Avg First Response Time</Typography>
+                </Box>
               </Box>
-              <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 600, color: '#334155' }}>
+              <Typography variant="body2" sx={{ mt: 1, mb: 0.5, fontWeight: 600, color: '#334155', fontSize: { xs: '0.72rem', sm: '0.82rem' } }}>
                 Avg Resolution: {metrics.avgResolutionTime ? `${metrics.avgResolutionTime} days` : '0 days'}
               </Typography>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{
-              p: 2.5,
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               borderRadius: 3,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #fffbeb, #fef3c7)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#fde68a',
@@ -324,25 +340,31 @@ const SellerReturns = () => {
               transition: 'transform 0.2s',
               '&:hover': { transform: 'translateY(-4px)' }
             }}>
-              <Typography variant="caption" fontWeight={700} color={isDark ? 'warning.light' : 'warning.dark'} sx={{ textTransform: 'uppercase' }}>
-                Dispute Health
-              </Typography>
-              <Box sx={{ mt: 1.5 }}>
-                <Typography variant="h5" fontWeight={800}>
-                  {metrics.disputeRate ? `${metrics.disputeRate}%` : '0%'}
+              <Box>
+                <Typography variant="caption" fontWeight={700} color={isDark ? 'warning.light' : 'warning.dark'} sx={{ textTransform: 'uppercase', fontSize: { xs: '0.68rem', sm: '0.75rem' }, lineHeight: 1.2, display: 'block' }}>
+                  Dispute Health
                 </Typography>
-                <Typography variant="caption" color="text.secondary">Customer Dispute Rate</Typography>
+                <Box sx={{ mt: { xs: 1, sm: 1.5 } }}>
+                  <Typography variant="h5" fontWeight={800} sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem', md: '1.5rem' } }}>
+                    {metrics.disputeRate ? `${metrics.disputeRate}%` : '0%'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>Customer Dispute Rate</Typography>
+                </Box>
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
                 Open Disputes: {metrics.openDisputes || 0}
               </Typography>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card sx={{
-              p: 2.5,
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               borderRadius: 3,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
               background: isDark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
               border: '1px solid',
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#bae6fd',
@@ -350,16 +372,18 @@ const SellerReturns = () => {
               transition: 'transform 0.2s',
               '&:hover': { transform: 'translateY(-4px)' }
             }}>
-              <Typography variant="caption" fontWeight={700} color={isDark ? 'info.light' : 'info.dark'} sx={{ textTransform: 'uppercase' }}>
-                Activity Overview
-              </Typography>
-              <Box sx={{ mt: 1.5 }}>
-                <Typography variant="h5" fontWeight={800}>
-                  {metrics.totalReturns || 0}
+              <Box>
+                <Typography variant="caption" fontWeight={700} color={isDark ? 'info.light' : 'info.dark'} sx={{ textTransform: 'uppercase', fontSize: { xs: '0.68rem', sm: '0.75rem' }, lineHeight: 1.2, display: 'block' }}>
+                  Activity Overview
                 </Typography>
-                <Typography variant="caption" color="text.secondary">Total Return Requests</Typography>
+                <Box sx={{ mt: { xs: 1, sm: 1.5 } }}>
+                  <Typography variant="h5" fontWeight={800} sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem', md: '1.5rem' } }}>
+                    {metrics.totalReturns || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>Total Return Requests</Typography>
+                </Box>
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
                 Refund Completion Rate: {metrics.refundApprovalRate ? `${metrics.refundApprovalRate}%` : '0%'}
               </Typography>
             </Card>
