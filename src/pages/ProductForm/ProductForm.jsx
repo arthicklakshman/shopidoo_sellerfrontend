@@ -144,7 +144,7 @@ const formFocusStyles = {
 const createColorGroup = (color = '', defaults = {}) => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   color,
-  sizes: [emptySizeVariant(defaults)],
+  sizes: [],
 });
 
 const emptySizeVariant = (defaults = {}) => ({
