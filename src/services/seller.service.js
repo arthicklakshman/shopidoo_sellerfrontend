@@ -38,8 +38,10 @@ export const sellerService = {
   updateCoupon: (id, data) => api.put(`/coupons/${id}`, data),
   deleteCoupon: (id) => api.delete(`/coupons/${id}`),
 
-  toggleAllProductsVisibility: () =>
-    api.patch('/products/seller/products/toggle-visibility'),
+  getMainVisibility: () =>
+    api.get('/products/seller/products/visibility'),
+  toggleAllProductsVisibility: (is_active) =>
+    api.patch('/products/seller/products/toggle-visibility', is_active !== undefined ? { is_active } : {}),
   toggleProductVisibility: (id) =>
     api.patch(`/products/${id}/toggle-visibility`),
   

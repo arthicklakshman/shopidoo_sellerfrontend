@@ -124,6 +124,24 @@ function useCommissionMap(products) {
   return commissionMap;
 }
 
+// ─── Storage Helpers for Instant Rendering without Flicker ────────────────────
+const getSellerStorageKey = () => {
+  try {
+    const seller = JSON.parse(localStorage.getItem('sellerUser'));
+    return seller?.id ? `seller_main_products_visible_${seller.id}` : 'seller_main_products_visible';
+  } catch {
+    return 'seller_main_products_visible';
+  }
+};
+
+const getInitialSellerVisibility = () => {
+  try {
+    const cached = localStorage.getItem(getSellerStorageKey());
+    if (cached !== null) return cached === 'true';
+  } catch {}
+  return true;
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Products = () => {
   const navigate = useNavigate();
@@ -138,8 +156,8 @@ const Products = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [fetchError, setFetchError] = useState('');
-  const [allProductsVisible, setAllProductsVisible] = useState(true);
-  const [togglingAllProducts, setTogglingAllProducts] = useState(false);
+  const [sellerMainVisible, setSellerMainVisible] = useState(getInitialSellerVisibility);
+  const [togglingSellerMain, setTogglingSellerMain] = useState(false);
   const [togglingProductId, setTogglingProductId] = useState(null);
   const deferredSearch = useDeferredValue(search);
 
@@ -183,6 +201,15 @@ const Products = () => {
               [];
 
       setProducts(productList);
+      if (data?.products_visible !== undefined) {
+        const isVis = Boolean(data.products_visible);
+        setSellerMainVisible(isVis);
+        try { localStorage.setItem(getSellerStorageKey(), String(isVis)); } catch {}
+      } else if (data?.data?.products_visible !== undefined) {
+        const isVis = Boolean(data.data.products_visible);
+        setSellerMainVisible(isVis);
+        try { localStorage.setItem(getSellerStorageKey(), String(isVis)); } catch {}
+      }
       setPagination(
         data?.pagination ||
         data?.data?.pagination || {
@@ -212,6 +239,16 @@ const Products = () => {
       walk(data.data || []);
       setCategories(flattened);
     }).catch(() => { });
+
+    sellerService.getMainVisibility()
+      .then(({ data }) => {
+        if (data?.data?.products_visible !== undefined) {
+          const isVis = Boolean(data.data.products_visible);
+          setSellerMainVisible(isVis);
+          try { localStorage.setItem(getSellerStorageKey(), String(isVis)); } catch {}
+        }
+      })
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -252,32 +289,26 @@ const Products = () => {
     setSelectedImageIndex(0);
   };
 
-  const handleToggleAllProducts = async () => {
-    setTogglingAllProducts(true);
+  const handleToggleSellerMainVisibility = async () => {
+    const next = !sellerMainVisible;
+    setTogglingSellerMain(true);
     try {
-      const { data } = await sellerService.toggleAllProductsVisibility();
-      const visible = Boolean(data?.data?.is_active);
-      setAllProductsVisible(visible);
-      setProducts((prev) => prev.map((product) => ({ ...product, is_active: visible })));
+      const { data } = await sellerService.toggleAllProductsVisibility(next);
+      const visible = Boolean(data?.data?.products_visible !== false);
+      setSellerMainVisible(visible);
+      try { localStorage.setItem(getSellerStorageKey(), String(visible)); } catch {}
       dispatch(showToast({
-        message: visible ? 'All products visible to users' : 'All products hidden from users',
+        message: visible ? 'All your products are visible to users' : 'All your products are hidden from users',
         severity: 'success',
       }));
     } catch (err) {
       dispatch(showToast({ message: getErrorMessage(err), severity: 'error' }));
     } finally {
-      setTogglingAllProducts(false);
+      setTogglingSellerMain(false);
     }
   };
 
   const handleToggleProductVisibility = async (productId) => {
-    if (!allProductsVisible) {
-      dispatch(showToast({
-        message: 'Please turn ON the main "Show To Users" button first.',
-        severity: 'warning',
-      }));
-      return;
-    }
     setTogglingProductId(productId);
     try {
       const { data } = await sellerService.toggleProductVisibility(productId);
@@ -341,10 +372,10 @@ const Products = () => {
             Show To Users
           </Typography>
           <Switch
-            checked={allProductsVisible}
-            onChange={handleToggleAllProducts}
+            checked={sellerMainVisible}
+            onChange={handleToggleSellerMainVisibility}
             color="success"
-            disabled={togglingAllProducts || products.length === 0}
+            disabled={togglingSellerMain}
           />
         </Box>
       </Box>
@@ -678,13 +709,15 @@ const Products = () => {
                             {STATUS_STYLES[product.admin_status || 'pending'].label.toLowerCase()}
                           </Box>
                           <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
-                            {product.admin_status === 'approved' && product.is_active
-                              ? 'Visible to users'
-                              : product.admin_status === 'approved' && !product.is_active
-                                ? 'Hidden from users'
-                                : product.admin_status === 'blocked'
-                                  ? 'Hidden from users'
-                                  : 'Waiting for admin approval'}
+                            {product.admin_status !== 'approved'
+                              ? product.admin_status === 'blocked'
+                                ? 'Hidden from users (Blocked)'
+                                : 'Waiting for admin approval'
+                              : !product.is_active
+                                ? 'Hidden from users (Product OFF)'
+                                : !sellerMainVisible
+                                  ? 'Hidden from users (Main toggle OFF)'
+                                  : 'Visible to users'}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -692,33 +725,21 @@ const Products = () => {
                       {/* Visible toggle */}
                       <TableCell sx={tableBodyCellSx}>
                         <Stack spacing={0.5} alignItems="flex-start">
-                          <Box onClick={() => {
-                            if (!allProductsVisible) {
-                              dispatch(showToast({
-                                message: 'Please turn ON the main "Show To Users" button first.',
-                                severity: 'warning',
-                              }));
+                          <Switch
+                            checked={Boolean(product.is_active)}
+                            onChange={() => handleToggleProductVisibility(product.id)}
+                            color="success"
+                            disabled={
+                              togglingProductId === product.id ||
+                              product.admin_status !== 'approved'
                             }
-                          }}>
-                            <Switch
-                              checked={Boolean(product.is_active)}
-                              onChange={() => handleToggleProductVisibility(product.id)}
-                              color="success"
-                              disabled={
-                                !allProductsVisible ||
-                                togglingProductId === product.id ||
-                                product.admin_status !== 'approved'
-                              }
-                            />
-                          </Box>
+                          />
                           <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
-                            {!allProductsVisible
-                              ? 'Turn ON main button first'
-                              : product.admin_status !== 'approved'
-                                ? 'Approve first'
-                                : product.is_active
-                                  ? 'ON'
-                                  : 'OFF'}
+                            {product.admin_status !== 'approved'
+                              ? 'Approve first'
+                              : product.is_active
+                                ? 'ON'
+                                : 'OFF'}
                           </Typography>
                         </Stack>
                       </TableCell>
