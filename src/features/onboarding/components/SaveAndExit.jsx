@@ -58,7 +58,9 @@ const SaveAndExit = ({ step }) => {
              await onboardingService.updateBusinessDetails(sellerId, {
                 businessName: data.businessName,
                 storeName: data.displayStoreName,
-                gstNumber: data.gstNumber,
+                gstType: data.gstType,
+                gstNumber: data.gstType === 'enrollment_id' ? (data.gstEnrollmentId || data.gstNumber) : data.gstNumber,
+                gstEnrollmentId: data.gstType === 'enrollment_id' ? data.gstEnrollmentId : '',
                 aadhaarNumber: data.aadhaarNumber,
                 panNumber: data.panNumber,
                 addressLine1: data.addressLine1,

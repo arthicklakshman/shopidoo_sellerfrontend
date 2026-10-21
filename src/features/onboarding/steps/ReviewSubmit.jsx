@@ -149,8 +149,10 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
       step: "2", title: "Business Details", stepIndex: 2,
       fields: [
         { label: "Business Name", value: data.step2.businessName },
-        { label: "Store Name", value: data.step2.displayStoreName },
-        { label: "GST Number", value: data.step2.hasGst ? data.step2.gstNumber : "Not applicable" },
+        {
+          label: data.step2.gstType === 'enrollment_id' ? "GST Enrollment ID" : "GSTIN",
+          value: (data.step2.gstType === 'enrollment_id' ? (data.step2.gstEnrollmentId || data.step2.gstNumber) : data.step2.gstNumber) || "Not provided",
+        },
         { label: "PAN Number", value: data.step2.panNumber },
         { label: "Business Address", value: `${data.step2.addressLine1}, ${data.step2.city || ''}, ${data.step2.state || ''} - ${data.step2.pincode || ''}`, fullWidth: true },
       ]
@@ -167,7 +169,12 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
     {
       step: "4", title: "Documents", stepIndex: 4,
       fields: [
-        { label: "GST Certificate", isDocument: true, isUploaded: !!data.step5.gstProof, mandatory: true },
+        {
+          label: data.step2.gstType === 'enrollment_id' ? "GST Enrollment Proof" : "GSTIN Proof",
+          isDocument: true,
+          isUploaded: !!data.step5.gstProof,
+          mandatory: true,
+        },
         { label: "PAN Card", isDocument: true, isUploaded: !!data.step5.panCard },
         { label: "Aadhaar Front", isDocument: true, isUploaded: !!data.step5.aadhaarFront },
         { label: "Aadhaar Back", isDocument: true, isUploaded: !!data.step5.aadhaarBack },

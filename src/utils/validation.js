@@ -49,10 +49,17 @@ export const validatePincode = (pincode) => {
 
 
 export const validateGST = (gst) => {
-  if (!gst || gst.trim() === '') return 'GST Number is required';
+  if (!gst || gst.trim() === '') return 'GSTIN is required';
   // Standard Indian GST Regex
   const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
-  if (!gstRegex.test(gst)) return 'Invalid GST format';
+  if (!gstRegex.test(gst.trim())) return 'Invalid GST format';
+  return null;
+};
+
+export const validateGSTEnrollmentId = (id) => {
+  if (!id || String(id).trim() === '') return 'GST Enrollment ID is required';
+  const enrollmentRegex = /^[A-Za-z0-9]{15,16}$/;
+  if (!enrollmentRegex.test(String(id).trim())) return 'Please enter a valid GST Enrollment ID';
   return null;
 };
 

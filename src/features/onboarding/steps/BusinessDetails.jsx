@@ -12,6 +12,9 @@ import {
   Tooltip,
   FormHelperText,
   Autocomplete,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
 } from "@mui/material";
 
 // Icons
@@ -28,6 +31,7 @@ import {
   validatePAN,
   validatePincode,
   validateGST,
+  validateGSTEnrollmentId,
 } from "../../../utils/validation";
 
 // Reusable Components
@@ -121,20 +125,37 @@ const CustomListIcon = () => (
 export default function BusinessDetails({ onBack, onNext }) {
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem("onboarding_step_2");
-    return savedData
-      ? JSON.parse(savedData)
-      : {
-          businessName: "",
-          displayStoreName: "",
-          gstNumber: "",
-          aadhaarNumber: "",
-          panNumber: "",
-          addressLine1: "",
-          addressLine2: "",
-          city: "",
-          pincode: "",
-          state: "",
-        };
+    if (savedData) {
+      const parsed = JSON.parse(savedData);
+      return {
+        businessName: parsed.businessName || "",
+        displayStoreName: parsed.displayStoreName || "",
+        gstType: parsed.gstType || (parsed.gstNumber ? "gstin" : ""),
+        gstNumber: parsed.gstNumber || "",
+        gstEnrollmentId: parsed.gstEnrollmentId || (parsed.gstType === "enrollment_id" ? parsed.gstNumber : ""),
+        aadhaarNumber: parsed.aadhaarNumber || "",
+        panNumber: parsed.panNumber || "",
+        addressLine1: parsed.addressLine1 || "",
+        addressLine2: parsed.addressLine2 || "",
+        city: parsed.city || "",
+        pincode: parsed.pincode || "",
+        state: parsed.state || "",
+      };
+    }
+    return {
+      businessName: "",
+      displayStoreName: "",
+      gstType: "",
+      gstNumber: "",
+      gstEnrollmentId: "",
+      aadhaarNumber: "",
+      panNumber: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      pincode: "",
+      state: "",
+    };
   });
 
   const [errors, setErrors] = useState({});
@@ -149,6 +170,18 @@ export default function BusinessDetails({ onBack, onNext }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
+    if (apiError) setApiError("");
+  };
+
+  const handleGstTypeChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, gstType: value }));
+    setErrors((prev) => ({
+      ...prev,
+      gstType: null,
+      gstNumber: null,
+      gstEnrollmentId: null,
+    }));
     if (apiError) setApiError("");
   };
 
@@ -171,7 +204,13 @@ export default function BusinessDetails({ onBack, onNext }) {
       state: validateRequired(formData.state, "State"),
     };
 
-    newErrors.gstNumber = validateGST(formData.gstNumber);
+    if (!formData.gstType) {
+      newErrors.gstType = "Please select your GST identification type";
+    } else if (formData.gstType === "gstin") {
+      newErrors.gstNumber = validateGST(formData.gstNumber);
+    } else if (formData.gstType === "enrollment_id") {
+      newErrors.gstEnrollmentId = validateGSTEnrollmentId(formData.gstEnrollmentId);
+    }
 
     const actualErrors = Object.entries(newErrors).reduce(
       (acc, [key, value]) => {
@@ -201,7 +240,15 @@ export default function BusinessDetails({ onBack, onNext }) {
       await onboardingService.updateBusinessDetails(sellerId, {
         businessName: formData.businessName,
         storeName: formData.displayStoreName, // Changed from storeName
-        gstNumber: formData.gstNumber,
+        gstType: formData.gstType,
+        gstNumber:
+          formData.gstType === "gstin"
+            ? formData.gstNumber
+            : (formData.gstEnrollmentId || formData.gstNumber),
+        gstEnrollmentId:
+          formData.gstType === "enrollment_id"
+            ? formData.gstEnrollmentId
+            : "",
         aadhaarNumber: formData.aadhaarNumber,
         panNumber: formData.panNumber,
         addressLine1: formData.addressLine1,
@@ -265,7 +312,7 @@ export default function BusinessDetails({ onBack, onNext }) {
         {/* Helper function to use brand green for list items */}
         {[
           { title: "Store Name:", desc: "This is what customers will see on your storefront" },
-          { title: "Mandatory Documents:", desc: "GST number, GST certificate, and signature image are required." },
+          { title: "Mandatory Documents:", desc: "GST identification (GSTIN or GST Enrollment ID), proof document, and signature image are required." },
           { title: "Documents Required:", desc: "PAN and [Government ID Redacted] needed for verification" }
         ].map((item, idx) => (
           <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" }}>
@@ -397,20 +444,138 @@ export default function BusinessDetails({ onBack, onNext }) {
                 )}
               </Box>
 
+              {/* GST Registration Details */}
               <Box>
-                <StyledInputLabel required>GST Number</StyledInputLabel>
-                <TextField
-                  name="gstNumber"
-                  value={formData.gstNumber}
-                  onChange={handleInputChange}
-                  fullWidth
-                  placeholder="e.g., 22AAAAA0000A1Z5"
-                  variant="outlined"
-                  size="small"
-                  error={!!errors.gstNumber}
-                  helperText={errors.gstNumber}
-                  sx={customInputStyles}
-                />
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    color: "#111827",
+                    fontSize: "15px",
+                    mb: 1.5,
+                  }}
+                >
+                  GST Registration Details
+                </Typography>
+
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <Typography
+                      sx={{
+                        color: "#111827",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Which type of GST identification do you have?
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#ef4444",
+                        ml: 0.5,
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      *
+                    </Typography>
+                  </Box>
+
+                  <RadioGroup
+                    row
+                    name="gstType"
+                    value={formData.gstType || ""}
+                    onChange={handleGstTypeChange}
+                    sx={{ gap: { xs: 1, sm: 2 } }}
+                  >
+                    <FormControlLabel
+                      value="gstin"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: "#9ca3af",
+                            "&.Mui-checked": { color: "#0B8457" },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography
+                          sx={{
+                            fontSize: "14px",
+                            color: "#374151",
+                            fontWeight: formData.gstType === "gstin" ? 600 : 400,
+                          }}
+                        >
+                          GSTIN (GST Identification Number)
+                        </Typography>
+                      }
+                    />
+                    <FormControlLabel
+                      value="enrollment_id"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: "#9ca3af",
+                            "&.Mui-checked": { color: "#0B8457" },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography
+                          sx={{
+                            fontSize: "14px",
+                            color: "#374151",
+                            fontWeight: formData.gstType === "enrollment_id" ? 600 : 400,
+                          }}
+                        >
+                          GST Enrollment ID
+                        </Typography>
+                      }
+                    />
+                  </RadioGroup>
+                  {errors.gstType && (
+                    <FormHelperText error sx={{ ml: 1, mt: 0.5 }}>
+                      {errors.gstType}
+                    </FormHelperText>
+                  )}
+                </Box>
+
+                {formData.gstType === "gstin" && (
+                  <Box sx={{ mt: 2 }}>
+                    <StyledInputLabel required>GSTIN</StyledInputLabel>
+                    <TextField
+                      name="gstNumber"
+                      value={formData.gstNumber}
+                      onChange={handleInputChange}
+                      fullWidth
+                      placeholder="Enter your GSTIN"
+                      variant="outlined"
+                      size="small"
+                      error={!!errors.gstNumber}
+                      helperText={errors.gstNumber}
+                      sx={customInputStyles}
+                    />
+                  </Box>
+                )}
+
+                {formData.gstType === "enrollment_id" && (
+                  <Box sx={{ mt: 2 }}>
+                    <StyledInputLabel required>GST Enrollment ID</StyledInputLabel>
+                    <TextField
+                      name="gstEnrollmentId"
+                      value={formData.gstEnrollmentId}
+                      onChange={handleInputChange}
+                      fullWidth
+                      placeholder="Enter your GST Enrollment ID"
+                      variant="outlined"
+                      size="small"
+                      error={!!errors.gstEnrollmentId}
+                      helperText={errors.gstEnrollmentId}
+                      sx={customInputStyles}
+                    />
+                  </Box>
+                )}
               </Box>
 
               <Box>

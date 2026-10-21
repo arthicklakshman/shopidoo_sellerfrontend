@@ -137,7 +137,15 @@ export default function Documents({ onBack, onNext }) {
     fileName: ""
   });
 
-  // Removed hasGst logic
+  const step2Data = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('onboarding_step_2') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const gstType = step2Data.gstType || (step2Data.gstEnrollmentId ? 'enrollment_id' : 'gstin');
+  const isEnrollmentId = gstType === 'enrollment_id';
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false); 
@@ -208,7 +216,11 @@ export default function Documents({ onBack, onNext }) {
   const handleContinue = async () => {
     const newErrors = {};
     
-    if (!isDocPresent(documents.gstProof)) newErrors.gstProof = "GST Proof is required";
+    if (!isDocPresent(documents.gstProof)) {
+      newErrors.gstProof = isEnrollmentId
+        ? "GST Enrollment Proof is required"
+        : "GSTIN Proof is required";
+    }
     if (!isDocPresent(documents.signature)) newErrors.signature = "Signature is required";
 
     if (Object.keys(newErrors).length > 0) {
@@ -335,7 +347,26 @@ export default function Documents({ onBack, onNext }) {
                 Required Documents
               </Typography>
               
-              <UploadZoneCard title="GST Proof Image" subtitle="Upload your GST Registration Certificate" required fileData={documents.gstProof} onChange={(file) => handleFileChange('gstProof', file)} error={errors.gstProof} onPreview={handlePreview} />
+              {/* Dynamic GST Proof Section */}
+              <Box sx={{ mb: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '15px', mb: 1.5 }}>
+                  {isEnrollmentId ? "GST Enrollment Verification" : "GSTIN Verification"}
+                </Typography>
+                <UploadZoneCard
+                  title={isEnrollmentId ? "Upload GST Enrollment Proof" : "Upload GSTIN Proof"}
+                  subtitle={
+                    isEnrollmentId
+                      ? "Upload an image of your GST enrollment document or another accepted document showing your GST Enrollment ID."
+                      : "Upload an image of your GST registration certificate or another accepted document showing your GSTIN."
+                  }
+                  required
+                  fileData={documents.gstProof}
+                  onChange={(file) => handleFileChange('gstProof', file)}
+                  error={errors.gstProof}
+                  onPreview={handlePreview}
+                />
+              </Box>
+
               <UploadZoneCard title="Signature" subtitle="Upload your signature on white paper" required fileData={documents.signature} onChange={(file) => handleFileChange('signature', file)} error={errors.signature} onPreview={handlePreview} />
 
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3, mb: 2, position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1, py: 1 }}>

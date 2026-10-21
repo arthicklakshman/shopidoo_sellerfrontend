@@ -417,10 +417,13 @@ export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
           const fullUser = profileResponse?.data?.data || profileResponse?.data;
           if (fullUser) {
             // Map Step 2: Business Details
+            const gstType = fullUser.gstType || (fullUser.gstEnrollmentId ? 'enrollment_id' : (fullUser.gstNumber ? 'gstin' : ''));
             const step2 = {
               businessName: fullUser.businessName || '',
               displayStoreName: fullUser.storeName || '',
-              gstNumber: fullUser.gstNumber || '',
+              gstType: gstType,
+              gstNumber: gstType === 'enrollment_id' ? '' : (fullUser.gstNumber || ''),
+              gstEnrollmentId: fullUser.gstEnrollmentId || (gstType === 'enrollment_id' ? fullUser.gstNumber : ''),
               aadhaarNumber: fullUser.aadhaarNumber || '',
               panNumber: fullUser.panNumber || '',
               addressLine1: fullUser.addressLine1 || '',

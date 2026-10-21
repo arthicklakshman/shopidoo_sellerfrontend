@@ -7,6 +7,7 @@ import {
   validatePAN,
   validatePincode,
   validateGST,
+  validateGSTEnrollmentId,
 } from '../../utils/validation';
 
 describe('Seller Validation Utilities (validation.js)', () => {
@@ -67,6 +68,15 @@ describe('Seller Validation Utilities (validation.js)', () => {
     it('should validate standard Indian GSTIN format', () => {
       expect(validateGST('22AAAAA0000A1Z5')).toBeNull();
       expect(validateGST('INVALIDGST')).toBe('Invalid GST format');
+    });
+  });
+
+  describe('validateGSTEnrollmentId', () => {
+    it('should validate standard GST Enrollment ID format (15-16 alphanumeric)', () => {
+      expect(validateGSTEnrollmentId('221234567890123')).toBeNull();
+      expect(validateGSTEnrollmentId('AR0701234567890')).toBeNull();
+      expect(validateGSTEnrollmentId('')).toBe('GST Enrollment ID is required');
+      expect(validateGSTEnrollmentId('SHORT')).toBe('Please enter a valid GST Enrollment ID');
     });
   });
 });

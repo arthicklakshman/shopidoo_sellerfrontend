@@ -30,10 +30,13 @@ export const prefillOnboardingFromProfile = (fullUser) => {
   localStorage.setItem('sellerId', String(fullUser.id));
 
   // Step 2: Business details
+  const gstType = fullUser.gstType || (fullUser.gstEnrollmentId ? 'enrollment_id' : (fullUser.gstNumber ? 'gstin' : ''));
   const step2 = {
     businessName: fullUser.businessName || '',
     displayStoreName: fullUser.storeName || '',
-    gstNumber: fullUser.gstNumber || '',
+    gstType: gstType,
+    gstNumber: gstType === 'enrollment_id' ? '' : (fullUser.gstNumber || ''),
+    gstEnrollmentId: fullUser.gstEnrollmentId || (gstType === 'enrollment_id' ? fullUser.gstNumber : ''),
     aadhaarNumber: fullUser.aadhaarNumber || '',
     panNumber: fullUser.panNumber || '',
     addressLine1: fullUser.addressLine1 || '',
