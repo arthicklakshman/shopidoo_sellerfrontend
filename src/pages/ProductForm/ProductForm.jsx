@@ -5,12 +5,13 @@ import {
   FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress,
   IconButton, Chip, Divider, RadioGroup, FormControlLabel, Radio, Stack,
   Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Checkbox, ListItemText, Avatar, Tooltip
+  Checkbox, ListItemText, Avatar, Tooltip, Autocomplete
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
@@ -443,6 +444,8 @@ const INDIAN_STATES = [
   "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
 
+const OTHER_CATEGORY = { id: 'other', name: 'Other (Specify Custom Category)' };
+
 const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
@@ -536,6 +539,11 @@ const ProductForm = () => {
     const catId = productTypeId || form.subcategory_id || form.category_id;
     return categories.find(c => Number(c.id) === Number(catId));
   }, [categories, form.category_id, form.subcategory_id, productTypeId]);
+
+   const categoryOptions = useMemo(
+    () => [...categories.filter(c => c.depth === 0), OTHER_CATEGORY],
+    [categories]
+  ); 
 
   const isFashionVariantCategory = useMemo(() => {
     // No Color/Size attributes configured on this category at all → this is
@@ -727,7 +735,22 @@ const ProductForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantAttributeValues, categoryAttributes, isFashionVariantCategory]);
 
-
+  const handleCategorySelect = (val) => {
+    setForm(prev => ({
+      ...prev,
+      category_id: val,
+      subcategory_id: '',
+      custom_category: val === 'other' ? prev.custom_category : '',
+      custom_subcategory: val === 'other' ? prev.custom_subcategory : '',
+      custom_product_type: val === 'other' ? prev.custom_product_type : '',
+    }));
+    setCategoryAttributes([]);
+    setAttributeValues({});
+    setVariantAttributeValues({});
+    setVariants([]);
+    setColorGroups([]);
+    setProductTypeId('');
+  };
 
   const handleChange = (key) => (e) => {
     let value = e.target.value;
@@ -1658,46 +1681,38 @@ const ProductForm = () => {
                         </Select>
                       </FormControl>
                     </Grid>
-
-                    {/* ── Category Selection ── */}
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth required>
-                        <InputLabel id="cat-label">Category</InputLabel>
-                        <Select
-                          labelId="cat-label"
-                          label="Category"
-                          value={form.category_id}
-                          onChange={(e) => {
-                            const val = e.target.value;
-
-                            setForm(prev => ({
-                              ...prev,
-                              category_id: val,
-                              subcategory_id: '',
-                              custom_category: val === 'other' ? prev.custom_category : '',
-                              custom_subcategory: val === 'other' ? prev.custom_subcategory : '',
-                              custom_product_type: val === 'other' ? prev.custom_product_type : '',
-                            }));
-
-                            // IMPORTANT: clear everything related to previous category
-                            setCategoryAttributes([]);
-                            setAttributeValues({});
-                            setVariantAttributeValues({});
-                            setVariants([]);
-                            setColorGroups([]);
-                            setProductTypeId('');
-                          }}
-                          MenuProps={menuPropsDownward}
-                        >
-
-                          <MenuItem value="">Select Category</MenuItem>
-                          {categories.filter(c => c.depth === 0).map(c => (
-                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                          ))}
-                          <MenuItem value="other">Other (Specify Custom Category)</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
+{/* ── Category Selection ── */}
+<Grid item xs={12} sm={6}>
+<Autocomplete
+  fullWidth
+  openOnFocus
+  autoHighlight
+  options={categoryOptions}
+  getOptionLabel={(opt) => opt?.name || ''}
+  isOptionEqualToValue={(opt, val) => String(opt.id) === String(val.id)}
+  value={categoryOptions.find(o => String(o.id) === String(form.category_id)) || null}
+  onChange={(_, newVal) => handleCategorySelect(newVal ? newVal.id : '')}
+  noOptionsText="No categories found"
+  ListboxProps={{ style: { maxHeight: 300 } }}
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      label="Category (type to search)"
+      required
+      placeholder="Search category..."
+      InputProps={{
+        ...params.InputProps,
+        startAdornment: (
+          <>
+            <SearchIcon sx={{ color: 'text.secondary', mr: 0.5 }} fontSize="small" />
+            {params.InputProps.startAdornment}
+          </>
+        ),
+      }}
+    />
+  )}
+/>
+</Grid>
 
                     {form.category_id === 'other' && (
                       <>
@@ -2268,23 +2283,39 @@ const ProductForm = () => {
                               <TableBody>
                                 {shippingRules.map((rule, idx) => (
                                   <TableRow key={idx}>
-                                    <TableCell sx={{ minWidth: 150 }}>
-                                      <FormControl fullWidth size="small">
-                                        <Select
-                                          value={rule.state}
-                                          onChange={(e) => {
-                                            const newRules = [...shippingRules];
-                                            newRules[idx].state = e.target.value;
-                                            setShippingRules(newRules);
-                                          }}
-                                          displayEmpty
-                                          MenuProps={menuPropsDownward}
-                                        >
-                                          <MenuItem value="" disabled>Select State</MenuItem>
-                                          {INDIAN_STATES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                                        </Select>
-                                      </FormControl>
-                                    </TableCell>
+                                    <TableCell sx={{ minWidth: 220 }}>
+  <Autocomplete
+    size="small"
+    fullWidth
+    openOnFocus
+    autoHighlight
+    options={INDIAN_STATES}
+    value={rule.state || null}
+    onChange={(_, newVal) => {
+      setShippingRules(prev =>
+        prev.map((r, i) => (i === idx ? { ...r, state: newVal || '' } : r))
+      );
+    }}
+    getOptionDisabled={(option) =>
+      shippingRules.some((r, i) => i !== idx && r.state === option)
+    }
+    noOptionsText="No states found"
+    ListboxProps={{ style: { maxHeight: 250 } }}
+     slotProps={{
+      popper: {
+        placement: 'bottom-start',
+        modifiers: [
+          { name: 'flip', enabled: false },
+          { name: 'preventOverflow', enabled: false },
+        ],
+        style: { width: 260 },
+      },
+    }}
+    renderInput={(params) => (
+      <TextField {...params} placeholder="Search state..." />
+    )}
+  />
+</TableCell>
                                     <TableCell sx={{ minWidth: 130 }}>
                                       <FormControl fullWidth size="small">
                                         <Select
