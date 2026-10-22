@@ -60,8 +60,9 @@ api.interceptors.response.use(
       orig._retry = true; isRefreshing = true;
       try {
         const { data } = await api.post('/auth/refresh-token', { role: 'seller' });
-        const newToken = data.data.accessToken;
-        localStorage.setItem('sellerAccessToken', newToken);
+        try {
+          localStorage.setItem('sellerAccessToken', newToken);
+        } catch {}
         processQueue(null, newToken);
         orig.headers.Authorization = `Bearer ${newToken}`;
         return api(orig);

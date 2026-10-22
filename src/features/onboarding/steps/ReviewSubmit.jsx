@@ -118,7 +118,24 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
       // 🌟 USING THE SERVICE FILE FOR FINAL COMPLETION
       await onboardingService.completeOnboarding(sellerId);
 
-      // Clean up everything from Local Storage on success
+      // Preserve seller_gst_type in localStorage so subsequent dashboard/product pages never flicker
+      try {
+        const step2 = data?.step2 || JSON.parse(localStorage.getItem('onboarding_step_2') || '{}');
+        const gstType = step2.gstType || (step2.gstEnrollmentId ? 'enrollment_id' : 'gstin');
+        if (gstType) {
+          localStorage.setItem('seller_gst_type', gstType);
+          if (sellerId) localStorage.setItem(`seller_gst_type_${sellerId}`, gstType);
+        }
+        const stored = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+        localStorage.setItem('sellerUser', JSON.stringify({
+          ...stored,
+          gstType: gstType,
+          gstNumber: step2.gstType === 'gstin' ? step2.gstNumber : (step2.gstEnrollmentId || step2.gstNumber),
+          gstEnrollmentId: step2.gstType === 'enrollment_id' ? step2.gstEnrollmentId : '',
+        }));
+      } catch {}
+
+      // Clean up onboarding steps from Local Storage on success
       localStorage.removeItem('onboarding_step_1');
       localStorage.removeItem('onboarding_step_2');
       localStorage.removeItem('onboarding_step_3');

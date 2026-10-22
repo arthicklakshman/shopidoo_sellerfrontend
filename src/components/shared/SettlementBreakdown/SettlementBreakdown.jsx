@@ -299,10 +299,19 @@ function useGatewaySettings() {
  * admin Settings > Payment Gateway Fee (%) and GST Rate (%). Change them
  * there and every seller's Wallet + Product Form updates automatically.
  */
-export default function SettlementBreakdown({ orderAmount, orderId, commission = 0, productGstRate = 0 }) {
+export default function SettlementBreakdown({ orderAmount, orderId, commission = 0, productGstRate = 0, isEnrollmentSeller: propIsEnrollmentSeller }) {
   const theme = useTheme();
   const { razorpayFeeRate, gstRate, tcsRate, activeGateway, loading, error } = useGatewaySettings();
   const [tcsExpanded, setTcsExpanded] = useState(false);
+
+  const isEnrollmentSeller = propIsEnrollmentSeller !== undefined ? propIsEnrollmentSeller : (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+      return u?.gstType === 'enrollment_id' || Boolean(u?.gstEnrollmentId && !u?.gstNumber);
+    } catch {
+      return false;
+    }
+  })();
 
   if (loading) {
     return (
@@ -322,7 +331,9 @@ export default function SettlementBreakdown({ orderAmount, orderId, commission =
     );
   }
 
-  const s = calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission, productGstRate, tcsRate);
+  const effectiveTcsRate = isEnrollmentSeller ? 0 : tcsRate;
+  const effectiveProductGstRate = isEnrollmentSeller ? 0 : productGstRate;
+  const s = calculateSettlement(orderAmount, razorpayFeeRate, gstRate, commission, effectiveProductGstRate, effectiveTcsRate);
 
    const gatewayLabel = activeGateway === 'cashfree' ? 'Cashfree' : 'Razorpay';
 
@@ -356,49 +367,51 @@ export default function SettlementBreakdown({ orderAmount, orderId, commission =
           </Box>
         ))}
 
-        <Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
-              <Typography variant="body2" color="text.secondary">{`TCS (${tcsRate}%)`}</Typography>
-              <IconButton
-                size="small"
-                onClick={() => setTcsExpanded((v) => !v)}
-                aria-label="Show how TCS is calculated"
-                sx={{ p: 0.25 }}
-              >
-                <ExpandMoreIcon
-                  fontSize="small"
-                  sx={{ transform: tcsExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
-                />
-              </IconButton>
+        {!isEnrollmentSeller && (
+          <Box>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+                <Typography variant="body2" color="text.secondary">{`TCS (${tcsRate}%)`}</Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setTcsExpanded((v) => !v)}
+                  aria-label="Show how TCS is calculated"
+                  sx={{ p: 0.25 }}
+                >
+                  <ExpandMoreIcon
+                    fontSize="small"
+                    sx={{ transform: tcsExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
+                  />
+                </IconButton>
+              </Box>
+              <Typography variant="body2" fontWeight={500} color={theme.palette.error.main}>
+                -{formatINR(s.tcs)}
+              </Typography>
             </Box>
-            <Typography variant="body2" fontWeight={500} color={theme.palette.error.main}>
-              -{formatINR(s.tcs)}
-            </Typography>
-          </Box>
 
-          <Collapse in={tcsExpanded}>
-            <Box sx={{ mt: 1, p: 1.25, borderRadius: 2, bgcolor: "action.hover", display: "flex", flexDirection: "column", gap: 0.5 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Order amount</Typography>
-                <Typography variant="caption">{formatINR(s.orderAmount)}</Typography>
+            <Collapse in={tcsExpanded}>
+              <Box sx={{ mt: 1, p: 1.25, borderRadius: 2, bgcolor: "action.hover", display: "flex", flexDirection: "column", gap: 0.5 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="caption" color="text.secondary">Order amount</Typography>
+                  <Typography variant="caption">{formatINR(s.orderAmount)}</Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="caption" color="text.secondary">Less: Product GST ({productGstRate}%)</Typography>
+                  <Typography variant="caption">-{formatINR(s.productGstDeduction)}</Typography>
+                </Box>
+                <Divider sx={{ my: 0.25 }} />
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="caption" color="text.secondary">Taxable base</Typography>
+                  <Typography variant="caption" fontWeight={600}>{formatINR(s.taxableBase)}</Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="caption" color="text.secondary">TCS = Taxable base × {tcsRate}%</Typography>
+                  <Typography variant="caption" fontWeight={600}>{formatINR(s.tcs)}</Typography>
+                </Box>
               </Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Less: Product GST ({productGstRate}%)</Typography>
-                <Typography variant="caption">-{formatINR(s.productGstDeduction)}</Typography>
-              </Box>
-              <Divider sx={{ my: 0.25 }} />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Taxable base</Typography>
-                <Typography variant="caption" fontWeight={600}>{formatINR(s.taxableBase)}</Typography>
-              </Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">TCS = Taxable base × {tcsRate}%</Typography>
-                <Typography variant="caption" fontWeight={600}>{formatINR(s.tcs)}</Typography>
-              </Box>
-            </Box>
-          </Collapse>
-        </Box>
+            </Collapse>
+          </Box>
+        )}
       </Box>
 
       <Divider sx={{ my: 1.5 }} />

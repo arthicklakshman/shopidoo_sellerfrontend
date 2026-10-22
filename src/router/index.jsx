@@ -12,7 +12,7 @@ const Maintenance = lazy(() => import('../pages/Maintenance/Maintenance'));
 const Settings = lazy(() => import('../pages/Settings/Setting'));
 
 
-const Login = lazy(() => import('../pages/Auth/Login'));
+import Login from '../pages/Auth/Login';
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const OnboardingEntry = lazy(() => import('../pages/Onboarding/OnboardingEntry'));
 const SellerOnboarding = lazy(() => import('../pages/Onboarding/SellerOnboarding'));
@@ -36,7 +36,7 @@ const SellerPolicies = lazy(() => import('../pages/SellerPolicies/SellerPolicies
 
 export const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth);
-  if (!authChecked) return null; // wait for the initial auth check to finish
+  if (!authChecked) return <PageLoader />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user && user.role !== 'seller') return <Navigate to="/login" replace />;
 
@@ -53,13 +53,17 @@ export const PrivateRoute = ({ children }) => {
 export const GuestRoute = ({ children }) => {
   const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth || {});
   const location = useLocation();
-  if (!authChecked) return null; // wait for the initial auth check to finish
 
   const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
 
   if (isAuthenticated && isAuthPath) {
+    if (!authChecked) return <PageLoader />;
     if (user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
     if (user?.seller_status === 'approved') return <Navigate to="/dashboard" replace />;
+    if (user?.seller_status === 'pending' || user?.seller_status === 'rejected') {
+      return <Navigate to="/onboarding/success" replace />;
+    }
+    return <Navigate to="/onboarding" replace />;
   }
 
   return children || null;

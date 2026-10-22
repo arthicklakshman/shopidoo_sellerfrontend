@@ -13,7 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
 import { sellerService } from '../../services/seller.service';
 import { getAssetUrl } from '../../utils/getAssetUrl';
@@ -354,7 +354,7 @@ const CommissionBadge = ({ price }) => {
   );
 };
 // ─── Compact per-variant Net Payout hint ──────────────────────────────────
-function VariantNetPayout({ price, gstRate }) {
+function VariantNetPayout({ price, gstRate, isEnrollmentSeller = false }) {
   const { commission, loading: commissionLoading } = useCommissionHint(price);
   const [rates, setRates] = useState(null);
   const [expanded, setExpanded] = useState(false);
@@ -381,13 +381,16 @@ function VariantNetPayout({ price, gstRate }) {
     );
   }
 
+  const effectiveTcsRate = isEnrollmentSeller ? 0 : rates.tcsRate;
+  const effectiveGstRate = isEnrollmentSeller ? 0 : (Number(gstRate) || 0);
+
   const s = calculateSettlement(
     numericPrice,
     rates.razorpayFeeRate,
     rates.gstRate,
     commission,
-    Number(gstRate) || 0,
-    rates.tcsRate
+    effectiveGstRate,
+    effectiveTcsRate
   );
 
   const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
@@ -424,10 +427,12 @@ function VariantNetPayout({ price, gstRate }) {
             <Typography variant="caption" color="text.secondary">Platform fee</Typography>
             <Typography variant="caption" color="error.main">-{fmt(s.commission)}</Typography>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.secondary">TCS ({rates.tcsRate}%)</Typography>
-            <Typography variant="caption" color="error.main">-{fmt(s.tcs)}</Typography>
-          </Box>
+          {!isEnrollmentSeller && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary">TCS ({rates.tcsRate}%)</Typography>
+              <Typography variant="caption" color="error.main">-{fmt(s.tcs)}</Typography>
+            </Box>
+          )}
         </Box>
       </Collapse>
     </Box>
@@ -446,32 +451,115 @@ const INDIAN_STATES = [
 
 const OTHER_CATEGORY = { id: 'other', name: 'Other (Specify Custom Category)' };
 
+export const isEnrollmentUser = (user) => {
+  if (!user || typeof user !== 'object') return false;
+  if (user.gstType === 'enrollment_id') return true;
+  if (Boolean(user.gstEnrollmentId)) return true;
+  if (user.gst_type === 'enrollment_id') return true;
+  if (Boolean(user.gst_enrollment_id)) return true;
+  const gstNum = String(user.gstNumber || user.gst_number || '').trim();
+  if (/^[0-9]{15,16}$/.test(gstNum)) return true;
+  return false;
+};
+
+export const getCachedSellerGstType = (sellerId) => {
+  try {
+    if (sellerId) {
+      const specific = localStorage.getItem(`seller_gst_type_${sellerId}`);
+      if (specific) return specific;
+    }
+    const general = localStorage.getItem('seller_gst_type');
+    if (general) return general;
+
+    const raw = localStorage.getItem('sellerUser');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (isEnrollmentUser(parsed)) return 'enrollment_id';
+      if (parsed.gstType) return parsed.gstType;
+    }
+
+    const rawStep2 = localStorage.getItem('onboarding_step_2');
+    if (rawStep2) {
+      const parsedStep2 = JSON.parse(rawStep2);
+      if (isEnrollmentUser(parsedStep2)) return 'enrollment_id';
+      if (parsedStep2.gstType) return parsedStep2.gstType;
+    }
+  } catch {}
+  return null;
+};
+
 const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const authUser = useSelector((state) => state.auth?.user);
 
-  const [shippingPreference, setShippingPreference] = useState(() => {
+  const [sellerProfile, setSellerProfile] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('sellerUser') || '{}')?.shippingPreference || 'platform';
+      const stored = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+      return { ...stored, ...(authUser || {}) };
     } catch {
-      return 'platform';
+      return authUser || {};
     }
   });
 
-  const [form, setForm] = useState(emptyForm);
+  const isEnrollmentSeller = useMemo(() => {
+    const cachedType = getCachedSellerGstType(authUser?.id || sellerProfile?.id);
+    if (cachedType === 'enrollment_id') return true;
+    if (isEnrollmentUser(authUser)) return true;
+    if (isEnrollmentUser(sellerProfile)) return true;
+    try {
+      const stored = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+      if (isEnrollmentUser(stored)) return true;
+    } catch {}
+    return false;
+  }, [authUser, sellerProfile]);
+
+  const isGstProfileResolved = useMemo(() => {
+    const cachedType = getCachedSellerGstType(authUser?.id || sellerProfile?.id);
+    if (cachedType) return true;
+    if (authUser?.gstType || authUser?.gstEnrollmentId || authUser?.gstNumber) return true;
+    if (sellerProfile?.gstType || sellerProfile?.gstEnrollmentId || sellerProfile?.gstNumber) return true;
+    try {
+      const stored = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+      if (stored?.gstType || stored?.gstEnrollmentId || stored?.gstNumber) return true;
+    } catch {}
+    return false;
+  }, [authUser, sellerProfile]);
+
+  const [shippingPreference, setShippingPreference] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sellerUser') || '{}')?.shippingPreference || authUser?.shippingPreference || 'platform';
+    } catch {
+      return authUser?.shippingPreference || 'platform';
+    }
+  });
+
+  const [form, setForm] = useState(() => {
+    const cachedType = getCachedSellerGstType(authUser?.id);
+    const initialIsEnrollment = cachedType === 'enrollment_id' || isEnrollmentUser(authUser);
+    return initialIsEnrollment ? { ...emptyForm, gst_rate: 0 } : emptyForm;
+  });
   const [productTypeId, setProductTypeId] = useState('');
   const resolvedProductTypeRef = useState({ done: false })[0];
 
   useEffect(() => {
     import('../../services/api').then(({ default: api }) => {
       try {
-        const sellerId = JSON.parse(localStorage.getItem('sellerUser') || '{}')?.id;
+        const sellerId = authUser?.id || JSON.parse(localStorage.getItem('sellerUser') || '{}')?.id;
         if (sellerId) {
           api.get(`/seller/${sellerId}`).then(({ data }) => {
             if (data.success && data.data) {
               setShippingPreference(data.data.shippingPreference || 'platform');
+              setSellerProfile(data.data);
+              const gstType = data.data.gstType || (isEnrollmentUser(data.data) ? 'enrollment_id' : 'gstin');
+              try {
+                localStorage.setItem('seller_gst_type', gstType);
+                localStorage.setItem(`seller_gst_type_${sellerId}`, gstType);
+                const current = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+                localStorage.setItem('sellerUser', JSON.stringify({ ...current, ...data.data, gstType }));
+              } catch {}
             }
           }).catch(err => {
             console.error('Failed to fetch seller profile for shipping preference', err);
@@ -481,7 +569,13 @@ const ProductForm = () => {
         console.error(e);
       }
     });
-  }, []);
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (isEnrollmentSeller) {
+      setForm((prev) => (prev.gst_rate === 0 ? prev : { ...prev, gst_rate: 0 }));
+    }
+  }, [isEnrollmentSeller]);
 
   const [categories, setCategories] = useState([]);
   const [categoryAttributes, setCategoryAttributes] = useState([]);
@@ -646,12 +740,34 @@ const ProductForm = () => {
               formattedVariantAttrs[k] = Array.from(reconstructedVariantAttrs[k]);
             });
             setVariantAttributeValues(formattedVariantAttrs);
+          } else {
+            setVariants([]);
+            setColorGroups([]);
+            setVariantAttributeValues({});
           }
           setCustomSpecs((p.specifications || []).filter(spec => spec.is_custom || (!spec.attribute_id && !spec.is_variant)));
           setShippingRules(p.shipping_rules || []);
           setImages(p.images || []);
         }).finally(() => setLoading(false))
       );
+    } else {
+      const cachedType = getCachedSellerGstType(authUser?.id);
+      const isEnroll = cachedType === 'enrollment_id' || isEnrollmentUser(authUser);
+      setForm(isEnroll ? { ...emptyForm, gst_rate: 0 } : emptyForm);
+      setProductTypeId('');
+      setAttributeValues({});
+      setVariantAttributeValues({});
+      setVariants([]);
+      setColorGroups([]);
+      setCustomSpecs([]);
+      setShippingRules([]);
+      setImages([]);
+      setNewFiles([]);
+      setColorFiles({});
+      setCategoryAttributes([]);
+      setError('');
+      setNameError('');
+      setLoading(false);
     }
   }, [id]);
 
@@ -779,7 +895,10 @@ const ProductForm = () => {
 
   const generateVariants = () => {
     const variantAttrs = categoryAttributes.filter(a => a.is_variant);
-    if (!variantAttrs.length) return;
+    if (!variantAttrs.length) {
+      if (variants.length > 0) setVariants([]);
+      return;
+    }
     const optionsArray = variantAttrs.map(attr => {
       const values = variantAttributeValues[attr.name] || [];
       return Array.isArray(values) && values.length > 0 ? values.map(v => ({ [attr.name]: v })) : [];
@@ -1312,7 +1431,10 @@ const ProductForm = () => {
    const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     const flattenedFashionVariants = buildFashionVariants();
-    const submittedVariants = isFashionVariantCategory ? flattenedFashionVariants : variants;
+    const hasVariantAttributesConfigured = categoryAttributes.some(a => a.is_variant);
+    const submittedVariants = isFashionVariantCategory
+      ? (colorGroups.length > 0 ? flattenedFashionVariants : [])
+      : (hasVariantAttributesConfigured && variants.length > 0 ? variants : []);
     const totalColorFiles = Object.values(colorFiles).reduce((sum, f) => sum + f.length, 0);
 
     // Generic (non-fashion) variants can carry their own image_url, uploaded
@@ -1397,7 +1519,7 @@ const ProductForm = () => {
       return;
     }
     if (!form.hsn_code?.trim()) { setError('Please enter an HSN Code.'); return; }
-    if (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) { setError('Please select a GST Rate.'); return; }
+    if (!isEnrollmentSeller && (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined)) { setError('Please select a GST Rate.'); return; }
     if (!form.weight || parseFloat(form.weight) <= 0) { setError('Please enter a valid weight greater than 0.'); return; }
     if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
     if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
@@ -1447,10 +1569,10 @@ const ProductForm = () => {
         delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
         free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
         express_delivery_charge: shippingPreference === 'platform' ? null : (form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null),
-        shipping_rules: shippingPreference === 'platform' ? [] : shippingRules.filter(r => r.state),
+        shipping_rules: (shippingPreference === 'platform' || isEnrollmentSeller) ? [] : shippingRules.filter(r => r.state),
         specifications: buildSpecifications(),
         hsn_code: form.hsn_code?.trim() || null,
-        gst_rate: (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate,
+        gst_rate: isEnrollmentSeller ? 0 : ((form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate),
         custom_category: form.custom_category?.trim() || null,
         custom_subcategory: form.custom_subcategory?.trim() || null,
         custom_product_type: form.custom_product_type?.trim() || null,
@@ -1465,8 +1587,8 @@ const ProductForm = () => {
           stock_quantity: parseInt(v.stock_quantity) || 0,
           custom_category: form.custom_category?.trim() || null,
           hsn_code: form.hsn_code?.trim() || null,
-          gst_rate: (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate,
-        })) : undefined,
+          gst_rate: isEnrollmentSeller ? 0 : ((form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate),
+        })) : [],
       };
 
       let productId = id;
@@ -1573,7 +1695,7 @@ const ProductForm = () => {
 
                   <Grid container spacing={2}>
                     {/* ── GST & HSN Fields ── */}
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={isEnrollmentSeller ? 12 : 6}>
                       <TextField
                         label="HSN Code"
                         value={form.hsn_code}
@@ -1583,25 +1705,27 @@ const ProductForm = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth required>
-                        <InputLabel>GST Rate (%)</InputLabel>
-                        <Select
-                          value={form.gst_rate}
-                          label="GST Rate (%)"
-                          onChange={handleChange('gst_rate')}
-                          MenuProps={menuPropsDownward}
-                        >
-                          <MenuItem value="">Select GST Rate</MenuItem>
-                          <MenuItem value={0}>0%</MenuItem>
-                          <MenuItem value={3}>3%</MenuItem>
-                          <MenuItem value={5}>5%</MenuItem>
-                          <MenuItem value={12}>12%</MenuItem>
-                          <MenuItem value={18}>18%</MenuItem>
-                          <MenuItem value={28}>28%</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
+                    {!isEnrollmentSeller && isGstProfileResolved && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth required>
+                          <InputLabel>GST Rate (%)</InputLabel>
+                          <Select
+                            value={form.gst_rate}
+                            label="GST Rate (%)"
+                            onChange={handleChange('gst_rate')}
+                            MenuProps={menuPropsDownward}
+                          >
+                            <MenuItem value="">Select GST Rate</MenuItem>
+                            <MenuItem value={0}>0%</MenuItem>
+                            <MenuItem value={3}>3%</MenuItem>
+                            <MenuItem value={5}>5%</MenuItem>
+                            <MenuItem value={12}>12%</MenuItem>
+                            <MenuItem value={18}>18%</MenuItem>
+                            <MenuItem value={28}>28%</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
 
                     {/* ── Selling Price + commission hint ── */}
                     <Grid item xs={12} sm={6}>
@@ -1635,7 +1759,12 @@ const ProductForm = () => {
                     </Grid>
                     {form.price && Number(form.price) > 0 && (
                       <Grid item xs={12}>
-                        <SettlementBreakdown orderAmount={Number(form.price)} commission={commission ?? 0} productGstRate={Number(form.gst_rate) || 0} />
+                        <SettlementBreakdown
+                          orderAmount={Number(form.price)}
+                          commission={commission ?? 0}
+                          productGstRate={isEnrollmentSeller ? 0 : (Number(form.gst_rate) || 0)}
+                          isEnrollmentSeller={isEnrollmentSeller}
+                        />
                       </Grid>
                     )}
 
@@ -2076,7 +2205,7 @@ const ProductForm = () => {
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
-                                                <VariantNetPayout price={sizeRow.price} gstRate={form.gst_rate} />
+                                                <VariantNetPayout price={sizeRow.price} gstRate={isEnrollmentSeller ? 0 : form.gst_rate} isEnrollmentSeller={isEnrollmentSeller} />
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
@@ -2153,7 +2282,7 @@ const ProductForm = () => {
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
-                                      <VariantNetPayout price={variant.price} gstRate={form.gst_rate} />
+                                      <VariantNetPayout price={variant.price} gstRate={isEnrollmentSeller ? 0 : form.gst_rate} isEnrollmentSeller={isEnrollmentSeller} />
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
@@ -2254,8 +2383,8 @@ const ProductForm = () => {
                       </Grid>
                     )}
 
-                    {/* State-wise Shipping Rules */}
-                    {form.delivery_type !== 'free' && (
+                    {/* State-wise Shipping Rules (only for GSTIN sellers; Enrollment ID sellers use single common charge) */}
+                    {form.delivery_type !== 'free' && !isEnrollmentSeller && (
                       <Box sx={{ mt: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                           <Typography variant="body2" fontWeight={700}>State-wise Delivery Charges</Typography>

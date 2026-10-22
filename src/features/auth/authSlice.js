@@ -3,12 +3,55 @@ import { authService } from '../../services/auth.service';
 
 const getUserFromStorage = () => { try { return JSON.parse(localStorage.getItem('sellerUser')); } catch { return null; } };
 
+export const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    if (err.name === 'QuotaExceededError' || err.code === 22) {
+      try {
+        const transientKeys = [
+          'onboarding_step_5',
+          'onboarding_step_6',
+          'onboarding_step_5_files',
+          'onboarding_step_6_files',
+        ];
+        transientKeys.forEach((k) => localStorage.removeItem(k));
+        localStorage.setItem(key, value);
+      } catch (retryErr) {
+        if (key === 'sellerUser') {
+          try {
+            const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+            const minimalUser = {
+              id: parsed?.id,
+              name: parsed?.name,
+              email: parsed?.email,
+              role: parsed?.role,
+              seller_status: parsed?.seller_status,
+            };
+            localStorage.setItem(key, JSON.stringify(minimalUser));
+          } catch {}
+        }
+      }
+    }
+  }
+};
+
+const cacheGstType = (user) => {
+  if (!user) return;
+  const gstType = user.gstType || (user.gstEnrollmentId ? 'enrollment_id' : null);
+  if (gstType) {
+    safeSetItem('seller_gst_type', gstType);
+    if (user.id) safeSetItem(`seller_gst_type_${user.id}`, gstType);
+  }
+};
+
 const handleAuthFulfilled = (state, action) => {
   state.loading = false;
   state.user = action.payload.user;
   state.isAuthenticated = true;
-  localStorage.setItem('sellerAccessToken', action.payload.accessToken);
-  localStorage.setItem('sellerUser', JSON.stringify(action.payload.user));
+  safeSetItem('sellerAccessToken', action.payload.accessToken);
+  safeSetItem('sellerUser', JSON.stringify(action.payload.user));
+  cacheGstType(action.payload.user);
 };
 
 export const googleLoginSeller = createAsyncThunk('auth/googleLogin', async (credential, { rejectWithValue }) => {
@@ -55,7 +98,7 @@ const authSlice = createSlice({
     isAuthenticated: !!localStorage.getItem('sellerAccessToken'),
     loading: false,
     error: null,
-    authChecked: false, // NEW: tells routes whether the initial auth check has finished
+    authChecked: !localStorage.getItem('sellerAccessToken'), // If no token, auth is already confirmed checked
   },
   reducers: { 
     clearError: (state) => { state.error = null; },
@@ -65,9 +108,10 @@ const authSlice = createSlice({
       state.user = user;
       state.isAuthenticated = true;
       if (token) {
-        localStorage.setItem('sellerAccessToken', token);
+        safeSetItem('sellerAccessToken', token);
       }
-      localStorage.setItem('sellerUser', JSON.stringify(user));
+      safeSetItem('sellerUser', JSON.stringify(user));
+      cacheGstType(user);
     }
   },
   extraReducers: (builder) => {
@@ -83,18 +127,21 @@ const authSlice = createSlice({
       .addCase(registerSeller.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(logoutSeller.fulfilled, (state) => {
         state.user = null; state.isAuthenticated = false;
-      localStorage.removeItem('sellerAccessToken'); localStorage.removeItem('sellerUser');
+        localStorage.removeItem('sellerAccessToken');
+        localStorage.removeItem('sellerUser');
+        localStorage.removeItem('seller_gst_type');
       })
       .addCase(fetchMe.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
-        state.authChecked = true; // NEW
-        localStorage.setItem('sellerUser', JSON.stringify(action.payload));
+        state.authChecked = true;
+        safeSetItem('sellerUser', JSON.stringify(action.payload));
+        cacheGstType(action.payload);
       })
       .addCase(fetchMe.rejected, (state) => {
         state.user = null; state.isAuthenticated = false;
-        state.authChecked = true; // NEW
-           localStorage.removeItem('sellerAccessToken');
+        state.authChecked = true;
+        localStorage.removeItem('sellerAccessToken');
       });
       
   },

@@ -287,7 +287,12 @@ export default function StoreSetup({ onBack, onNext }) {
       storeLogo: getSafeFile(formData.storeLogo),
       storeBanner: getSafeFile(formData.storeBanner),
     };
-    localStorage.setItem("onboarding_step_6", JSON.stringify(safeStorageData));
+
+    try {
+      localStorage.setItem("onboarding_step_6", JSON.stringify(safeStorageData));
+    } catch (e) {
+      console.warn("localStorage quota exceeded for store setup", e);
+    }
 
     try {
       sessionStorage.setItem("onboarding_step_6_files", JSON.stringify({

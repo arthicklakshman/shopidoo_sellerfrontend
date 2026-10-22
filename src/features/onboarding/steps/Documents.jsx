@@ -168,7 +168,12 @@ export default function Documents({ onBack, onNext }) {
       bankProof: getSafeDoc(documents.bankProof),
       gstProof: getSafeDoc(documents.gstProof),
     };
-    localStorage.setItem('onboarding_step_5', JSON.stringify(safeStorageData));
+
+    try {
+      localStorage.setItem('onboarding_step_5', JSON.stringify(safeStorageData));
+    } catch (e) {
+      console.warn('localStorage quota exceeded for documents', e);
+    }
 
     try {
       sessionStorage.setItem('onboarding_step_5_files', JSON.stringify(documents));

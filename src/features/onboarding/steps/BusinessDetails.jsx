@@ -258,6 +258,26 @@ export default function BusinessDetails({ onBack, onNext }) {
         pincode: formData.pincode,
       });
 
+      try {
+        localStorage.setItem("seller_gst_type", formData.gstType);
+        if (sellerId) localStorage.setItem(`seller_gst_type_${sellerId}`, formData.gstType);
+        const stored = JSON.parse(localStorage.getItem("sellerUser") || "{}");
+        localStorage.setItem("sellerUser", JSON.stringify({
+          ...stored,
+          gstType: formData.gstType,
+          gstNumber:
+            formData.gstType === "gstin"
+              ? formData.gstNumber
+              : (formData.gstEnrollmentId || formData.gstNumber),
+          gstEnrollmentId:
+            formData.gstType === "enrollment_id"
+              ? formData.gstEnrollmentId
+              : "",
+        }));
+      } catch (cacheErr) {
+        console.warn("Could not cache seller GST details in localStorage", cacheErr);
+      }
+
       onNext();
     } catch (err) {
       // 🌟 ROBUST ERROR HANDLING
