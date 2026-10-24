@@ -9,17 +9,17 @@ export const useOtp = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isMobileVerified, setIsMobileVerified] = useState(false);
 
-  // 🌟 Accept actionType from the UI component
-  const sendOtp = async (type, targetValue, actionType = 'register') => {
+  // 🌟 Accept actionType and role from the UI component
+  const sendOtp = async (type, targetValue, actionType = 'register', role = 'seller') => {
     setOtpError('');
     try {
       if (type === 'email') {
-        await onboardingService.sendEmailOtp(targetValue, actionType);
+        await onboardingService.sendEmailOtp(targetValue, actionType, role);
       } else {
-        await onboardingService.sendMobileOtp(targetValue, actionType);
+        await onboardingService.sendMobileOtp(targetValue, actionType, role);
       }
-      // Store the actionType so the resend function knows what to do
-      setOtpModal({ isOpen: true, type, targetValue, actionType });
+      // Store the actionType and role so the resend function knows what to do
+      setOtpModal({ isOpen: true, type, targetValue, actionType, role });
     } catch (error) {
       throw error;
     }
@@ -34,7 +34,7 @@ export const useOtp = () => {
       if (otpModal.type === 'mobile') setIsMobileVerified(true);
       
       // Reset state on success
-      setOtpModal({ isOpen: false, type: '', targetValue: '', actionType: 'register' });
+      setOtpModal({ isOpen: false, type: '', targetValue: '', actionType: 'register', role: 'seller' });
     } catch (error) {
       setOtpError(error.response?.data?.message || 'Invalid or expired OTP.');
       throw error;
@@ -46,11 +46,11 @@ export const useOtp = () => {
   const resendOtp = async () => {
     setOtpError('');
     try {
-      // 🌟 Pass the saved actionType back to the service
+      // 🌟 Pass the saved actionType and role back to the service
       if (otpModal.type === 'email') {
-        await onboardingService.sendEmailOtp(otpModal.targetValue, otpModal.actionType);
+        await onboardingService.sendEmailOtp(otpModal.targetValue, otpModal.actionType, otpModal.role || 'seller');
       } else {
-        await onboardingService.sendMobileOtp(otpModal.targetValue, otpModal.actionType);
+        await onboardingService.sendMobileOtp(otpModal.targetValue, otpModal.actionType, otpModal.role || 'seller');
       }
     } catch (error) {
       setOtpError(error.response?.data?.message || 'Failed to resend OTP.');

@@ -209,9 +209,9 @@ export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
     try {
       if (isMobile) {
         // 'register' makes sure the correct MSG91 DLT template is used
-        await onboardingService.sendMobileOtp(value, 'register');
+        await onboardingService.sendMobileOtp(value, 'register', 'seller');
       } else {
-        await onboardingService.sendEmailOtp(value, 'register');
+        await onboardingService.sendEmailOtp(value, 'register', 'seller');
       }
       // Only open the OTP window if the code was sent
       setOtpModal({ isOpen: true, type, targetValue: value });
@@ -259,12 +259,12 @@ export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
     try {
       if (otpModal.type === 'email') {
         // 🌟 Resend via Email, ensuring the 'register' type is passed again
-        await onboardingService.sendEmailOtp(otpModal.targetValue, 'register');
+        await onboardingService.sendEmailOtp(otpModal.targetValue, 'register', 'seller');
         console.log("OTP successfully resent to email:", otpModal.targetValue);
         
       } else if (otpModal.type === 'mobile') {
         // 🌟 Hooked up the Mobile SMS Resend Logic using MSG91!
-        await onboardingService.sendMobileOtp(otpModal.targetValue, 'register');
+        await onboardingService.sendMobileOtp(otpModal.targetValue, 'register', 'seller');
         console.log("OTP successfully resent to mobile:", otpModal.targetValue);
       }
     } catch (error) {

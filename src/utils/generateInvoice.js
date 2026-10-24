@@ -146,11 +146,23 @@ function getSellerProfile(data, isSeller) {
     s.pincode || s.pin_code || '',
   ].filter(Boolean).join(', ');
 
+  let localSeller = {};
+  try {
+    localSeller = JSON.parse(localStorage.getItem('sellerUser') || '{}');
+  } catch (_) {}
+  const gstType = s.gstType || (isSeller ? localSeller.gstType : null);
+  const gstEnrollmentId = s.gstEnrollmentId || (isSeller ? localSeller.gstEnrollmentId : null);
+  const gstNumber = s.gstNumber || s.gst_number || s.gst || (isSeller ? (localSeller.gstNumber || localSeller.gst) : '');
+  const isEnrollmentSeller = gstType === 'enrollment_id' || Boolean(gstEnrollmentId && !gstNumber);
+
   return {
     name: s.storeName || s.businessName || s.business_name || s.name || (isSeller ? '' : data?.seller) || 'Seller',
     address: addrString(s.address || s.gst_address) || structuredAddr,
     pan: s.panNumber || s.pan_number || s.pan || '',
-    gst: s.gstNumber || s.gst_number || s.gst || '',
+    gst: gstNumber,
+    gstEnrollmentId: gstEnrollmentId || '',
+    gstType: gstType || 'gstin',
+    isEnrollmentSeller,
     state: s.state || s.gst_state || '',
     signatureUrl: s.signatureImage || s.signature_url || s.signatureUrl || null,
   };
@@ -315,7 +327,11 @@ function drawBoxes(doc, startY, seller, od) {
   selLines.slice(0, 2).forEach(l => { txt(doc, l, lX + 3, sy, { color: GREY_TX, size: 7 }); sy += 4; });
   if (sy < startY + 25) sy = startY + 25;
   if (seller.pan) { txt(doc, `PAN : ${seller.pan}`, lX + 3, sy, { color: GREY_TX, size: 7 }); sy += 4; }
-  if (seller.gst) { txt(doc, `GST : ${seller.gst}`, lX + 3, sy, { color: GREY_TX, size: 7 }); }
+  if (seller.isEnrollmentSeller && seller.gstEnrollmentId) {
+    txt(doc, `GST Enrollment ID : ${seller.gstEnrollmentId}`, lX + 3, sy, { color: GREY_TX, size: 7 });
+  } else if (seller.gst) {
+    txt(doc, `GST : ${seller.gst}`, lX + 3, sy, { color: GREY_TX, size: 7 });
+  }
 
   box(doc, rX, startY, COL_W, bH);
   txt(doc, 'Billing Address', rX + 3, startY + 5, { color: GREY_TX, size: 7 });
@@ -370,9 +386,74 @@ function drawBoxes(doc, startY, seller, od) {
   return row3Y + smH + gap;
 }
 
-function drawItemsTable(doc, y, items, shippingAmount = 0) {
+function drawItemsTable(doc, y, items, shippingAmount = 0, isEnrollmentSeller = false) {
   // Total Amount per line is the product price only (post-coupon). Shipment is
   // order-level, so it gets its own summary row below the items instead of a column.
+  if (isEnrollmentSeller) {
+    const rows = items.map((item, i) => [
+      i + 1,
+      // HSN shown on second line under product name
+      item.name + (item.hsn ? `\nHSN Code: ${item.hsn}` : ''),
+      fmtRs(item.unitPrice),
+      fmtRs(item.discount),
+      item.qty,
+      fmtRs(item.total),
+    ]);
+
+    const productTotal = items.reduce((s, i) => s + i.total, 0);
+    const grandTotal = parseFloat((productTotal + shippingAmount).toFixed(2));
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Sl.\nNo', 'Description', 'Unit\nPrice', 'Discount', 'Qty', 'Total\nAmount']],
+      body: rows,
+      foot: [
+        ['', 'Shipment:', '', '', '', { content: fmtRs(shippingAmount), styles: { halign: 'center' } }],
+        ['', '', '', '', 'TOTAL:', { content: fmtRs(grandTotal), styles: { halign: 'center' } }],
+      ],
+      theme: 'grid',
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 2.5,
+        textColor: DARK,
+        lineColor: [180, 180, 180],
+        lineWidth: 0.3,
+        overflow: 'linebreak',
+        font: 'helvetica',
+      },
+      headStyles: {
+        fillColor: WHITE,
+        textColor: DARK,
+        fontStyle: 'bold',
+        fontSize: 7,
+        halign: 'center',
+        lineColor: [150, 150, 150],
+        lineWidth: 0.4,
+      },
+      footStyles: {
+        fillColor: [235, 235, 235],
+        textColor: DARK,
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      alternateRowStyles: {
+        fillColor: [252, 252, 252],
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { cellWidth: 79 },
+        2: { halign: 'right', cellWidth: 25 },
+        3: { halign: 'right', cellWidth: 22 },
+        4: { halign: 'center', cellWidth: 16 },
+        5: { halign: 'center', cellWidth: 32 },
+      },
+      margin: { left: MARGIN, right: MARGIN },
+    });
+
+    return doc.lastAutoTable.finalY + 4;
+  }
+
+  // Standard GSTIN layout (9 columns)
   const rows = items.map((item, i) => [
     i + 1,
     // HSN shown on second line under product name
@@ -544,7 +625,7 @@ export async function generateInvoice(data, isSeller = false) {
 
   let y = drawHeader(doc);
   y = drawBoxes(doc, y, seller, orderData);
-  y = drawItemsTable(doc, y, items, orderData.shippingAmount);
+  y = drawItemsTable(doc, y, items, orderData.shippingAmount, seller.isEnrollmentSeller);
   y = await drawFooter(doc, y, items, seller, orderData.shippingAmount);
   drawNotice(doc, y);
 

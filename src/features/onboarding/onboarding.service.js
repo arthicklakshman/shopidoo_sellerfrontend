@@ -8,12 +8,12 @@ const onboardingService = {
   /**
    * OTP VERIFICATION (Email)
    */
-sendEmailOtp: async (email, type) => {
-    return await api.post(`${API_BASE_URL}/send-email-otp`, { email, type });
+  sendEmailOtp: async (email, type = 'register', role = 'seller') => {
+    return await api.post(`${API_BASE_URL}/send-email-otp`, { email, type, role });
   },
   
-  sendMobileOtp: async (mobile, type) => {
-    return await api.post(`${API_BASE_URL}/send-email-otp`, { mobile, type });
+  sendMobileOtp: async (mobile, type = 'register', role = 'seller') => {
+    return await api.post(`${API_BASE_URL}/send-email-otp`, { mobile, type, role });
   },
 
   /**
