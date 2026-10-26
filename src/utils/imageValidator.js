@@ -85,37 +85,35 @@ export const validateImage = (file, imageType) => {
 
       const { width, height } = img;
 
-      // Check minimums
+       const wrongSizeMsg = rules.aspectRatio
+        ? `Wrong banner size. Please upload a ${rules.minWidth}×${rules.minHeight}px banner (yours is ${width}×${height}px).`
+        : null;
+
+      // Shape check first, so the seller sees the exact size to use
+      if (rules.aspectRatio) {
+        const ratioDifference = Math.abs(width / height - rules.aspectRatio);
+        if (ratioDifference > 0.05) return reject(wrongSizeMsg);
+      }
+
       if (width < rules.minWidth || height < rules.minHeight) {
         return reject(
+           wrongSizeMsg ||
           `Image too small. Minimum resolution is ${rules.minWidth}x${rules.minHeight}px (Uploaded: ${width}x${height}px).`,
         );
       }
 
-      // Check maximums
+     
       if (width > rules.maxWidth || height > rules.maxHeight) {
         return reject(
           `Image too large. Maximum resolution is ${rules.maxWidth}x${rules.maxHeight}px (Uploaded: ${width}x${height}px).`,
         );
       }
 
-      // Check strict square requirement
+
       if (rules.requireSquare && width !== height) {
         return reject(
           `Image must be a perfect square (1:1 aspect ratio). Uploaded image is ${width}x${height}px.`,
         );
-      }
-
-      // Check aspect ratio with a 0.05 tolerance margin
-      if (rules.aspectRatio) {
-        const currentRatio = width / height;
-        const ratioDifference = Math.abs(currentRatio - rules.aspectRatio);
-
-        if (ratioDifference > 0.05) {
-          return reject(
-            `Incorrect image shape. Please upload an image matching the required aspect ratio of ${rules.aspectRatio.toFixed(2)}.`,
-          );
-        }
       }
 
       resolve(file);
