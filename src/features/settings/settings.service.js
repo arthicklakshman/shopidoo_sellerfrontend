@@ -77,15 +77,15 @@ export const updatePickupAddressAPI = async (form) => {
     form.city ? form.city.trim() : '',
   ].filter(Boolean);
   let pickupAddr = parts.join(', ');
-  if (form.state) pickupAddr += `, ${form.state.replace(/_/g, ' ').toUpperCase()}`;
+  if (form.state) pickupAddr += `, ${form.state.trim()}`;
   if (form.zip) pickupAddr += ` - ${form.zip.trim()}`;
 
   const { data } = await api.put(`${sellerPath()}/business`, {
-    addressLine1: form.address1,
-    addressLine2: form.address2,
-    city: form.city,
-    state: form.state,
-    pincode: form.zip,
+    addressLine1: form.address1 ? form.address1.trim() : '',
+    addressLine2: form.address2 ? form.address2.trim() : '',
+    city: form.city ? form.city.trim() : '',
+    state: form.state ? form.state.trim() : '',
+    pincode: form.zip ? form.zip.trim() : '',
     pickupAddress: pickupAddr,
   });
   return data;
