@@ -5,6 +5,7 @@ import {
   Typography,
   Button,
   Table,
+  TableContainer,
   TableHead,
   TableRow,
   TableCell,
@@ -24,6 +25,7 @@ import {
   MenuItem,
 } from "@mui/material";
 
+import { useTheme, useMediaQuery } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -36,6 +38,7 @@ import { validateImage, IMAGE_RULES } from "../../utils/imageValidator";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const STATIC_BASE = API_URL.replace(/\/api.*$/, "").replace(/\/+$/, "");
+
 
 const BTN_STYLE = {
   height: 38,
@@ -97,6 +100,8 @@ const BannerPreviewImage = ({ src, alt }) => {
 
 const APPROVAL_COLOR = { pending: "warning", approved: "success", rejected: "error" };
 const SellerCMS = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState("");
@@ -300,9 +305,9 @@ const SellerCMS = () => {
   const activeBanners = banners.filter((b) => b.status === "active").length;
 
   return (
-    <Box p={3} sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
+<Box p={{ xs: 0, md: 3 }} sx={{ bgcolor: "background.default", minWidth: 0 }}>
 
-      <Typography variant="h4" fontWeight={700} color="text.primary">
+     <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.6rem', md: '2.125rem' } }}> 
         CMS Management
       </Typography>
       <Typography color="text.secondary" mb={3}>
@@ -324,8 +329,15 @@ const SellerCMS = () => {
         </Grid>
       </Grid>
 
-      <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Card sx={{ p: { xs: 2, md: 3 }, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+        <Box
+  display="flex"
+  flexDirection={{ xs: "column", sm: "row" }}
+  justifyContent="space-between"
+  alignItems={{ xs: "stretch", sm: "center" }}
+  gap={2}
+  mb={2}
+>
           <Typography variant="h6" fontWeight={700} color="text.primary">Promotional Banners</Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} sx={BTN_STYLE}>
             Add Banner
@@ -343,7 +355,8 @@ const SellerCMS = () => {
             </Button>
           </Box>
         ) : (
-          <Table>
+  <TableContainer sx={{ overflowX: "auto" }}>
+    <Table sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700, color: "text.secondary" }}>Preview</TableCell>
@@ -433,6 +446,7 @@ const SellerCMS = () => {
               ))}
             </TableBody>
           </Table>
+        </TableContainer>
         )}
       </Card>
 
