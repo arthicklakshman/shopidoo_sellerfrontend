@@ -114,7 +114,7 @@ const SummaryCard = ({ title, value, icon: Icon, tint }) => (
   </Card>
 );
 
-const TicketCard = ({ ticket, onOpen, onDelete, deleting }) => (
+const TicketCard = ({ ticket, onOpen }) => (
   <Card
     variant="outlined"
     onClick={() => onOpen(ticket)}
@@ -151,22 +151,7 @@ const TicketCard = ({ ticket, onOpen, onDelete, deleting }) => (
           <Typography color="text.secondary" sx={{ textAlign: { xs: 'left', md: 'right' } }}>
             Updated: {ticket.updated_at ? formatDate(ticket.updated_at) : 'N/A'}
           </Typography>
-          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: 1.5 }}>
-            <Button
-              color="error"
-              variant="text"
-              size="small"
-              startIcon={<DeleteOutlineRoundedIcon />}
-              disabled={deleting}
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete(ticket);
-              }}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Delete
-            </Button>
-          </Box>
+
         </Box>
       </Box>
     </CardContent>
@@ -407,16 +392,14 @@ const Support = () => {
           ) : (
             <Stack spacing={2}>
               {tickets.map((ticket) => (
-                <TicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  deleting={deletingTicketId === ticket.id}
-                  onOpen={(value) => {
-                    setSelectedTicket(value);
-                    setDetailsOpen(true);
-                  }}
-                  onDelete={openDeleteDialog}
-                />
+               <TicketCard
+  key={ticket.id}
+  ticket={ticket}
+  onOpen={(value) => {
+    setSelectedTicket(value);
+    setDetailsOpen(true);
+  }}
+/>
               ))}
             </Stack>
           )}
@@ -617,17 +600,7 @@ const Support = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          {selectedTicket && (
-            <Button
-              color="error"
-              startIcon={<DeleteOutlineRoundedIcon />}
-              onClick={() => openDeleteDialog(selectedTicket)}
-              disabled={deletingTicketId === selectedTicket.id}
-              sx={{ mr: 'auto' }}
-            >
-              Delete Ticket
-            </Button>
-          )}
+
          <Button onClick={() => { setDetailsOpen(false); setNewMessage(''); }}>Close</Button> 
         </DialogActions>
       </Dialog>

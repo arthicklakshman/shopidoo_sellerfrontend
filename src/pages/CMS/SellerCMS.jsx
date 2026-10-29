@@ -5,6 +5,7 @@ import {
   Typography,
   Button,
   Table,
+  TableContainer,
   TableHead,
   TableRow,
   TableCell,
@@ -24,6 +25,7 @@ import {
   MenuItem,
 } from "@mui/material";
 
+import { useTheme, useMediaQuery } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -36,6 +38,7 @@ import { validateImage, IMAGE_RULES } from "../../utils/imageValidator";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const STATIC_BASE = API_URL.replace(/\/api.*$/, "").replace(/\/+$/, "");
+
 
 const BTN_STYLE = {
   height: 38,
@@ -97,6 +100,8 @@ const BannerPreviewImage = ({ src, alt }) => {
 
 const APPROVAL_COLOR = { pending: "warning", approved: "success", rejected: "error" };
 const SellerCMS = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState("");
@@ -195,11 +200,11 @@ const SellerCMS = () => {
     setOpen(true);
   };
 
-  // Clear the image if the user changes the location to prevent ratio mismatches
-    const handleLocationChange = (e) => {
+ const handleLocationChange = (e) => {
     const newLocation = e.target.value;
     setForm({ ...form, location: newLocation });
     setSelectedFile(null);
+
     setBannerError("");
     if (editingBanner && editingBanner.location === newLocation) {
       setPreviewUrl(getImageUrl(editingBanner.image));
@@ -236,10 +241,12 @@ const SellerCMS = () => {
     if (!form.title.trim()) { setSaveError("Title is required."); return; }
     if (!form.location.trim()) { setSaveError("Location is required."); return; }
     if (!editingBanner && !selectedFile) { setSaveError("Please upload a banner image."); return; }
-    if (editingBanner && editingBanner.location !== form.location && !selectedFile) {
+
+     if (editingBanner && editingBanner.location !== form.location && !selectedFile) {
       setSaveError("You changed the location, so please upload a new banner image in the correct size.");
       return;
      }
+
     if (!editingBanner || editingBanner.location !== form.location) {
       if (form.location === "store_top" || form.location === "top_of_second_image") {
         const locationBanners = banners.filter((b) => b.location === form.location);
@@ -250,7 +257,9 @@ const SellerCMS = () => {
       }
     }
 
-      try {
+    try {
+     
+
       const formData = new FormData();
       formData.append("title", form.title.trim());
       formData.append("location", form.location.trim());
@@ -264,8 +273,7 @@ const SellerCMS = () => {
         formData.append("clicks", 0);
         await sellerService.createBanner(formData);
       }
-
-      // Delete the old Brand Store banner only AFTER the new one saved successfully
+ // Delete the old Brand Store banner only AFTER the new one saved successfully
       if (form.location === "brand_store") {
         const existingBanners = banners.filter(
           (b) => b.location === "brand_store" && b.id !== editingBanner?.id
@@ -297,32 +305,39 @@ const SellerCMS = () => {
   const activeBanners = banners.filter((b) => b.status === "active").length;
 
   return (
-    <Box p={3} sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
+<Box p={{ xs: 0, md: 3 }} sx={{ bgcolor: "background.default", minWidth: 0 }}>
 
-      <Typography variant="h4" fontWeight={700} color="text.primary">
+     <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.6rem', md: '2.125rem' } }}> 
         CMS Management
       </Typography>
       <Typography color="text.secondary" mb={3}>
         Create and manage promotional banners for your store
       </Typography>
 
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={6}>
-          <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-            <Typography variant="body2" color="text.secondary">Total Banners</Typography>
-            <Typography variant="h5" fontWeight={700} color="text.primary">{banners.length}</Typography>
+      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} mb={3}>
+        <Grid item xs={6} sm={6}>
+          <Card sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600 }}>Total Banners</Typography>
+            <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{banners.length}</Typography>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6}>
-          <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-            <Typography variant="body2" color="text.secondary">Active Banners</Typography>
-            <Typography variant="h5" fontWeight={700} color="text.primary">{activeBanners}</Typography>
+        <Grid item xs={6} sm={6}>
+          <Card sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600 }}>Active Banners</Typography>
+            <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{activeBanners}</Typography>
           </Card>
         </Grid>
       </Grid>
 
-      <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Card sx={{ p: { xs: 2, md: 3 }, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+        <Box
+  display="flex"
+  flexDirection={{ xs: "column", sm: "row" }}
+  justifyContent="space-between"
+  alignItems={{ xs: "stretch", sm: "center" }}
+  gap={2}
+  mb={2}
+>
           <Typography variant="h6" fontWeight={700} color="text.primary">Promotional Banners</Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} sx={BTN_STYLE}>
             Add Banner
@@ -340,7 +355,8 @@ const SellerCMS = () => {
             </Button>
           </Box>
         ) : (
-          <Table>
+  <TableContainer sx={{ overflowX: "auto" }}>
+    <Table sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700, color: "text.secondary" }}>Preview</TableCell>
@@ -384,7 +400,7 @@ const SellerCMS = () => {
                       color={b.status === "active" ? "success" : "default"}
                     />
                   </TableCell>
-                  <TableCell>
+                   <TableCell>
   <Chip
     label={b.approval_status || "approved"}
     size="small"
@@ -430,6 +446,7 @@ const SellerCMS = () => {
               ))}
             </TableBody>
           </Table>
+        </TableContainer>
         )}
       </Card>
 
@@ -442,7 +459,7 @@ const SellerCMS = () => {
         <DialogContent>
           {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
 
-          {editingBanner?.approval_status === "approved" && (
+           {editingBanner?.approval_status === "approved" && (
   <Alert severity="info" sx={{ mb: 2 }}>
     Changing the title, image, location or category will send this banner for admin approval again.
   </Alert>
@@ -452,6 +469,7 @@ const SellerCMS = () => {
     New banners are shown on your store only after admin approval.
   </Alert>
 )}
+
 
           <TextField
             fullWidth label="Banner Title" margin="dense" size="small"
@@ -546,11 +564,11 @@ const SellerCMS = () => {
               )}
             </Box>
 
-          {bannerRules && (
+           {bannerRules && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
             <strong>Required size:</strong> {bannerRules.minWidth}×{bannerRules.minHeight}px (same shape, larger sizes are fine). Max file size {formatBytes(bannerRules.maxSize)}.
            </Typography>
-           )} 
+           )}  
 
             {bannerError && (
               <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
@@ -593,7 +611,7 @@ const SellerCMS = () => {
               <Box sx={{ p: 2, bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(15, 185, 177, 0.08)' : '#fafffe' }}>
                 <Stack direction="row" spacing={2}>
                   <Box>
-  <Typography variant="caption" color="text.secondary">Approval</Typography>
+                      <Typography variant="caption" color="text.secondary">Approval</Typography>
   <Typography variant="body2" fontWeight={600} sx={{ textTransform: "capitalize" }}>
     {previewBanner.approval_status || "approved"}
   </Typography>
