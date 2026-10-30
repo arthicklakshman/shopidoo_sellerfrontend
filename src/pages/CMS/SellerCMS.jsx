@@ -314,17 +314,17 @@ const SellerCMS = () => {
         Create and manage promotional banners for your store
       </Typography>
 
-      <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} mb={3}>
-        <Grid item xs={6} sm={6}>
-          <Card sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600 }}>Total Banners</Typography>
-            <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{banners.length}</Typography>
+<Grid container spacing={3} mb={3}>
+        <Grid item xs={12} sm={6}>
+          <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">Total Banners</Typography>
+            <Typography variant="h5" fontWeight={700} color="text.primary">{banners.length}</Typography>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6}>
-          <Card sx={{ p: { xs: 1.5, sm: 2, md: 3 }, height: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.82rem', md: '0.875rem' }, fontWeight: 600 }}>Active Banners</Typography>
-            <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mt: 0.5 }}>{activeBanners}</Typography>
+        <Grid item xs={12} sm={6}>
+          <Card sx={{ p: 3, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">Active Banners</Typography>
+            <Typography variant="h5" fontWeight={700} color="text.primary">{activeBanners}</Typography>
           </Card>
         </Grid>
       </Grid>
