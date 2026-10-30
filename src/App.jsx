@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { lightTheme, darkTheme } from './theme/theme';
 import AppRouter from './router/index';
 import { fetchMe } from './features/auth/authSlice';
+import api from './services/api';
 
 // Change this single value to control the zoom-out level.
 // 0.8 = 80% size (what you had with zoom: 0.8)
@@ -17,6 +18,40 @@ const App = () => {
 
   useEffect(() => {
     dispatch(fetchMe());
+
+    // Proactively refresh access token every 10 minutes so session never expires while the tab is open
+    const refreshSession = async () => {
+      const token = localStorage.getItem('sellerAccessToken');
+      if (!token) return;
+      try {
+        const { data } = await api.post('/auth/refresh-token', { role: 'seller' });
+        const newToken = data?.data?.accessToken;
+        if (newToken) {
+          localStorage.setItem('sellerAccessToken', newToken);
+        }
+      } catch (e) {
+        // Silently ignore background keep-alive failures; 401 interceptor will handle when needed
+      }
+    };
+
+    // 10 minutes interval (access token expires in 15 minutes)
+    const interval = setInterval(refreshSession, 10 * 60 * 1000);
+
+    // Also refresh when tab becomes visible or focused again after being left in background
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [dispatch]);
 
   return (
