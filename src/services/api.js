@@ -20,8 +20,8 @@ api.interceptors.response.use(
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('sellerAccessToken');
   
-  // 🌟 FIX: Do not send the old token if we are trying to register or login!
-  const isAuthRoute = config.url.includes('/auth/register') || config.url.includes('/auth/login');
+ // 🌟 FIX: Do not send the old token if we are trying to register, login, or refresh token!
+  const isAuthRoute = config.url.includes('/auth/register') || config.url.includes('/auth/login') || config.url.includes('/auth/refresh-token');
   
   if (token && !isAuthRoute) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -56,30 +56,60 @@ api.interceptors.response.use(
                         orig.url?.includes('/auth/refresh-token');
 
     if (error.response?.status === 401 && !orig._retry && !isAuthRoute) {
-      if (isRefreshing) return new Promise((res, rej) => failedQueue.push({ resolve: res, reject: rej })).then((t) => { orig.headers.Authorization = `Bearer ${t}`; return api(orig); });
-      orig._retry = true; isRefreshing = true;
+ if (isRefreshing) {
+        return new Promise((res, rej) => failedQueue.push({ resolve: res, reject: rej }))
+          .then((t) => {
+            if (orig.headers?.set) {
+              orig.headers.set('Authorization', `Bearer ${t}`);
+            } else if (orig.headers) {
+              orig.headers.Authorization = `Bearer ${t}`;
+              orig.headers['Authorization'] = `Bearer ${t}`;
+            }
+            return api(orig);
+          });
+      }
+
+      orig._retry = true;
+      isRefreshing = true;
       try {
         const { data } = await api.post('/auth/refresh-token', { role: 'seller' });
+           const newToken = data?.data?.accessToken;
+        if (!newToken) {
+          throw new Error('Failed to retrieve new access token');
+        }
+
         try {
           localStorage.setItem('sellerAccessToken', newToken);
         } catch {}
         processQueue(null, newToken);
-        orig.headers.Authorization = `Bearer ${newToken}`;
+        if (orig.headers?.set) {
+          orig.headers.set('Authorization', `Bearer ${newToken}`);
+        } else if (orig.headers) {
+          orig.headers.Authorization = `Bearer ${newToken}`;
+          orig.headers['Authorization'] = `Bearer ${newToken}`;
+        }
         return api(orig);
       } catch (err) {
         processQueue(err, null);
-        localStorage.removeItem('sellerAccessToken');
-        localStorage.removeItem('sellerUser');
-        
-        // Prevent hard redirect loop to login if we are already on auth or onboarding pages
-        const publicAuthPaths = ['/login', '/register', '/forgot-password'];
-        const isAuthOrOnboarding = publicAuthPaths.includes(window.location.pathname) || window.location.pathname.startsWith('/onboarding');
+        // Only clear session and redirect if the refresh token is genuinely invalid/expired (401/403)
+        // This prevents logging out on transient network blips or server restarts.
+        const isAuthFailure = err.response?.status === 401 || err.response?.status === 403;
+        if (isAuthFailure) {
+          localStorage.removeItem('sellerAccessToken');
+          localStorage.removeItem('sellerUser');
+          
+          // Prevent hard redirect loop to login if we are already on auth or onboarding pages
+          const publicAuthPaths = ['/login', '/register', '/forgot-password'];
+          const isAuthOrOnboarding = publicAuthPaths.includes(window.location.pathname) || window.location.pathname.startsWith('/onboarding');
 
-        if (!isAuthOrOnboarding) {
-          window.location.href = '/login';
+          if (!isAuthOrOnboarding) {
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(new Error('Authentication expired'));
-      } finally { isRefreshing = false; }
+       } finally {
+        isRefreshing = false;
+      }
     }
     return Promise.reject(error);
   }
