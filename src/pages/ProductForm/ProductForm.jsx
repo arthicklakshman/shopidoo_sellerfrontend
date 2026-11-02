@@ -638,6 +638,11 @@ const ProductForm = () => {
     () => [...categories.filter(c => c.depth === 0), OTHER_CATEGORY],
     [categories]
   ); 
+  const isOthersCat = (c) => ['others', 'other'].includes(String(c?.name || '').trim().toLowerCase());
+const selectedSubcategory = categories.find(c => Number(c.id) === Number(form.subcategory_id));
+const selectedProductType = categories.find(c => Number(c.id) === Number(productTypeId));
+const subIsOthers = isOthersCat(selectedSubcategory);
+const typeIsOthers = isOthersCat(selectedProductType);
 
   const isFashionVariantCategory = useMemo(() => {
     // No Color/Size attributes configured on this category at all → this is
@@ -713,6 +718,8 @@ const ProductForm = () => {
             hsn_code: p.hsn_code || '',
             gst_rate: p.gst_rate != null ? String(p.gst_rate) : '',
             custom_category: p.custom_category || '',
+            custom_subcategory: p.custom_subcategory || '',
+            custom_product_type: p.custom_product_type || '',
             warranty_type: p.warranty_type || '',
             warranty_duration: p.warranty_duration || '',
             warranty_duration_unit: p.warranty_duration_unit || 'months',
@@ -1481,6 +1488,15 @@ const ProductForm = () => {
       return;
     }
   }
+
+  if (subIsOthers && !form.custom_subcategory?.trim()) {
+    setError('Please enter your subcategory name.');
+    return;
+  }
+  if ((subIsOthers || typeIsOthers) && !form.custom_product_type?.trim()) {
+    setError('Please enter your product type name.');
+    return;
+  }
 }
     if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
     if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
@@ -1897,6 +1913,8 @@ const ProductForm = () => {
                               setForm(prev => ({
                                 ...prev,
                                 subcategory_id: val,
+                                 custom_subcategory: '',
+                                 custom_product_type: '',
                               }));
 
                               // Clear attributes belonging to previous selection
@@ -1930,7 +1948,7 @@ const ProductForm = () => {
                               const val = e.target.value;
 
                               setProductTypeId(val);
-
+                              setForm(prev => ({ ...prev, custom_product_type: '' }));
                               // Clear old attributes/variants
                               setCategoryAttributes([]);
                               setAttributeValues({});
@@ -1946,6 +1964,29 @@ const ProductForm = () => {
                             ))}
                           </Select>
                         </FormControl>
+                      </Grid>
+                    )}
+                                        {form.category_id !== 'other' && subIsOthers && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Specify Subcategory"
+                          value={form.custom_subcategory}
+                          onChange={handleChange('custom_subcategory')}
+                          fullWidth required
+                          placeholder="Enter your subcategory name"
+                        />
+                      </Grid>
+                    )}
+
+                    {form.category_id !== 'other' && (subIsOthers || typeIsOthers) && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Specify Product Type"
+                          value={form.custom_product_type}
+                          onChange={handleChange('custom_product_type')}
+                          fullWidth required
+                          placeholder="Enter your product type name"
+                        />
                       </Grid>
                     )}
                   </Grid>
