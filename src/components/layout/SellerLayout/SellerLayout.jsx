@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import socket from '../../../services/socket';
+import socket, { connectSellerSocket, disconnectSellerSocket } from '../../../services/socket';
 import SEO from '../../SEO/SEO';
 import {
   Box,
@@ -24,6 +24,7 @@ import {
   Menu,
   MenuItem,
   Badge,
+  Chip,
   alpha,
 } from '@mui/material';
 
@@ -71,6 +72,46 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: SettingsIcon, path: '/settings' },
 ];
 
+const SELLER_SIDEBAR_CONFIG = {
+  Products: {
+    path: '/products',
+    types: ['product_status', 'product_approval'],
+  },
+  Reviews: {
+    path: '/sellerreviews',
+    types: ['new_review'],
+  },
+  Orders: {
+    path: '/orders',
+    types: ['new_order', 'order_status_update', 'order_delivered', 'shipment_status'],
+  },
+  Returns: {
+    path: '/returns',
+    types: ['return_request', 'return_penalty'],
+  },
+  Inventory: {
+    path: '/inventory',
+    types: ['low_stock'],
+  },
+  CMS: {
+    path: '/cms',
+    types: ['banner_status', 'banner_approval'],
+  },
+  Support: {
+    path: '/support',
+    types: ['support_reply'],
+  },
+  Wallet: {
+    path: '/wallet',
+    types: ['payout_status', 'wallet_transaction'],
+  },
+};
+
+const getSellerModuleConfigForPath = (pathname) => {
+  return Object.values(SELLER_SIDEBAR_CONFIG).find(
+    (cfg) => pathname === cfg.path || pathname.startsWith(`${cfg.path}/`)
+  );
+};
 
 const SellerLayout = () => {
   const theme = useTheme();
@@ -93,54 +134,130 @@ const SellerLayout = () => {
   // screen. Deferring the navigate() to the Menu's onExited avoids that.
   const pendingNavigationRef = useRef(null);
 
+  const getBadgeCount = (label) => {
+    const config = SELLER_SIDEBAR_CONFIG[label];
+    if (!config) return 0;
+
+    // Filter unseen & unread notifications matching this module
+    const matching = notifications.filter(
+      (n) => !n.is_seen && !n.is_read && config.types.includes(n.type)
+    );
+
+    // Count each activity only once (deduplicate by reference_id or notification id)
+    const seenActivities = new Set();
+    matching.forEach((n) => {
+      const key = n.reference_id != null ? `ref_${n.reference_id}` : `id_${n.id}`;
+      seenActivities.add(key);
+    });
+
+    return seenActivities.size;
+  };
+
+  const markModuleAsSeen = async (configOrTypes) => {
+    const types = Array.isArray(configOrTypes)
+      ? configOrTypes
+      : configOrTypes?.types;
+    if (!types || types.length === 0) return;
+
+    // Immediately mark matching notifications as seen in local state
+    setNotifications((prev) =>
+      prev.map((n) =>
+        types.includes(n.type) ? { ...n, is_seen: true } : n
+      )
+    );
+
+    // Persist seen state to backend
+    try {
+      await api.patch('/notifications/seen', { types });
+    } catch (err) {
+      console.error('Failed to mark notifications as seen', err);
+    }
+  };
+
+  // Automatically mark module notifications as seen when entering its page
+  useEffect(() => {
+    const config = getSellerModuleConfigForPath(location.pathname);
+    if (config) {
+      markModuleAsSeen(config);
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     dispatch(fetchMe());
   }, [dispatch]);
 
   useEffect(() => {
     fetchNotifications();
+    connectSellerSocket();
 
-    socket.emit('join', `seller_${user?.id}`, {
-      id: user?.id,
-      name: user?.storeName || user?.businessName || user?.name || 'Seller Store',
-    });
-
-    const handleNewNotification = (data) => {
-      console.log('SELLER NEW NOTIFICATION', data);
-
-      if (
-        data.type === 'product_status' ||
-        data.type === 'support_reply' ||
-        data.type === 'payout_status' ||
-        data.type === 'new_order' ||
-        data.type === 'new_review' ||
-        data.type === 'low_stock' ||
-        data.type === 'order_delivered' ||
-        data.type === 'shipment_status' ||
-        data.type === 'order_status_update' ||
-        data.type === 'return_penalty'
-      ) {
-        setNotifications((prev) => {
-          const exists = prev.some((n) => n.id === data.id);
-
-          if (exists) return prev;
-
-          return [data, ...prev];
+    const joinRoom = () => {
+      if (user?.id) {
+        console.log('JOINING SELLER ROOM', `seller_${user.id}`);
+        socket.emit('join', `seller_${user.id}`, {
+          id: user.id,
+          name: user.storeName || user.businessName || user.name || 'Seller Store',
         });
       }
     };
 
+    if (socket.connected) {
+      joinRoom();
+    }
+
+    const handleConnect = () => {
+      joinRoom();
+      fetchNotifications();
+    };
+
+    socket.on('connect', handleConnect);
+
+    const handleNewNotification = (data) => {
+      if (!data) return;
+      // Strict seller data isolation: do not accept notifications for another seller
+      if (data.user_id != null && user?.id && String(data.user_id) !== String(user.id)) {
+        return;
+      }
+      console.log('SELLER NEW NOTIFICATION', data);
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === data.id);
+        if (exists) return prev;
+        return [data, ...prev];
+      });
+    };
+
+    const handleSidebarSeen = (data) => {
+      if (data?.all) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_seen: true })));
+      } else if (data?.id) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === data.id ? { ...n, is_seen: true, is_read: true } : n))
+        );
+      } else if (data?.types && Array.isArray(data.types)) {
+        setNotifications((prev) =>
+          prev.map((n) =>
+            data.types.includes(n.type) ? { ...n, is_seen: true } : n
+          )
+        );
+      }
+    };
+
     socket.on('new_notification', handleNewNotification);
+    socket.on('sidebar:notification:new', handleNewNotification);
+    socket.on('sidebar_notifications_seen', handleSidebarSeen);
+    socket.on('sidebar:notification:read', handleSidebarSeen);
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('new_notification', handleNewNotification);
+      socket.off('sidebar:notification:new', handleNewNotification);
+      socket.off('sidebar_notifications_seen', handleSidebarSeen);
+      socket.off('sidebar:notification:read', handleSidebarSeen);
     };
-  }, [user?.id]);
+  }, [user?.id, user?.storeName, user?.name]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
-
 
   useEffect(() => {
     const handleNotificationRead = (e) => {
@@ -172,22 +289,18 @@ const SellerLayout = () => {
   const fetchNotifications = async () => {
     try {
       const res = await api.get('/notifications');
+      const data = res.data?.data || [];
+      setNotifications(data);
 
-      const onlyProductNotifications = (res.data.data || []).filter(
-        (item) =>
-          item.type === 'product_status' ||
-          item.type === 'support_reply' ||
-          item.type === 'payout_status' ||
-          item.type === 'new_order' ||
-          item.type === 'new_review' ||
-          item.type === 'low_stock' ||
-          item.type === 'order_delivered' ||
-          item.type === 'shipment_status' ||
-          item.type === 'order_status_update' ||
-          item.type === 'return_penalty'
-      );
-
-      setNotifications(onlyProductNotifications);
+      const currentConfig = getSellerModuleConfigForPath(location.pathname);
+      if (currentConfig) {
+        const hasUnseen = data.some(
+          (n) => !n.is_seen && !n.is_read && currentConfig.types.includes(n.type)
+        );
+        if (hasUnseen) {
+          markModuleAsSeen(currentConfig);
+        }
+      }
     } catch (err) {
       console.error(err);
     }
@@ -235,7 +348,7 @@ const SellerLayout = () => {
         navigate(`/support?highlight=${item.reference_id}`);
       }
 
-      if (item.type === 'payout_status') {
+      if (item.type === 'payout_status' || item.type === 'wallet_transaction') {
         navigate('/wallet');
       }
 
@@ -252,8 +365,16 @@ const SellerLayout = () => {
         navigate('/sellerreviews');
       }
 
-      if (item.type === 'return_penalty') {
+      if (item.type === 'return_penalty' || item.type === 'return_request') {
         navigate('/returns');
+      }
+
+      if (item.type === 'low_stock') {
+        navigate('/inventory');
+      }
+
+      if (item.type === 'banner_status' || item.type === 'banner_approval') {
+        navigate('/cms');
       }
 
       handleCloseNotifications();
@@ -264,6 +385,7 @@ const SellerLayout = () => {
 
   const handleLogout = async () => {
     setAnchorEl(null);
+    disconnectSellerSocket();
     await dispatch(logoutSeller());
     navigate('/login');
   };
@@ -330,6 +452,10 @@ const SellerLayout = () => {
             <ListItem key={path} disablePadding>
               <ListItemButton
                 onClick={() => {
+                  const config = SELLER_SIDEBAR_CONFIG[label];
+                  if (config) {
+                    markModuleAsSeen(config);
+                  }
                   if (isMobile) {
                     setMobileOpen(false);
                     setTimeout(() => {
@@ -370,6 +496,27 @@ const SellerLayout = () => {
                     fontSize: 14,
                   }}
                 />
+
+                {getBadgeCount(label) > 0 && (
+                  <Chip
+                    label={getBadgeCount(label) > 99 ? '99+' : getBadgeCount(label)}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      minWidth: 20,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      bgcolor: '#ef4444',
+                      color: '#ffffff',
+                      borderRadius: '10px',
+                      ml: 1,
+                      boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)',
+                      '& .MuiChip-label': {
+                        px: 0.8,
+                      },
+                    }}
+                  />
+                )}
               </ListItemButton>
             </ListItem>
           );
