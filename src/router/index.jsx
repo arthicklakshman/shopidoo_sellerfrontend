@@ -33,6 +33,12 @@ const SellerCMS = lazy(() => import('../pages/CMS/SellerCMS'));
 const DeleteAccount = lazy(() => import('../pages/DeleteAccount/DeleteAccount'));
 const TermsAndConditions = lazy(() => import('../pages/TermsAndConditions/TermsAndConditions'));
 const SellerPolicies = lazy(() => import('../pages/SellerPolicies/SellerPolicies'));
+// QUICK / Minutes
+const QuickOverview = lazy(() => import('../pages/Quick/QuickOverview'));
+const QuickOrders = lazy(() => import('../pages/Quick/QuickOrders'));
+const QuickProducts = lazy(() => import('../pages/Quick/QuickProducts'));
+const QuickInventory = lazy(() => import('../pages/Quick/QuickInventory'));
+const QuickReturns = lazy(() => import('../pages/Quick/QuickReturns'));
 
 export const PrivateRoute = ({ children }) => {
   const { isAuthenticated, user, authChecked } = useSelector((s) => s.auth);
@@ -123,6 +129,12 @@ const AppRouter = () => (
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/returns" element={<Returns />} />
           <Route path="/cms" element={<SellerCMS />} />
+          {/* QUICK / Minutes */}
+          <Route path="/quick" element={<QuickOverview />} />
+          <Route path="/quick/orders" element={<QuickOrders />} />
+          <Route path="/quick/products" element={<QuickProducts />} />
+          <Route path="/quick/inventory" element={<QuickInventory />} />
+          <Route path="/quick/returns" element={<QuickReturns />} />
         </Route>
 
         {/* ✅ Public routes - no auth needed */}

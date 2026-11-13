@@ -25,6 +25,8 @@ import {
   MenuItem,
   Badge,
   alpha,
+  Collapse,
+  Chip,
 } from '@mui/material';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -48,6 +50,15 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import CloseIcon from '@mui/icons-material/Close';
+// QUICK / Minutes
+import BoltIcon from '@mui/icons-material/Bolt';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined';
+import AssignmentReturnOutlinedIcon from '@mui/icons-material/AssignmentReturnOutlined';
 import api from '../../../services/api';
 import { toggleTheme } from '../../../features/ui/uiSlice';
 import { logoutSeller, fetchMe } from '../../../features/auth/authSlice';
@@ -71,6 +82,15 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: SettingsIcon, path: '/settings' },
 ];
 
+// QUICK / Minutes sub-menu
+const QUICK_COLOR = '#0D9488';
+const QUICK_NAV_ITEMS = [
+  { label: 'QUICK Overview', icon: GridViewOutlinedIcon, path: '/quick' },
+  { label: 'QUICK Orders', icon: ShoppingBagOutlinedIcon, path: '/quick/orders' },
+  { label: 'QUICK Products', icon: Inventory2OutlinedIcon, path: '/quick/products' },
+  { label: 'QUICK Inventory', icon: WarehouseOutlinedIcon, path: '/quick/inventory' },
+  { label: 'QUICK Returns', icon: AssignmentReturnOutlinedIcon, path: '/quick/returns' },
+];
 
 const SellerLayout = () => {
   const theme = useTheme();
@@ -85,6 +105,20 @@ const SellerLayout = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [quickOpen, setQuickOpen] = useState(() => location.pathname.startsWith('/quick'));
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/quick')) setQuickOpen(true);
+  }, [location.pathname]);
+
+  const goTo = (path) => {
+    if (isMobile) {
+      setMobileOpen(false);
+      setTimeout(() => navigate(path), 250);
+    } else {
+      navigate(path);
+    }
+  };
 
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -374,6 +408,54 @@ const SellerLayout = () => {
             </ListItem>
           );
         })}
+
+        {/* ─── QUICK / Minutes ─────────────────────────────────── */}
+        <Typography sx={{ px: 2.5, pt: 2, pb: 0.75, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, color: 'text.secondary', textTransform: 'uppercase' }}>
+          Local delivery
+        </Typography>
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setQuickOpen((o) => !o)}
+            sx={{ mx: 1, borderRadius: 2, mb: 0.5, '&:hover': { bgcolor: alpha(QUICK_COLOR, 0.08) } }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Box sx={{ width: 26, height: 26, borderRadius: '8px', bgcolor: alpha(QUICK_COLOR, 0.12), color: QUICK_COLOR, display: 'grid', placeItems: 'center' }}>
+                <BoltIcon sx={{ fontSize: 17 }} />
+              </Box>
+            </ListItemIcon>
+            <ListItemText primary="QUICK" primaryTypographyProps={{ fontWeight: 700, fontSize: 14 }} />
+            <Chip label="LIVE" size="small" sx={{ height: 18, fontSize: 10, fontWeight: 700, bgcolor: '#E8F7EE', color: '#16A34A', mr: 0.5, '& .MuiChip-label': { px: 0.75 } }} />
+            {quickOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </ListItemButton>
+        </ListItem>
+        <Collapse in={quickOpen} timeout="auto" unmountOnExit>
+          <List disablePadding sx={{ ml: 3, pl: 1, borderLeft: 1, borderColor: 'divider' }}>
+            {QUICK_NAV_ITEMS.map(({ label, icon: Icon, path }) => {
+              const active = location.pathname === path;
+              return (
+                <ListItem key={path} disablePadding sx={{ mb: 0.25 }}>
+                  <ListItemButton
+                    onClick={() => goTo(path)}
+                    sx={{
+                      mx: 0.5,
+                      borderRadius: 2,
+                      py: 0.75,
+                      bgcolor: active ? alpha(QUICK_COLOR, 0.12) : 'transparent',
+                      color: active ? QUICK_COLOR : 'text.primary',
+                      '&:hover': { bgcolor: alpha(QUICK_COLOR, 0.08) },
+                      '& .MuiListItemIcon-root': { color: active ? QUICK_COLOR : 'text.secondary' },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <Icon sx={{ fontSize: 18 }} />
+                    </ListItemIcon>
+                    <ListItemText primary={label} primaryTypographyProps={{ fontWeight: active ? 700 : 500, fontSize: 13 }} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Collapse>
       </List>
 
 
@@ -501,7 +583,7 @@ const SellerLayout = () => {
             )}
 
             <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-              {NAV_ITEMS.find((i) => i.path === location.pathname)?.label ||
+              {[...NAV_ITEMS, ...QUICK_NAV_ITEMS].find((i) => i.path === location.pathname)?.label ||
                 'Seller Panel'}
             </Typography>
 

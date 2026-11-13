@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress,
@@ -492,6 +492,9 @@ const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // QUICK: opened from "Create a new product" in the QUICK drawer
+  const fromQuick = searchParams.get('channel') === 'quick';
   const dispatch = useDispatch();
   const authUser = useSelector((state) => state.auth?.user);
 
@@ -1637,7 +1640,8 @@ const typeIsOthers = isOthersCat(selectedProductType);
       }
 
       dispatch(showToast({ message: isEdit ? 'Product updated!' : 'Product created!', severity: 'success' }));
-      navigate('/products');
+      // QUICK: go back to QUICK Products with the listing drawer open for this product
+      navigate(fromQuick ? `/quick/products?enable=${productId}` : '/products');
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -1660,13 +1664,18 @@ const typeIsOthers = isOthersCat(selectedProductType);
     <Box>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <IconButton onClick={() => navigate('/products')}>
+        <IconButton onClick={() => navigate(fromQuick ? '/quick/products' : '/products')}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h5" fontWeight={700}>
           {isEdit ? 'Edit Product' : 'Add New Product'}
         </Typography>
       </Box>
+      {fromQuick && !isEdit && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Create the product here first. After you save, you'll go straight back to QUICK to set its QUICK price, stock and delivery areas.
+        </Alert>
+      )}
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
 
