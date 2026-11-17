@@ -22,41 +22,42 @@ import { getDeliverySummary } from '../../utils/shipping';
 import api from '../../services/api';
 import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
+import { normalizeCommissionSlabs, calculateUnitCommission, getCommissionPercentForPrice } from '../../utils/commission';
 import SettlementBreakdown, { calculateSettlement } from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
 import { Collapse } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // ─── Commission hint hook ─────────────────────────────────────────────────
+// Returns the platform fee in ₹ for this price, plus the percentage it came
+// from: fee = (price × matching slab %) / 100.
 function useCommissionHint(price) {
   const [commission, setCommission] = useState(null);
+  const [commissionPercent, setCommissionPercent] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (price == null || price === '' || isNaN(Number(price)) || Number(price) <= 0) {
       setCommission(null);
+      setCommissionPercent(null);
       return;
     }
     setLoading(true);
     fetchSettingsOnce()
       .then(raw => {
-        let slabs = raw?.commissionSlabs;
-        if (typeof slabs === 'string') {
-          try { slabs = JSON.parse(slabs); } catch { slabs = []; }
+        const slabs = normalizeCommissionSlabs(raw?.commissionSlabs);
+        if (!slabs.length) {
+          setCommission(null);
+          setCommissionPercent(null);
+          return;
         }
-        if (!Array.isArray(slabs)) { setCommission(null); return; }
-        const p = Number(price);
-        const matched = slabs
-          .sort((a, b) => b.minPrice - a.minPrice)
-          .find(s =>
-            p >= Number(s.minPrice) &&
-            (s.maxPrice === null || s.maxPrice === '' || p <= Number(s.maxPrice))
-          );
-        setCommission(matched ? matched.commission : null);
+        const percent = getCommissionPercentForPrice(price, slabs);
+        setCommissionPercent(percent || null);
+        setCommission(percent ? calculateUnitCommission(price, slabs) : null);
       })
-      .catch(() => setCommission(null))
+      .catch(() => { setCommission(null); setCommissionPercent(null); })
       .finally(() => setLoading(false));
   }, [price]);
 
-  return { commission, loading };
+  return { commission, commissionPercent, loading };
 }
 
 

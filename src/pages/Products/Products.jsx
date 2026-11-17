@@ -47,6 +47,7 @@ import { getErrorMessage } from '../../utils/getErrorMessage';
 import EmptyState from '../../components/common/EmptyState/EmptyState';
 import api from '../../services/api';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
+import { normalizeCommissionSlabs, calculateUnitCommission } from '../../utils/commission';
 
 const PRODUCT_STATUSES = ['pending', 'approved', 'blocked'];
 
@@ -99,22 +100,13 @@ function useCommissionMap(products) {
     if (!products.length) return;
     fetchSettingsOnce()
       .then(raw => {
-        let slabs = raw?.commissionSlabs;
-        if (typeof slabs === 'string') {
-          try { slabs = JSON.parse(slabs); } catch { slabs = []; }
-        }
-        if (!Array.isArray(slabs)) return;
+        // Percentage slabs: platform fee ₹ = (product price × slab %) / 100
+        const slabs = normalizeCommissionSlabs(raw?.commissionSlabs);
+        if (!slabs.length) return;
 
         const map = {};
         products.forEach(product => {
-          const p = Number(product.price);
-          const matched = slabs
-            .sort((a, b) => b.minPrice - a.minPrice)
-            .find(s =>
-              p >= Number(s.minPrice) &&
-              (s.maxPrice === null || s.maxPrice === '' || p <= Number(s.maxPrice))
-            );
-          map[product.id] = matched ? Number(matched.commission) : 0;
+          map[product.id] = calculateUnitCommission(product.price, slabs);
         });
         setCommissionMap(map);
       })
