@@ -4,6 +4,7 @@ import {
 } from '@mui/material';
 // Add this import at the top
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 // Icons
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -13,6 +14,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 // 🌟 IMPORT SERVICE & CUSTOM BUTTONS
 import onboardingService from '../../../features/onboarding/onboarding.service';
+import { onboardingFormsAreStale } from '../prefillFromProfile';
 import GradientButton from '../../../components/shared/GradientButton/GradientButton'; // Verify path!
 import GradientOutlineButton from '../../../components/shared/GradientButton/GradientOutlineButton'; // Verify path!
 
@@ -81,7 +83,11 @@ const SectionCard = ({ step, title, onEdit, children }) => (
 // --- Main Component ---
 export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: propSellerId }) {
 
-  const sellerId = propSellerId || localStorage.getItem("sellerId");
+  // Always prefer the seller this session is actually authenticated as.
+  const authUser = useSelector((s) => s.auth.user);
+  const hasSession = !!localStorage.getItem('sellerAccessToken') && authUser?.role === 'seller';
+  const authSellerId = hasSession ? authUser?.id : null;
+  const sellerId = authSellerId || propSellerId || localStorage.getItem("sellerId");
   
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,14 +99,55 @@ export default function ReviewSubmit({ onBack, onNext, onEditStep, sellerId: pro
 
   // Load all saved states from local storage to display the summary
   useEffect(() => {
-    setData({
-      step1: JSON.parse(localStorage.getItem('onboarding_step_1') || '{}'),
-      step2: JSON.parse(localStorage.getItem('onboarding_step_2') || '{}'),
-      step3: JSON.parse(localStorage.getItem('onboarding_step_3') || '{}'),
-      step5: JSON.parse(localStorage.getItem('onboarding_step_5') || '{}'),
-      step6: JSON.parse(localStorage.getItem('onboarding_step_6') || '{}')
-    });
-  }, []);
+    let cancelled = false;
+
+    const readStep = (key) => {
+      try {
+        return JSON.parse(localStorage.getItem(key) || '{}');
+      } catch {
+        return {};
+      }
+    };
+
+    const load = async () => {
+      // Never show form data that a previous seller left behind in this browser.
+      const stale = onboardingFormsAreStale(authSellerId);
+      if (!cancelled) {
+        setData({
+          step1: stale ? {} : readStep('onboarding_step_1'),
+          step2: stale ? {} : readStep('onboarding_step_2'),
+          step3: stale ? {} : readStep('onboarding_step_3'),
+          step5: stale ? {} : readStep('onboarding_step_5'),
+          step6: stale ? {} : readStep('onboarding_step_6')
+        });
+      }
+
+      if (!hasSession) return;
+
+      // Basic Information is the one section no step form refreshes from the server, so read it
+      // straight from the authenticated seller's profile instead of trusting local storage.
+      try {
+        const res = await onboardingService.getProfile();
+        const me = res?.data?.data || res?.data;
+        if (cancelled || !me) return;
+        setData((prev) => ({
+          ...prev,
+          step1: {
+            ...prev.step1,
+            fullName: me.fullName || me.name || '',
+            email: me.email || '',
+            phone: me.phone || '',
+            businessType: me.businessType || ''
+          }
+        }));
+      } catch (err) {
+        console.error('Failed to load profile for review', err);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [hasSession, authSellerId]);
 
   const isSubmitEnabled = termsAccepted && !isSubmitting;
 

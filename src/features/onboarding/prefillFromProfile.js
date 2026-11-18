@@ -1,7 +1,7 @@
 // Save as: shopidoo_sellerfrontend/src/features/onboarding/prefillFromProfile.js
 //
 // Copies the seller's saved data from the server into the localStorage keys that the
-// onboarding step forms already read (onboarding_step_2, _3, _5, _6). This is the same
+// onboarding step forms already read (onboarding_step_1, _2, _3, _5, _6). This is the same
 // mapping that BasicInfo.jsx used to do only after clicking "Continue" on step 1.
 
 const STEP_KEYS = [1, 2, 3, 4, 5, 6].map((n) => `onboarding_step_${n}`);
@@ -18,16 +18,51 @@ const parseCategories = (value) => {
   }
 };
 
+// The saved step forms belong to exactly one seller. Call this as soon as a seller's id is
+// known (login, registration, profile load): it drops whatever a previous seller left in this
+// browser and records who owns the forms now, so no later step can read the wrong seller's data.
+export const claimOnboardingForms = (sellerId) => {
+  if (!sellerId) return;
+  const owner = localStorage.getItem('onboarding_owner');
+  if (owner && String(owner) !== String(sellerId)) {
+    STEP_KEYS.forEach((key) => localStorage.removeItem(key));
+  }
+  localStorage.setItem('onboarding_owner', String(sellerId));
+  localStorage.setItem('sellerId', String(sellerId));
+};
+
+// True when the saved step forms were written by somebody other than the seller we are about to
+// render them for - either a different seller id, or a seller whose session has since ended.
+// Unstamped forms (a brand new signup that has not registered yet) are not stale.
+export const onboardingFormsAreStale = (sellerId) => {
+  const owner = localStorage.getItem('onboarding_owner');
+  if (!owner) return false;
+  if (sellerId) return String(owner) !== String(sellerId);
+  return !localStorage.getItem('sellerAccessToken');
+};
+
 export const prefillOnboardingFromProfile = (fullUser) => {
   if (!fullUser || !fullUser.id) return;
 
   // If a different seller used this browser before, remove their leftover form data.
-  const owner = localStorage.getItem('onboarding_owner');
-  if (owner && String(owner) !== String(fullUser.id)) {
-    STEP_KEYS.forEach((key) => localStorage.removeItem(key));
-  }
-  localStorage.setItem('onboarding_owner', String(fullUser.id));
-  localStorage.setItem('sellerId', String(fullUser.id));
+  claimOnboardingForms(fullUser.id);
+
+  // Step 1: Basic information. Written from the server like every other step, so the review
+  // page never falls back to whoever filled step 1 in this browser last.
+  const emailOk = Boolean(fullUser.email_verified);
+  const phoneOk = Boolean(fullUser.phone_verified);
+  const step1 = {
+    fullName: fullUser.fullName || fullUser.name || '',
+    phone: fullUser.phone || '',
+    email: fullUser.email || '',
+    businessType: fullUser.businessType || '',
+    email_verified: emailOk ? 1 : 0,
+    phone_verified: phoneOk ? 1 : 0,
+    verifiedEmailValue: emailOk ? (fullUser.email || '') : '',
+    verifiedPhoneValue: phoneOk ? (fullUser.phone || '') : '',
+    isRegistered: fullUser.isRegistered ?? null,
+  };
+  if (hasAny(step1)) localStorage.setItem('onboarding_step_1', JSON.stringify(step1));
 
   // Step 2: Business details
   const gstType = fullUser.gstType || (fullUser.gstEnrollmentId ? 'enrollment_id' : (fullUser.gstNumber ? 'gstin' : ''));

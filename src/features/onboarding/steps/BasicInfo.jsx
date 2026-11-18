@@ -18,6 +18,7 @@ import {
 } from '../../../utils/validation';
 
 import onboardingService from '../onboarding.service';
+import { claimOnboardingForms, onboardingFormsAreStale } from '../prefillFromProfile';
 
 // Reusable Components
 import { setSellerId } from '../onboardingSlice';
@@ -76,7 +77,11 @@ export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
 
   const [formData, setFormData] = useState(() => {
     try {
-      const savedData = localStorage.getItem('onboarding_step_1');
+      // Saved step 1 data left by a different seller (or by a session that has since
+      // ended) must never prefill this form.
+      const savedData = onboardingFormsAreStale(localStorage.getItem('sellerId'))
+        ? null
+        : localStorage.getItem('onboarding_step_1');
       const parsed = savedData ? JSON.parse(savedData) : null;
       return {
         fullName: parsed?.fullName || '',
@@ -388,6 +393,11 @@ export default function BasicInformation({ onNext, sellerId: sellerIdProp }) {
       // If we got tokens (from registration or login), sync them
       if (userData && accessToken) {
         const currentSellerId = userData.id || userData.sellerId;
+
+        // The saved step forms in this browser now belong to this seller: drop any
+        // leftovers from a previous seller, then re-save the step 1 data we just submitted.
+        claimOnboardingForms(currentSellerId);
+        localStorage.setItem('onboarding_step_1', JSON.stringify(formData));
 
         // Persist to LocalStorage
         localStorage.setItem("sellerId", currentSellerId);
