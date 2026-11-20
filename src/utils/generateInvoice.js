@@ -586,7 +586,7 @@ function drawNotice(doc, y) {
   doc.setTextColor(...GREY_TX);
   doc.text('Whether tax is payable under reverse charge - No', MARGIN, y + 5);
   sf(doc, 'italic', 6.5);
-  doc.text('This is a computer-generated invoice. For support: support@shopidoo.com',
+  doc.text('This is a computer-generated invoice. For support: support@shopidoo.in',
     PAGE_W / 2, y + 10, { align: 'center' });
   sf(doc, 'normal', 6.5);
   doc.text('Page 1 of 1', PAGE_W - MARGIN, y + 10, { align: 'right' });
