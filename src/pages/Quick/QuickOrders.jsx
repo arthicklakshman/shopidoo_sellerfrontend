@@ -21,6 +21,7 @@ const TABS = [
   { value: 'ready', label: 'Ready for Dispatch' },
   { value: 'out_for_delivery', label: 'Out for Delivery' },
   { value: 'delivered', label: 'Delivered' },
+  { value: 'returns', label: 'Returns' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 

@@ -31,6 +31,7 @@ export const BUCKETS = {
   ready: { label: 'Ready for Dispatch', tone: 'violet' },
   out_for_delivery: { label: 'Out for Delivery', tone: 'purple' },
   delivered: { label: 'Delivered', tone: 'green' },
+  returns: { label: 'Return', tone: 'orange' },
   cancelled: { label: 'Cancelled', tone: 'red' },
 };
 
