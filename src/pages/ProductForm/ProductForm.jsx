@@ -157,6 +157,19 @@ const emptySizeVariant = (defaults = {}) => ({
   sku: '',
 });
 
+// Compare price is the MRP, so a variant's selling price can never exceed it.
+// Mirrors the MRP rule enforced on the main pricing section.
+const getVariantMrpError = (price, comparePrice) => {
+  if (comparePrice === '' || comparePrice === null || comparePrice === undefined) return null;
+  const mrp = parseFloat(comparePrice);
+  const selling = parseFloat(price);
+  if (isNaN(mrp) || isNaN(selling)) return null;
+  if (selling > mrp) {
+    return `Price cannot exceed Compare price (₹${mrp.toLocaleString('en-IN')})`;
+  }
+  return null;
+};
+
 const getVariantValue = (variant, names) => {
   const attrs = variant?.variant_attributes || {};
   const key = Object.keys(attrs).find(attrName => names.includes(String(attrName).toLowerCase()));
@@ -1458,6 +1471,29 @@ const typeIsOthers = isOthersCat(selectedProductType);
     }
 
     if (mrpWarning) { setError(mrpWarning); return; }
+
+    // Variant rows follow the same MRP rule as the main pricing section.
+    if (isFashionVariantCategory) {
+      for (const group of colorGroups) {
+        for (const sizeRow of group.sizes) {
+          const rowError = getVariantMrpError(sizeRow.price, sizeRow.compare_price);
+          if (rowError) {
+            const rowLabel = [group.color, sizeRow.size].filter(Boolean).join(' / ') || 'variant';
+            setError(`${rowLabel}: ${rowError}`);
+            return;
+          }
+        }
+      }
+    } else {
+      for (const variant of variants) {
+        const rowError = getVariantMrpError(variant.price, variant.compare_price);
+        if (rowError) {
+          const rowLabel = Object.values(variant.variant_attributes || {}).join(' / ') || 'variant';
+          setError(`${rowLabel}: ${rowError}`);
+          return;
+        }
+      }
+    }
     if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
     if (form.category_id === 'other') {
       if (!form.custom_category?.trim()) {
@@ -2220,7 +2256,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {group.sizes.map((sizeRow, sizeIndex) => (
+                                          {group.sizes.map((sizeRow, sizeIndex) => {
+                                            const sizeMrpError = getVariantMrpError(sizeRow.price, sizeRow.compare_price);
+                                            return (
                                             <TableRow key={sizeIndex}>
                                               <TableCell>
                                                 {sizeOptions.length > 0 ? (
@@ -2245,11 +2283,11 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                                 <TextField size="small" type="number" value={sizeRow.stock_quantity} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
                                               </TableCell>
                                               <TableCell>
-                                                <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                                <TextField size="small" type="number" value={sizeRow.price} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} error={!!sizeMrpError} />
                                                 <VariantNetPayout price={sizeRow.price} gstRate={isEnrollmentSeller ? 0 : form.gst_rate} isEnrollmentSeller={isEnrollmentSeller} />
                                               </TableCell>
                                               <TableCell>
-                                                <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} />
+                                                <TextField size="small" type="number" value={sizeRow.compare_price || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'compare_price', e.target.value)} inputProps={{ min: 0, step: 0.01 }} error={!!sizeMrpError} helperText={sizeMrpError || ''} />
                                               </TableCell>
                                               <TableCell>
                                                 <TextField size="small" placeholder="SKU" value={sizeRow.sku || ''} onChange={(e) => updateColorGroupSize(groupIndex, sizeIndex, 'sku', e.target.value)} />
@@ -2260,7 +2298,8 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                                 </IconButton>
                                               </TableCell>
                                             </TableRow>
-                                          ))}
+                                            );
+                                          })}
                                         </TableBody>
                                       </Table>
                                     </TableContainer>
@@ -2315,18 +2354,20 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                 </TableRow>
                               </TableHead>
                               <TableBody>
-                                {variants.map((variant, idx) => (
+                                {variants.map((variant, idx) => {
+                                  const variantMrpError = getVariantMrpError(variant.price, variant.compare_price);
+                                  return (
                                   <TableRow key={idx}>
                                     <TableCell>{Object.entries(variant.variant_attributes).map(([k, v]) => `${v}`).join(' / ')}</TableCell>
                                     <TableCell>
                                       <TextField size="small" placeholder="SKU" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} />
                                     </TableCell>
                                     <TableCell>
-                                      <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} />
+                                      <TextField size="small" type="number" placeholder="Price" value={variant.price} onChange={(e) => updateVariant(idx, 'price', e.target.value)} inputProps={{ min: 0 }} error={!!variantMrpError} />
                                       <VariantNetPayout price={variant.price} gstRate={isEnrollmentSeller ? 0 : form.gst_rate} isEnrollmentSeller={isEnrollmentSeller} />
                                     </TableCell>
                                     <TableCell>
-                                      <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} />
+                                      <TextField size="small" type="number" placeholder="Compare" value={variant.compare_price || ''} onChange={(e) => updateVariant(idx, 'compare_price', e.target.value)} inputProps={{ min: 0 }} error={!!variantMrpError} helperText={variantMrpError || ''} />
                                     </TableCell>
                                     <TableCell>
                                       <TextField size="small" type="number" placeholder="Stock" value={variant.stock_quantity} onChange={(e) => updateVariant(idx, 'stock_quantity', e.target.value)} inputProps={{ min: 0 }} />
@@ -2340,7 +2381,8 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                       </IconButton>
                                     </TableCell>
                                   </TableRow>
-                                ))}
+                                  );
+                                })}
                               </TableBody>
                             </Table>
                           </TableContainer>
