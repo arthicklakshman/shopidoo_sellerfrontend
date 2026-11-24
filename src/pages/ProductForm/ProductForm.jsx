@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, Button,
@@ -24,6 +24,7 @@ import { validateImage, IMAGE_RULES } from '../../utils/imageValidator';
 import { fetchSettingsOnce } from '../../utils/settingsCache';
 import { normalizeCommissionSlabs, calculateUnitCommission, getCommissionPercentForPrice } from '../../utils/commission';
 import SettlementBreakdown, { calculateSettlement } from "../../components/shared/SettlementBreakdown/SettlementBreakdown";
+import PincodeRulesEditor from './PincodeRulesEditor';
 import { Collapse } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // ─── Commission hint hook ─────────────────────────────────────────────────
@@ -465,6 +466,37 @@ const INDIAN_STATES = [
 
 const OTHER_CATEGORY = { id: 'other', name: 'Other (Specify Custom Category)' };
 
+// Shipping rules come back from the API with optional nested pincode_rules. Older
+// products have none, so the field is normalized to an empty array either way.
+const normalizeLoadedShippingRules = (rules) =>
+  (Array.isArray(rules) ? rules : []).map((rule) => ({
+    ...rule,
+    pincode_rules: (Array.isArray(rule.pincode_rules) ? rule.pincode_rules : []).map((group) => ({
+      district: group.district || '',
+      pincodes: Array.isArray(group.pincodes) ? group.pincodes.map(String) : [],
+      delivery_charge:
+        group.delivery_charge === null || group.delivery_charge === undefined
+          ? ''
+          : String(Number(group.delivery_charge)),
+    })),
+  }));
+
+// Drops incomplete pincode groups (no district, no pincodes) so a half-filled row
+// never reaches the backend and never shadows the state charge.
+const buildShippingRulesPayload = (rules) =>
+  (Array.isArray(rules) ? rules : [])
+    .filter((rule) => rule.state)
+    .map((rule) => ({
+      ...rule,
+      pincode_rules: (Array.isArray(rule.pincode_rules) ? rule.pincode_rules : [])
+        .filter((group) => group.district && Array.isArray(group.pincodes) && group.pincodes.length)
+        .map((group) => ({
+          district: group.district,
+          pincodes: group.pincodes,
+          delivery_charge: parseFloat(group.delivery_charge || 0) || 0,
+        })),
+    }));
+
 export const isEnrollmentUser = (user) => {
   if (!user || typeof user !== 'object') return false;
   if (user.gstType === 'enrollment_id') return true;
@@ -599,6 +631,7 @@ const ProductForm = () => {
   const [colorGroups, setColorGroups] = useState([]);
   const [customSpecs, setCustomSpecs] = useState([]);
   const [shippingRules, setShippingRules] = useState([]);
+  const [expandedPincodeRules, setExpandedPincodeRules] = useState({});
   const [images, setImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [colorFiles, setColorFiles] = useState({});
@@ -767,7 +800,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
             setVariantAttributeValues({});
           }
           setCustomSpecs((p.specifications || []).filter(spec => spec.is_custom || (!spec.attribute_id && !spec.is_variant)));
-          setShippingRules(p.shipping_rules || []);
+          setShippingRules(normalizeLoadedShippingRules(p.shipping_rules));
           setImages(p.images || []);
         }).finally(() => setLoading(false))
       );
@@ -1621,7 +1654,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
         delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
         free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
         express_delivery_charge: shippingPreference === 'platform' ? null : (form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null),
-        shipping_rules: (shippingPreference === 'platform' || isEnrollmentSeller) ? [] : shippingRules.filter(r => r.state),
+        shipping_rules: (shippingPreference === 'platform' || isEnrollmentSeller) ? [] : buildShippingRulesPayload(shippingRules),
         specifications: buildSpecifications(),
         hsn_code: form.hsn_code?.trim() || null,
         gst_rate: isEnrollmentSeller ? 0 : ((form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate),
@@ -2244,7 +2277,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
 
                                   {group.sizes.length > 0 ? (
                                     <TableContainer sx={{ overflowX: 'auto' }}>
-                                      <Table size="small" sx={{ minWidth: 600 }}>
+                                      <Table size="small" sx={{ minWidth: 760 }}>
                                         <TableHead>
                                           <TableRow>
                                             <TableCell sx={{ minWidth: 120 }}>{sizeLabel}</TableCell>
@@ -2476,7 +2509,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             size="small"
                             startIcon={<AddIcon />}
                             sx={secondaryButtonStyle}
-                            onClick={() => setShippingRules(prev => [...prev, { state: '', delivery_type: 'free', delivery_charge: '', free_delivery_min_order: '' }])}
+                            onClick={() => setShippingRules(prev => [...prev, { state: '', delivery_type: 'free', delivery_charge: '', free_delivery_min_order: '', pincode_rules: [] }])}
                           >
                             Add State Rule
                           </Button>
@@ -2489,12 +2522,14 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                   <TableCell>State</TableCell>
                                   <TableCell>Type</TableCell>
                                   <TableCell>Charge / Threshold</TableCell>
+                                  <TableCell>Pincodes</TableCell>
                                   <TableCell align="right">Action</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
                                 {shippingRules.map((rule, idx) => (
-                                  <TableRow key={idx}>
+                                  <Fragment key={idx}>
+                                  <TableRow>
                                     <TableCell sx={{ minWidth: 220 }}>
   <Autocomplete
     size="small"
@@ -2505,7 +2540,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
     value={rule.state || null}
     onChange={(_, newVal) => {
       setShippingRules(prev =>
-        prev.map((r, i) => (i === idx ? { ...r, state: newVal || '' } : r))
+        prev.map((r, i) => (i === idx ? { ...r, state: newVal || '', pincode_rules: [] } : r))
       );
     }}
     getOptionDisabled={(option) =>
@@ -2581,12 +2616,48 @@ const typeIsOthers = isOthersCat(selectedProductType);
                                         )}
                                       </Box>
                                     </TableCell>
+                                    <TableCell sx={{ minWidth: 170 }}>
+                                      <Button
+                                        size="small"
+                                        variant={expandedPincodeRules[idx] ? "contained" : "outlined"}
+                                        disabled={!rule.state}
+                                        sx={{
+                                          ...(expandedPincodeRules[idx] ? primaryButtonStyle : secondaryButtonStyle),
+                                          height: 40,
+                                          whiteSpace: "nowrap",
+                                          px: 1.5,
+                                        }}
+                                        endIcon={<ExpandMoreIcon sx={{ transform: expandedPincodeRules[idx] ? "rotate(180deg)" : "none", transition: "transform .2s" }} />}
+                                        onClick={() => setExpandedPincodeRules(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                      >
+                                        {(rule.pincode_rules || []).length > 0
+                                          ? `${(rule.pincode_rules || []).reduce((n, g) => n + (g.pincodes?.length || 0), 0)} pincodes`
+                                          : "Add"}
+                                      </Button>
+                                    </TableCell>
                                     <TableCell align="right">
-                                      <IconButton size="small" color="error" onClick={() => setShippingRules(prev => prev.filter((_, i) => i !== idx))}>
+                                      <IconButton size="small" color="error" onClick={() => {
+                                        setShippingRules(prev => prev.filter((_, i) => i !== idx));
+                                        setExpandedPincodeRules({});
+                                      }}>
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
                                     </TableCell>
                                   </TableRow>
+                                  {expandedPincodeRules[idx] && (
+                                    <TableRow>
+                                      <TableCell colSpan={5} sx={{ bgcolor: "background.default", py: 2 }}>
+                                        <PincodeRulesEditor
+                                          state={rule.state}
+                                          value={rule.pincode_rules || []}
+                                          onChange={(nextGroups) => setShippingRules(prev =>
+                                            prev.map((r, i) => (i === idx ? { ...r, pincode_rules: nextGroups } : r))
+                                          )}
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                  </Fragment>
                                 ))}
                               </TableBody>
                             </Table>
