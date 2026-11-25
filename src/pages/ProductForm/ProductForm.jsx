@@ -623,6 +623,7 @@ const ProductForm = () => {
     }
   }, [isEnrollmentSeller]);
 
+
   const [categories, setCategories] = useState([]);
   const [categoryAttributes, setCategoryAttributes] = useState([]);
   const [attributeValues, setAttributeValues] = useState({});
@@ -632,6 +633,55 @@ const ProductForm = () => {
   const [customSpecs, setCustomSpecs] = useState([]);
   const [shippingRules, setShippingRules] = useState([]);
   const [expandedPincodeRules, setExpandedPincodeRules] = useState({});
+  // Enrollment ID sellers are intrastate-only, so their one allowed shipping rule is
+  // pinned to the state on their seller profile. Matched against INDIAN_STATES so the
+  // label is spelled the same way a GSTIN seller would have picked it.
+  const lockedSellerState = useMemo(() => {
+    if (!isEnrollmentSeller) return '';
+    const raw = sellerProfile?.state || authUser?.state || '';
+    if (!raw) return '';
+    const key = (s) => String(s).toLowerCase().replace(/^the /, '').replace(/[^a-z0-9]/g, '');
+    return INDIAN_STATES.find((st) => key(st) === key(raw)) || String(raw).trim();
+  }, [isEnrollmentSeller, sellerProfile, authUser]);
+
+  const lockedStateRule = useMemo(
+    () => shippingRules.find((r) => r.state === lockedSellerState) || null,
+    [shippingRules, lockedSellerState]
+  );
+
+  // Keep exactly one rule for the locked state, mirroring the product's own delivery
+  // settings. It is only a container for pincode overrides, so the state tier always
+  // resolves to the same amount as the default charge and never surprises the seller.
+  useEffect(() => {
+    if (!isEnrollmentSeller || shippingPreference !== 'self' || !lockedSellerState) return;
+    setShippingRules((prev) => {
+      const existing = prev.find((r) => r.state === lockedSellerState) || prev[0];
+      const next = {
+        state: lockedSellerState,
+        delivery_type: form.delivery_type || 'fixed',
+        delivery_charge: form.delivery_type === 'free' ? '' : (form.delivery_charge ?? ''),
+        free_delivery_min_order:
+          form.delivery_type === 'conditional' ? (form.free_delivery_min_order ?? '') : '',
+        pincode_rules: existing?.pincode_rules || [],
+      };
+      const unchanged =
+        prev.length === 1 &&
+        prev[0].state === next.state &&
+        prev[0].delivery_type === next.delivery_type &&
+        String(prev[0].delivery_charge ?? '') === String(next.delivery_charge ?? '') &&
+        String(prev[0].free_delivery_min_order ?? '') === String(next.free_delivery_min_order ?? '') &&
+        prev[0].pincode_rules === next.pincode_rules;
+      return unchanged ? prev : [next];
+    });
+  }, [
+    isEnrollmentSeller,
+    shippingPreference,
+    lockedSellerState,
+    shippingRules,
+    form.delivery_type,
+    form.delivery_charge,
+    form.free_delivery_min_order,
+  ]);
   const [images, setImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [colorFiles, setColorFiles] = useState({});
@@ -1654,7 +1704,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
         delivery_charge: shippingPreference === 'platform' ? 0 : (form.delivery_type === 'free' ? 0 : parseFloat(form.delivery_charge || 0)),
         free_delivery_min_order: shippingPreference === 'platform' ? null : (form.delivery_type === 'conditional' ? parseFloat(form.free_delivery_min_order || 0) : null),
         express_delivery_charge: shippingPreference === 'platform' ? null : (form.express_delivery_charge ? parseFloat(form.express_delivery_charge) : null),
-        shipping_rules: (shippingPreference === 'platform' || isEnrollmentSeller) ? [] : buildShippingRulesPayload(shippingRules),
+        shipping_rules: shippingPreference === 'platform' ? [] : buildShippingRulesPayload(shippingRules),
         specifications: buildSpecifications(),
         hsn_code: form.hsn_code?.trim() || null,
         gst_rate: isEnrollmentSeller ? 0 : ((form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined) ? null : form.gst_rate),
@@ -2497,6 +2547,47 @@ const typeIsOthers = isOthersCat(selectedProductType);
                           </Grid>
                         )}
                       </Grid>
+                    )}
+
+                    {/* Enrollment ID sellers: intrastate only, so the state is locked to their
+                        registered state and only pincode-level overrides are configurable. */}
+                    {form.delivery_type !== 'free' && isEnrollmentSeller && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+                          District / Pincode Delivery Charges
+                        </Typography>
+                        {lockedSellerState ? (
+                          <>
+                            <TextField
+                              size="small"
+                              label="State"
+                              value={lockedSellerState}
+                              disabled
+                              InputProps={{ readOnly: true }}
+                              helperText="Your registered state. Enrollment ID sellers deliver within this state only."
+                              sx={{ mb: 2, width: { xs: '100%', sm: 320 } }}
+                            />
+                            <PincodeRulesEditor
+                              state={lockedSellerState}
+                              value={lockedStateRule?.pincode_rules || []}
+                              onChange={(nextGroups) => setShippingRules((prev) => {
+                                const base = prev.find((r) => r.state === lockedSellerState) || prev[0];
+                                return [{
+                                  state: lockedSellerState,
+                                  delivery_type: base?.delivery_type || form.delivery_type || 'fixed',
+                                  delivery_charge: base?.delivery_charge ?? '',
+                                  free_delivery_min_order: base?.free_delivery_min_order ?? '',
+                                  pincode_rules: nextGroups,
+                                }];
+                              })}
+                            />
+                          </>
+                        ) : (
+                          <Alert severity="info">
+                            Add your registered state in your seller profile to set district and pincode delivery charges.
+                          </Alert>
+                        )}
+                      </Box>
                     )}
 
                     {/* State-wise Shipping Rules (only for GSTIN sellers; Enrollment ID sellers use single common charge) */}
