@@ -1,17 +1,19 @@
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem, Alert, CircularProgress,
   IconButton, Chip, Divider, RadioGroup, FormControlLabel, Radio, Stack,
   Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Checkbox, ListItemText, Avatar, Tooltip, Autocomplete
+  Checkbox, ListItemText, Avatar, Tooltip, Autocomplete,
+  Dialog, DialogTitle, DialogContent, DialogActions, FormHelperText
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../../features/ui/uiSlice';
@@ -169,6 +171,14 @@ const getVariantMrpError = (price, comparePrice) => {
     return `Price cannot exceed Compare price (₹${mrp.toLocaleString('en-IN')})`;
   }
   return null;
+};
+
+// Field labels used by validation messages so each one names its exact input.
+const PRODUCT_DIM_LABELS = {
+  product_weight: 'Product Weight (kg)',
+  product_length: 'Product Length (L, in cm)',
+  product_breadth: 'Product Breadth (B, in cm)',
+  product_height: 'Product Height (H, in cm)',
 };
 
 const getVariantValue = (variant, names) => {
@@ -691,6 +701,59 @@ const ProductForm = () => {
   const [imageErrs, setImageErrs] = useState([]);
   const [nameError, setNameError] = useState('');
 
+  // ── Field-level validation plumbing ───────────────────────────────────
+  // Every mandatory check names the exact input that failed, highlights it
+  // inline and scrolls it into view. The checks themselves are unchanged.
+  const [fieldErrors, setFieldErrors] = useState({});
+  const fieldRefs = useRef({});
+
+  const registerField = useCallback((key) => (node) => {
+    if (node) fieldRefs.current[key] = node;
+    else delete fieldRefs.current[key];
+  }, []);
+
+  const focusField = useCallback((key) => {
+    const node = fieldRefs.current[key];
+    if (!node) return;
+    // For real inputs, centre the whole field (label + helper text) in view;
+    // section anchors (a heading) are already the right thing to scroll to.
+    const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(node.tagName);
+    const anchor = (isInput && typeof node.closest === 'function')
+      ? (node.closest('.MuiFormControl-root') || node)
+      : node;
+    try {
+      anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      anchor.scrollIntoView();
+    }
+    if (typeof node.focus === 'function') {
+      window.setTimeout(() => {
+        try { node.focus({ preventScroll: true }); } catch { node.focus(); }
+      }, 350);
+    }
+  }, []);
+
+  // Shows the summary (alert + toast), marks the offending input and jumps to it.
+  const failValidation = useCallback((key, message) => {
+    setError(message);
+    setFieldErrors(key ? { [key]: message } : {});
+    dispatch(showToast({ message, severity: 'error' }));
+    if (key) focusField(key);
+  }, [dispatch, focusField]);
+
+  const clearFieldError = useCallback((key) => {
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  // ── Description editor (expanded modal) ───────────────────────────────
+  const [descDialogOpen, setDescDialogOpen] = useState(false);
+  const [descDraft, setDescDraft] = useState('');
+
   // Dynamic helper strings for UI rendering
   const formatBytes = (bytes) => {
     if (bytes >= 1024 * 1024) {
@@ -977,6 +1040,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
    if (key === 'name') {
       setNameError('');
     }
+    clearFieldError(key);
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -1534,6 +1598,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
 
    const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    setFieldErrors({});
     const flattenedFashionVariants = buildFashionVariants();
     const hasVariantAttributesConfigured = categoryAttributes.some(a => a.is_variant);
     const submittedVariants = isFashionVariantCategory
@@ -1549,11 +1614,11 @@ const typeIsOthers = isOthersCat(selectedProductType);
 
     const totalImagesCount = images.length + newFiles.length + totalColorFiles + variantImagesCount;
     if (totalImagesCount === 0) {
-      setError('Please upload at least one product image.');
+      failValidation('images', 'Product Images: please upload at least one product image.');
       return;
     }
 
-    if (mrpWarning) { setError(mrpWarning); return; }
+    if (mrpWarning) { failValidation('compare_price', `MRP / Compare Price (₹): ${mrpWarning}`); return; }
 
     // Variant rows follow the same MRP rule as the main pricing section.
     if (isFashionVariantCategory) {
@@ -1562,7 +1627,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
           const rowError = getVariantMrpError(sizeRow.price, sizeRow.compare_price);
           if (rowError) {
             const rowLabel = [group.color, sizeRow.size].filter(Boolean).join(' / ') || 'variant';
-            setError(`${rowLabel}: ${rowError}`);
+            failValidation('colorGroups', `Fashion Variants → ${rowLabel}: ${rowError}`);
             return;
           }
         }
@@ -1572,25 +1637,26 @@ const typeIsOthers = isOthersCat(selectedProductType);
         const rowError = getVariantMrpError(variant.price, variant.compare_price);
         if (rowError) {
           const rowLabel = Object.values(variant.variant_attributes || {}).join(' / ') || 'variant';
-          setError(`${rowLabel}: ${rowError}`);
+          failValidation('variants', `Variants → ${rowLabel}: ${rowError}`);
           return;
         }
       }
     }
-    if (!form.name || !form.name.trim()) { setError('Please enter a product name.'); return; }
+    if (!form.name || !form.name.trim()) { failValidation('name', 'Product Name is required.'); return; }
+    if (!form.category_id) { failValidation('category_id', 'Category is required — please select a Category.'); return; }
     if (form.category_id === 'other') {
       if (!form.custom_category?.trim()) {
-        setError('Please specify a custom category.');
+        failValidation('custom_category', '"Specify Category Name" is required.');
         return;
       }
 
       if (!form.custom_subcategory?.trim()) {
-        setError('Please specify a custom subcategory.');
+        failValidation('custom_subcategory', '"Specify Subcategory" is required.');
         return;
       }
 
       if (!form.custom_product_type?.trim()) {
-        setError('Please specify a custom product type.');
+        failValidation('custom_product_type', '"Specify Product Type" is required.');
         return;
       }
     }
@@ -1598,33 +1664,33 @@ const typeIsOthers = isOthersCat(selectedProductType);
     if (form.category_id && form.category_id !== 'other') {
   const hasSubcategories = categories.filter(c => c.parent_id === Number(form.category_id)).length > 0;
   if (hasSubcategories && !form.subcategory_id) {
-    setError('Please select a subcategory.');
+    failValidation('subcategory_id', 'Subcategory is required — please select a Subcategory.');
     return;
   }
   if (form.subcategory_id) {
     const hasProductTypes = categories.filter(c => c.parent_id === Number(form.subcategory_id)).length > 0;
     if (hasProductTypes && !productTypeId) {
-      setError('Please select a product type.');
+      failValidation('product_type_id', 'Product Type is required — please select a Product Type.');
       return;
     }
   }
 
   if (subIsOthers && !form.custom_subcategory?.trim()) {
-    setError('Please enter your subcategory name.');
+    failValidation('custom_subcategory', '"Specify Subcategory" is required.');
     return;
   }
   if ((subIsOthers || typeIsOthers) && !form.custom_product_type?.trim()) {
-    setError('Please enter your product type name.');
+    failValidation('custom_product_type', '"Specify Product Type" is required.');
     return;
   }
 }
-    if (!form.price || parseFloat(form.price) <= 0) { setError('Please enter a valid price.'); return; }
-    if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { setError('Please enter a valid stock quantity.'); return; }
+    if (!form.price || parseFloat(form.price) <= 0) { failValidation('price', 'Selling Price (₹) must be greater than 0.'); return; }
+    if (!submittedVariants.length && (!form.stock_quantity || parseInt(form.stock_quantity) < 0)) { failValidation('stock_quantity', 'Stock Quantity is required and cannot be negative.'); return; }
 
     // Check general images limit for non-fashion products
     const generalImagesCount = images.filter(img => !img.color).length + newFiles.length;
     if (!isFashionVariantCategory && generalImagesCount > MAX_PRODUCT_IMAGES) {
-      setError(`You can upload up to ${MAX_PRODUCT_IMAGES} general product images only.`);
+      failValidation('images', `Product Images: you can upload up to ${MAX_PRODUCT_IMAGES} general product images only.`);
       return;
     }
 
@@ -1636,43 +1702,49 @@ const typeIsOthers = isOthersCat(selectedProductType);
         const existingColorCount = images.filter(img => img.color && String(img.color).trim().toLowerCase() === colorName).length;
         const pendingColorCount = (colorFiles[group.color] || []).length;
         if ((existingColorCount + pendingColorCount) > MAX_PRODUCT_IMAGES) {
-          setError(`You can upload up to ${MAX_PRODUCT_IMAGES} images for color '${group.color}' only.`);
+          failValidation('colorGroups', `Fashion Variants → color '${group.color}': you can upload up to ${MAX_PRODUCT_IMAGES} images only.`);
           return;
         }
       }
     }
     if (isFashionVariantCategory && colorGroups.length === 0) {
-      setError('Add at least one color variant for fashion products.');
+      failValidation('colorGroups', 'Fashion Variants (Color & Size): add at least one color group.');
       return;
     }
     if (isFashionVariantCategory && colorGroups.length > 0 && !flattenedFashionVariants.length) {
-      setError('Add at least one color with one size before saving fashion variants.');
+      failValidation('colorGroups', 'Fashion Variants (Color & Size): add at least one size row under a color group.');
       return;
     }
     if (isFashionVariantCategory && colorGroups.some((group) => !String(group.color || '').trim())) {
-      setError('Each color block needs a color name.');
+      failValidation('colorGroups', 'Fashion Variants (Color & Size): Color is required in every color block.');
       return;
     }
-    if (!form.hsn_code?.trim()) { setError('Please enter an HSN Code.'); return; }
-    if (!isEnrollmentSeller && (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined)) { setError('Please select a GST Rate.'); return; }
-    if (!form.weight || parseFloat(form.weight) <= 0) { setError('Please enter a valid weight greater than 0.'); return; }
-    if (!form.length || parseFloat(form.length) <= 0) { setError('Please enter a valid length greater than 0.'); return; }
-    if (!form.breadth || parseFloat(form.breadth) <= 0) { setError('Please enter a valid breadth greater than 0.'); return; }
-    if (!form.height || parseFloat(form.height) <= 0) { setError('Please enter a valid height greater than 0.'); return; }
+    if (!form.hsn_code?.trim()) { failValidation('hsn_code', 'HSN Code is required.'); return; }
+    if (!isEnrollmentSeller && (form.gst_rate === '' || form.gst_rate === null || form.gst_rate === undefined)) { failValidation('gst_rate', 'GST Rate (%) is required — please select a GST Rate.'); return; }
+    if (!form.weight || parseFloat(form.weight) <= 0) { failValidation('weight', 'Shipment Weight (kg) must be greater than 0.'); return; }
+    if (!form.length || parseFloat(form.length) <= 0) { failValidation('length', 'Shipment Length (L, in cm) must be greater than 0.'); return; }
+    if (!form.breadth || parseFloat(form.breadth) <= 0) { failValidation('breadth', 'Shipment Breadth (B, in cm) must be greater than 0.'); return; }
+    if (!form.height || parseFloat(form.height) <= 0) { failValidation('height', 'Shipment Height (H, in cm) must be greater than 0.'); return; }
     for (const dimKey of ['product_weight', 'product_length', 'product_breadth', 'product_height']) {
       const dimVal = form[dimKey];
       if (dimVal !== '' && dimVal !== null && dimVal !== undefined && parseFloat(dimVal) <= 0) {
-        setError('Product dimensions, if provided, must be greater than 0.');
+        failValidation(dimKey, `${PRODUCT_DIM_LABELS[dimKey]} must be greater than 0 when provided.`);
         return;
       }
     }
     if (shippingPreference === 'self') {
       if (form.delivery_type === 'fixed' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0)) {
-        setError('Please enter a delivery charge for fixed delivery.');
+        failValidation('delivery_charge', 'Delivery Charge (₹) must be greater than 0 for fixed delivery.');
         return;
       }
       if (form.delivery_type === 'conditional' && (!form.delivery_charge || parseFloat(form.delivery_charge) <= 0 || !form.free_delivery_min_order || parseFloat(form.free_delivery_min_order) <= 0)) {
-        setError('Please enter delivery charge and free delivery threshold.');
+        const chargeMissing = !form.delivery_charge || parseFloat(form.delivery_charge) <= 0;
+        failValidation(
+          chargeMissing ? 'delivery_charge' : 'free_delivery_min_order',
+          chargeMissing
+            ? 'Delivery Charge (₹) must be greater than 0.'
+            : 'Free Delivery Above (₹) must be greater than 0.'
+        );
         return;
       }
     }
@@ -1788,7 +1860,22 @@ const typeIsOthers = isOthersCat(selectedProductType);
         </Typography>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => { setError(''); setFieldErrors({}); }}
+          action={
+            Object.keys(fieldErrors).length > 0 ? (
+              <Button color="inherit" size="small" onClick={() => focusField(Object.keys(fieldErrors)[0])}>
+                Go to field
+              </Button>
+            ) : undefined
+          }
+        >
+          {error}
+        </Alert>
+      )}
 
       <Box component="form" onSubmit={handleSubmit} sx={formFocusStyles}>
         <Grid container spacing={3}>
@@ -1811,22 +1898,44 @@ const typeIsOthers = isOthersCat(selectedProductType);
                     onChange={handleChange('name')}
                     fullWidth required
                     placeholder="e.g. Running Shoes"
-                    error={!!nameError}
-                    helperText={nameError}
+                    inputRef={registerField('name')}
+                    error={!!nameError || !!fieldErrors.name}
+                    helperText={nameError || fieldErrors.name}
                     FormHelperTextProps={{
-                      sx: { color: nameError ? 'error.main' : 'text.secondary', fontWeight: nameError ? 600 : 400 }
+                      sx: {
+                        color: (nameError || fieldErrors.name) ? 'error.main' : 'text.secondary',
+                        fontWeight: (nameError || fieldErrors.name) ? 600 : 400,
+                      }
                     }}
                     sx={{ mb: 2 }}
                   />
 
-                  <TextField
-                    label="Description"
-                    value={form.description}
-                    onChange={handleChange('description')}
-                    fullWidth multiline rows={4}
-                    placeholder="Describe your product..."
-                    sx={{ mb: 2 }}
-                  />
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75, gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Tip: press Enter for a new line and start points with <strong>*</strong> or <strong>-</strong> — buyers see them line by line.
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<OpenInFullIcon fontSize="small" />}
+                        onClick={() => { setDescDraft(form.description || ''); setDescDialogOpen(true); }}
+                        sx={{ ...secondaryButtonStyle, flexShrink: 0 }}
+                      >
+                        Expand Editor
+                      </Button>
+                    </Box>
+                    <TextField
+                      label="Description"
+                      value={form.description}
+                      onChange={handleChange('description')}
+                      fullWidth
+                      multiline
+                      minRows={6}
+                      maxRows={16}
+                      placeholder={'Describe your product...\n\n* Key point one\n* Key point two'}
+                    />
+                  </Box>
 
                   <Grid container spacing={2}>
                     {/* ── GST & HSN Fields ── */}
@@ -1837,12 +1946,15 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         onChange={handleChange('hsn_code')}
                         fullWidth required
                         placeholder="e.g. 6404"
+                        inputRef={registerField('hsn_code')}
+                        error={!!fieldErrors.hsn_code}
+                        helperText={fieldErrors.hsn_code || ''}
                       />
                     </Grid>
 
                     {!isEnrollmentSeller && isGstProfileResolved && (
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth required>
+                        <FormControl fullWidth required ref={registerField('gst_rate')} error={!!fieldErrors.gst_rate}>
                           <InputLabel>GST Rate (%)</InputLabel>
                           <Select
                             value={form.gst_rate}
@@ -1858,6 +1970,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             <MenuItem value={18}>18%</MenuItem>
                             <MenuItem value={28}>28%</MenuItem>
                           </Select>
+                          {fieldErrors.gst_rate && <FormHelperText>{fieldErrors.gst_rate}</FormHelperText>}
                         </FormControl>
                       </Grid>
                     )}
@@ -1871,8 +1984,10 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         onChange={handleChange('price')}
                         fullWidth required
                         placeholder="0.00"
-                        helperText={hasVariants ? "💡 Pre-fills default price for variant rows below. You can also change individual variant prices in the table." : undefined}
-                        FormHelperTextProps={{ sx: { color: hasVariants ? '#0b8457' : 'text.secondary', fontWeight: hasVariants ? 600 : 400 } }}
+                        inputRef={registerField('price')}
+                        error={!!fieldErrors.price}
+                        helperText={fieldErrors.price || (hasVariants ? "💡 Pre-fills default price for variant rows below. You can also change individual variant prices in the table." : undefined)}
+                        FormHelperTextProps={{ sx: { color: fieldErrors.price ? 'error.main' : (hasVariants ? '#0b8457' : 'text.secondary'), fontWeight: (fieldErrors.price || hasVariants) ? 600 : 400 } }}
                         inputProps={{ min: 0, step: 0.01 }}
                       />
                       <CommissionBadge price={form.price} />
@@ -1886,10 +2001,11 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         onChange={handleChange('compare_price')}
                         fullWidth
                         placeholder="0.00"
-                        helperText={mrpWarning || "Original price (shown as strikethrough)"}
-                        FormHelperTextProps={{ sx: { color: mrpWarning ? '#e65100' : 'text.secondary' } }}
+                        inputRef={registerField('compare_price')}
+                        helperText={mrpWarning || fieldErrors.compare_price || "Original price (shown as strikethrough)"}
+                        FormHelperTextProps={{ sx: { color: mrpWarning ? '#e65100' : (fieldErrors.compare_price ? 'error.main' : 'text.secondary'), fontWeight: (mrpWarning || fieldErrors.compare_price) ? 600 : 400 } }}
                         inputProps={{ min: 0, step: 0.01 }}
-                        error={!!mrpWarning}
+                        error={!!mrpWarning || !!fieldErrors.compare_price}
                       />
                     </Grid>
                     {form.price && Number(form.price) > 0 && (
@@ -1913,8 +2029,10 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         required={!hasVariants}
                         disabled={hasVariants}
                         placeholder={hasVariants ? "Managed per variant" : "0"}
-                        helperText={hasVariants ? "📦 Stock is managed per variant in the section below." : "Base product inventory count"}
-                        FormHelperTextProps={{ sx: { color: hasVariants ? 'warning.main' : 'text.secondary', fontWeight: hasVariants ? 600 : 400 } }}
+                        inputRef={registerField('stock_quantity')}
+                        error={!!fieldErrors.stock_quantity}
+                        helperText={fieldErrors.stock_quantity || (hasVariants ? "📦 Stock is managed per variant in the section below." : "Base product inventory count")}
+                        FormHelperTextProps={{ sx: { color: fieldErrors.stock_quantity ? 'error.main' : (hasVariants ? 'warning.main' : 'text.secondary'), fontWeight: (fieldErrors.stock_quantity || hasVariants) ? 600 : 400 } }}
                         inputProps={{ min: 0 }}
                       />
                     </Grid>
@@ -1948,6 +2066,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
 {/* ── Category Selection ── */}
 <Grid item xs={12} sm={6}>
 <Autocomplete
+  ref={registerField('category_id')}
   fullWidth
   openOnFocus
   autoHighlight
@@ -1964,6 +2083,8 @@ const typeIsOthers = isOthersCat(selectedProductType);
       label="Category (type to search)"
       required
       placeholder="Search category..."
+      error={!!fieldErrors.category_id}
+      helperText={fieldErrors.category_id || ''}
       InputProps={{
         ...params.InputProps,
         startAdornment: (
@@ -1989,6 +2110,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             fullWidth
                             required
                             placeholder="e.g. Handmade Crafts"
+                            inputRef={registerField('custom_category')}
+                            error={!!fieldErrors.custom_category}
+                            helperText={fieldErrors.custom_category || ''}
                           />
                         </Grid>
 
@@ -2001,6 +2125,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             fullWidth
                             required
                             placeholder="e.g. Handmade Home Decor"
+                            inputRef={registerField('custom_subcategory')}
+                            error={!!fieldErrors.custom_subcategory}
+                            helperText={fieldErrors.custom_subcategory || ''}
                           />
                         </Grid>
 
@@ -2013,6 +2140,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             fullWidth
                             required
                             placeholder="e.g. Wall Hanging"
+                            inputRef={registerField('custom_product_type')}
+                            error={!!fieldErrors.custom_product_type}
+                            helperText={fieldErrors.custom_product_type || ''}
                           />
                         </Grid>
                       </>
@@ -2021,7 +2151,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
 
                     {form.category_id && form.category_id !== 'other' && categories.filter(c => c.parent_id === Number(form.category_id)).length > 0 && (
                     <Grid item xs={12} sm={6}>
-                     <FormControl fullWidth required>
+                     <FormControl fullWidth required ref={registerField('subcategory_id')} error={!!fieldErrors.subcategory_id}>
                       <InputLabel id="subcat-label">Subcategory </InputLabel>
                       <Select
                         labelId="subcat-label"
@@ -2052,13 +2182,14 @@ const typeIsOthers = isOthersCat(selectedProductType);
                               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                             ))}
                           </Select>
+                          {fieldErrors.subcategory_id && <FormHelperText>{fieldErrors.subcategory_id}</FormHelperText>}
                         </FormControl>
                       </Grid>
                     )}
 
                     {form.subcategory_id && categories.filter(c => c.parent_id === Number(form.subcategory_id)).length > 0 && (
   <Grid item xs={12} sm={6}>
-    <FormControl fullWidth required>
+    <FormControl fullWidth required ref={registerField('product_type_id')} error={!!fieldErrors.product_type_id}>
       <InputLabel id="type-label">Product Type </InputLabel>
       <Select
         labelId="type-label"
@@ -2083,6 +2214,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
                               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                             ))}
                           </Select>
+                          {fieldErrors.product_type_id && <FormHelperText>{fieldErrors.product_type_id}</FormHelperText>}
                         </FormControl>
                       </Grid>
                     )}
@@ -2094,6 +2226,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                           onChange={handleChange('custom_subcategory')}
                           fullWidth required
                           placeholder="Enter your subcategory name"
+                          inputRef={registerField('custom_subcategory')}
+                          error={!!fieldErrors.custom_subcategory}
+                          helperText={fieldErrors.custom_subcategory || ''}
                         />
                       </Grid>
                     )}
@@ -2106,6 +2241,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                           onChange={handleChange('custom_product_type')}
                           fullWidth required
                           placeholder="Enter your product type name"
+                          inputRef={registerField('custom_product_type')}
+                          error={!!fieldErrors.custom_product_type}
+                          helperText={fieldErrors.custom_product_type || ''}
                         />
                       </Grid>
                     )}
@@ -2129,6 +2267,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         onChange={handleChange('product_weight')}
                         fullWidth
                         placeholder="e.g. 12.5"
+                        inputRef={registerField('product_weight')}
+                        error={!!fieldErrors.product_weight}
+                        helperText={fieldErrors.product_weight || ''}
                         inputProps={{ min: 0, step: 0.01 }}
                       />
                     </Grid>
@@ -2137,10 +2278,15 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         Product Size (L x B x H in cm)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <TextField size="small" placeholder="L" type="number" value={form.product_length} onChange={handleChange('product_length')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="B" type="number" value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="H" type="number" value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="L" type="number" value={form.product_length} onChange={handleChange('product_length')} inputProps={{ min: 0 }} inputRef={registerField('product_length')} error={!!fieldErrors.product_length} />
+                        <TextField size="small" placeholder="B" type="number" value={form.product_breadth} onChange={handleChange('product_breadth')} inputProps={{ min: 0 }} inputRef={registerField('product_breadth')} error={!!fieldErrors.product_breadth} />
+                        <TextField size="small" placeholder="H" type="number" value={form.product_height} onChange={handleChange('product_height')} inputProps={{ min: 0 }} inputRef={registerField('product_height')} error={!!fieldErrors.product_height} />
                       </Box>
+                      {(fieldErrors.product_length || fieldErrors.product_breadth || fieldErrors.product_height) && (
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'error.main', fontWeight: 600 }}>
+                          {fieldErrors.product_length || fieldErrors.product_breadth || fieldErrors.product_height}
+                        </Typography>
+                      )}
                     </Grid>
                   </Grid>
                 </CardContent>
@@ -2163,6 +2309,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         fullWidth
                         required
                         placeholder="e.g. 0.5"
+                        inputRef={registerField('weight')}
+                        error={!!fieldErrors.weight}
+                        helperText={fieldErrors.weight || ''}
                         inputProps={{ min: 0, step: 0.001 }}
                       />
                     </Grid>
@@ -2171,10 +2320,15 @@ const typeIsOthers = isOthersCat(selectedProductType);
                         Dimensions (L x B x H in cm) (For Shipment after package) *
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <TextField size="small" placeholder="L" type="number" required value={form.length} onChange={handleChange('length')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="B" type="number" required value={form.breadth} onChange={handleChange('breadth')} inputProps={{ min: 0 }} />
-                        <TextField size="small" placeholder="H" type="number" required value={form.height} onChange={handleChange('height')} inputProps={{ min: 0 }} />
+                        <TextField size="small" placeholder="L" type="number" required value={form.length} onChange={handleChange('length')} inputProps={{ min: 0 }} inputRef={registerField('length')} error={!!fieldErrors.length} />
+                        <TextField size="small" placeholder="B" type="number" required value={form.breadth} onChange={handleChange('breadth')} inputProps={{ min: 0 }} inputRef={registerField('breadth')} error={!!fieldErrors.breadth} />
+                        <TextField size="small" placeholder="H" type="number" required value={form.height} onChange={handleChange('height')} inputProps={{ min: 0 }} inputRef={registerField('height')} error={!!fieldErrors.height} />
                       </Box>
+                      {(fieldErrors.length || fieldErrors.breadth || fieldErrors.height) && (
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'error.main', fontWeight: 600 }}>
+                          {fieldErrors.length || fieldErrors.breadth || fieldErrors.height}
+                        </Typography>
+                      )}
                     </Grid>
                   </Grid>
                 </CardContent>
@@ -2215,7 +2369,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
                           </Typography>
                         </Alert>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          <Typography variant="subtitle2" fontWeight={700}>Fashion Variants (Color & Size)</Typography>
+                          <Typography variant="subtitle2" fontWeight={700} ref={registerField('colorGroups')}>Fashion Variants (Color & Size)</Typography>
                           <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addColorGroup} sx={secondaryButtonStyle}>
                             Add Color Group
                           </Button>
@@ -2418,7 +2572,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
                           </Typography>
                         </Alert>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          <Typography variant="subtitle2" fontWeight={700}>Product Variants</Typography>
+                          <Typography variant="subtitle2" fontWeight={700} ref={registerField('variants')}>Product Variants</Typography>
                           <Button variant="outlined" size="small" onClick={generateVariants} sx={secondaryButtonStyle}>Generate Combinations</Button>
                         </Box>
 
@@ -2531,6 +2685,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                             value={form.delivery_charge}
                             onChange={handleChange('delivery_charge')}
                             fullWidth
+                            inputRef={registerField('delivery_charge')}
+                            error={!!fieldErrors.delivery_charge}
+                            helperText={fieldErrors.delivery_charge || ''}
                             inputProps={{ min: 0, step: 0.01 }}
                           />
                         </Grid>
@@ -2542,6 +2699,9 @@ const typeIsOthers = isOthersCat(selectedProductType);
                               value={form.free_delivery_min_order}
                               onChange={handleChange('free_delivery_min_order')}
                               fullWidth
+                              inputRef={registerField('free_delivery_min_order')}
+                              error={!!fieldErrors.free_delivery_min_order}
+                              helperText={fieldErrors.free_delivery_min_order || ''}
                               inputProps={{ min: 0, step: 0.01 }}
                             />
                           </Grid>
@@ -2848,7 +3008,7 @@ const typeIsOthers = isOthersCat(selectedProductType);
               {/* General images gallery */}
               <Card sx={{ mb: 3 }}>
                 <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Product Images (General)</Typography>
+                  <Typography variant="h6" fontWeight={700} gutterBottom ref={registerField('images')}>Product Images (General)</Typography>
                   <Divider sx={{ mb: 2 }} />
 
                   {hasVariants ? (
@@ -3007,6 +3167,63 @@ const typeIsOthers = isOthersCat(selectedProductType);
           </Grid>
         </Grid>
       </Box>
+
+      {/* Roomy description editor — line breaks and bullet points are kept as typed. */}
+      <Dialog
+        open={descDialogOpen}
+        onClose={() => setDescDialogOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Product Description</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Press Enter for a new line. Start a line with <strong>*</strong> or <strong>-</strong> to make it a bullet
+            point — buyers see your points exactly line by line.
+          </Typography>
+          <TextField
+            value={descDraft}
+            onChange={(e) => setDescDraft(e.target.value)}
+            fullWidth
+            multiline
+            minRows={14}
+            maxRows={24}
+            autoFocus
+            placeholder={'* 100% cotton fabric\n* Machine washable\n* Available in 5 colours'}
+            sx={formFocusStyles}
+          />
+          {descDraft.trim() && (
+            <Box sx={{ mt: 2.5 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                Preview (as buyers will see it)
+              </Typography>
+              <Box
+                sx={{
+                  mt: 0.75, p: 1.5, borderRadius: 2, border: '1px solid',
+                  borderColor: 'divider', bgcolor: 'background.default',
+                  whiteSpace: 'pre-line', wordBreak: 'break-word',
+                  fontSize: 14, lineHeight: 1.8,
+                }}
+              >
+                {descDraft}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setDescDialogOpen(false)} sx={secondaryButtonStyle}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setForm(prev => ({ ...prev, description: descDraft }));
+              setDescDialogOpen(false);
+            }}
+            sx={primaryButtonStyle}
+          >
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
